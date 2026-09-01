@@ -4,10 +4,10 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Post,
   Put,
   Query,
+  UnsupportedMediaTypeException,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
@@ -18,13 +18,18 @@ import { UploadsService } from '../uploads/uploads.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
+import { ReportListingDto } from './dto/report-listing.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ParseBigIntPipe } from '../../common/pipes/parse-bigint.pipe';
 
 interface AuthUser {
   id: bigint;
   role: string;
 }
+
+const ACCEPTED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB/ảnh — khớp đúng giới hạn đã ghi trong skill 04
 
 @ApiTags('listings')
 @Controller('listings')
@@ -54,42 +59,53 @@ export class ListingsController {
 
   @ApiBearerAuth()
   @Put(':id')
-  update(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateListingDto) {
-    return this.listingsService.update(BigInt(id), user, dto);
+  update(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint, @Body() dto: UpdateListingDto) {
+    return this.listingsService.update(id, user, dto);
   }
 
   @ApiBearerAuth()
   @Delete(':id')
-  remove(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
-    return this.listingsService.remove(BigInt(id), user);
+  remove(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.listingsService.remove(id, user);
   }
 
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @Post(':id/images')
-  @UseInterceptors(FilesInterceptor('files', 20))
+  @UseInterceptors(
+    FilesInterceptor('files', 20, {
+      limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+      fileFilter: (_req, file, callback) => {
+        // TRƯỚC ĐÂY: không có bước này — bất kỳ ai đăng nhập cũng upload được file bất kỳ định dạng
+        // (kể cả .exe đổi đuôi) và dung lượng bất kỳ (có thể làm đầy ổ đĩa server). Đây là lỗ hổng
+        // thật, không phải chỉ thiếu tính năng.
+        if (!ACCEPTED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
+          callback(new UnsupportedMediaTypeException('Chỉ chấp nhận ảnh định dạng JPEG, PNG hoặc WEBP.'), false);
+          return;
+        }
+        callback(null, true);
+      },
+    }),
+  )
   async addImages(
     @CurrentUser() user: AuthUser,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseBigIntPipe) id: bigint,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     const urls = await this.uploadsService.saveListingImages(id.toString(), files);
-    return this.listingsService.addImages(BigInt(id), user, urls);
+    return this.listingsService.addImages(id, user, urls);
   }
 
   @ApiBearerAuth()
   @Post(':id/reveal-phone')
-  revealPhone(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
-    return this.listingsService.revealPhone(BigInt(id), user.id);
+  revealPhone(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.listingsService.revealPhone(id, user.id);
   }
 
   @Public()
   @Post(':id/report')
-  report(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('reason') reason: string,
-    @Body('note') note?: string,
-  ) {
-    return this.listingsService.report(BigInt(id), reason, note);
+  report(@Param('id', ParseBigIntPipe) id: bigint, @Body() dto: ReportListingDto) {
+    return this.listingsService.report(id, dto.reason, dto.note);
   }
 }
+

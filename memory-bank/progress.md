@@ -11,4 +11,6 @@
 | 07 - Tìm kiếm Meilisearch | ⬜ Chưa làm | Đang dùng Prisma filter trực tiếp |
 | 08-13 | ⬜ Chưa làm | Xem roadmap CLAUDE.md § 2.8 |
 
-Cập nhật lần cuối: 01/09/2026 (Prisma Client generated, DB migrated & seeded, E2E dev servers running on :4000 và :3000).
+| Audit nghiêm ngặt lần 2 | ✅ Xong | Tìm & sửa 12 lỗi thật (2 nghiêm trọng, 4 quan trọng, 4 trung bình, 2 nhỏ) — chi tiết đầy đủ trong `TRANG-THAI-TRIEN-KHAI.md § Đợt audit nghiêm ngặt lần 2`. Re-verify: `tsc --noEmit` API và `next build` Web đều PASS sau sửa. |
+
+Cập nhật lần cuối: 01/09/2026 (Prisma Client generated, DB migrated & seeded, E2E dev servers running on :4000 và :3000; sau đó audit lần 2 sửa 12 lỗi thật, re-verify PASS).

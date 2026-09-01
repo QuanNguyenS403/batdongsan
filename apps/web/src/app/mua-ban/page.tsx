@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { fetchListings } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
+import { Pagination } from '@/components/Pagination';
 
 export const metadata: Metadata = {
   title: 'Nhà đất bán',
@@ -34,12 +35,21 @@ export default async function MuaBanPage({ searchParams }: Props) {
           Chưa có tin đăng nào khớp bộ lọc — dữ liệu bất động sản đang chờ khách hàng cung cấp.
         </p>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
-        </div>
+        <>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            basePath="/mua-ban"
+            searchParams={searchParams}
+          />
+        </>
       )}
     </div>
   );
 }
+

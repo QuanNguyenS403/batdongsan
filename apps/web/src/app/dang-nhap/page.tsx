@@ -14,7 +14,6 @@ export default function DangNhapPage() {
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [fullName, setFullName] = useState('');
-  const [isNewUser, setIsNewUser] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -23,10 +22,21 @@ export default function DangNhapPage() {
     setError(null);
     setLoading(true);
     try {
-      // Ở bản MVP này chưa có endpoint "kiểm tra SĐT tồn tại chưa" riêng — tạm thời cho người dùng
-      // tự chọn: nếu đã có mật khẩu thì đăng nhập, chưa có thì gửi OTP để đăng ký.
-      // TODO (bản hoàn thiện): thêm GET /auth/check-phone để tự động chuyển bước đúng như UX của Mogi.
-      setStep('login-password');
+      // TRƯỚC ĐÂY: bỏ qua bước kiểm tra, luôn nhảy thẳng vào màn hình nhập mật khẩu — người dùng
+      // mới (chưa từng đăng ký) sẽ luôn nhận lỗi "sai mật khẩu" rất khó hiểu vì tài khoản còn
+      // chưa tồn tại. Endpoint GET /auth/check-phone giờ đã có, dùng để tự động rẽ đúng nhánh
+      // giống hệt UX thật của Mogi (SĐT cũ -> nhập mật khẩu; SĐT mới -> gửi OTP đăng ký).
+      const res = await fetch(`${API_URL}/auth/check-phone?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? 'Không kiểm tra được số điện thoại.');
+
+      if (data.exists) {
+        setStep('login-password');
+      } else {
+        await handleSendOtpForRegister();
+      }
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -66,7 +76,6 @@ export default function DangNhapPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? 'Gửi OTP thất bại.');
-      setIsNewUser(true);
       setStep('register-otp');
     } catch (err) {
       setError((err as Error).message);
@@ -121,13 +130,6 @@ export default function DangNhapPage() {
               className="w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark"
             >
               Tiếp tục
-            </button>
-            <button
-              type="button"
-              onClick={handleSendOtpForRegister}
-              className="w-full text-center text-xs text-gray-500 underline"
-            >
-              Tôi là người dùng mới — đăng ký bằng OTP
             </button>
           </form>
         )}
@@ -200,7 +202,6 @@ export default function DangNhapPage() {
         )}
 
         {error && <p className="mt-3 text-center text-sm text-red-600">{error}</p>}
-        {isNewUser && step === 'phone' && null}
       </div>
     </div>
   );

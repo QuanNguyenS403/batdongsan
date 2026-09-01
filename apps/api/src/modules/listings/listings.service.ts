@@ -61,7 +61,16 @@ export class ListingsService {
       };
     }
     if (query.locationSlug) {
-      where.location = { slug: query.locationSlug };
+      // BUG ĐÃ SỬA: trước đây filter `location: { slug: query.locationSlug }` chỉ khớp CHÍNH XÁC
+      // 1 location — nghĩa là xem tin theo tỉnh (VD "ho-chi-minh") sẽ KHÔNG thấy tin nào cả vì mọi
+      // tin đều gắn locationId ở cấp quận/phường, không gắn trực tiếp vào cấp tỉnh. Phải lấy toàn bộ
+      // cây con (chính nó + mọi quận/phường trực thuộc) rồi filter locationId IN (...).
+      const ids = await this.resolveLocationIdsIncludingChildren(query.locationSlug);
+      if (ids.length === 0) {
+        // Slug không tồn tại — trả kết quả rỗng thay vì bỏ qua filter (tránh lộ toàn bộ tin ngoài ý muốn).
+        return { items: [], pagination: { page: 1, pageSize: query.pageSize ?? 20, total: 0, totalPages: 0 } };
+      }
+      where.locationId = { in: ids };
     }
     if (query.keyword) {
       where.OR = [
@@ -88,6 +97,29 @@ export class ListingsService {
       items: items.map(serialize),
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     };
+  }
+
+  /** Trả về ID của chính location này + toàn bộ con cháu (đệ quy) — dùng để browsing theo tỉnh vẫn thấy tin ở mọi quận/phường con. */
+  private async resolveLocationIdsIncludingChildren(slug: string): Promise<number[]> {
+    const root = await this.prisma.location.findUnique({ where: { slug } });
+    if (!root) return [];
+
+    const allIds = [root.id];
+    let currentLevelIds = [root.id];
+
+    // Tối đa 3 cấp (tỉnh → quận → phường) nên vòng lặp luôn dừng sau vài lần — không cần giới hạn đệ quy phức tạp.
+    while (currentLevelIds.length > 0) {
+      const children = await this.prisma.location.findMany({
+        where: { parentId: { in: currentLevelIds } },
+        select: { id: true },
+      });
+      if (children.length === 0) break;
+      const childIds = children.map((c: { id: number }) => c.id);
+      allIds.push(...childIds);
+      currentLevelIds = childIds;
+    }
+
+    return allIds;
   }
 
   /** Chấp nhận cả slug đầy đủ ("...-id123") lẫn ID số thuần. */

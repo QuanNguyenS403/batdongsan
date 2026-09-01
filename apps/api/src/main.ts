@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +21,11 @@ async function bootstrap() {
     }),
   );
 
+  // Đã viết HttpExceptionFilter từ đầu nhưng SÓT bước đăng ký này — mọi lỗi 500 trước đây
+  // sẽ trả nguyên stack trace mặc định của Nest ra ngoài (rò rỉ thông tin nội bộ), không theo
+  // format {statusCode, message, timestamp} thống nhất mà frontend đang parse (data.message).
+  app.useGlobalFilters(new HttpExceptionFilter());
+
   const config = new DocumentBuilder()
     .setTitle('Batdongsan API')
     .setDescription('API cho nền tảng rao vặt bất động sản')
@@ -35,3 +41,4 @@ async function bootstrap() {
   console.log(`📘 Swagger docs tại http://localhost:${port}/docs`);
 }
 bootstrap();
+

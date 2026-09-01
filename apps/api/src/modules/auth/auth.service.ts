@@ -6,6 +6,7 @@ import { OtpService } from './otp.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 function serializeUser(user: { id: bigint; phone: string; fullName: string | null; avatarUrl: string | null; role: string; createdAt: Date }) {
   return {
@@ -25,6 +26,11 @@ export class AuthService {
     private readonly otpService: OtpService,
     private readonly jwtService: JwtService,
   ) {}
+
+  async checkPhone(phone: string) {
+    const user = await this.prisma.user.findUnique({ where: { phone }, select: { id: true } });
+    return { exists: !!user };
+  }
 
   async sendOtp(phone: string) {
     await this.otpService.sendOtp(phone);
@@ -57,6 +63,27 @@ export class AuthService {
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng.');
+
+    return this.issueTokens(user);
+  }
+
+  /**
+   * Cấp lại access token mới từ refresh token còn hạn — trước đây API có TRẢ refreshToken khi
+   * login/register nhưng KHÔNG hề có endpoint nào chấp nhận nó, khiến access token hết hạn sau
+   * 15 phút là người dùng bị văng ra phải đăng nhập lại bằng mật khẩu, refreshToken sinh ra vô nghĩa.
+   */
+  async refresh(dto: RefreshTokenDto) {
+    let payload: { sub: string; phone: string; role: string };
+    try {
+      payload = this.jwtService.verify(dto.refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET ?? 'changeme_refresh',
+      });
+    } catch {
+      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: BigInt(payload.sub) } });
+    if (!user) throw new UnauthorizedException();
 
     return this.issueTokens(user);
   }
@@ -95,3 +122,4 @@ export class AuthService {
     return { accessToken, refreshToken, user: serializeUser(user) };
   }
 }
+
