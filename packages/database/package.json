@@ -1,0 +1,26 @@
+{
+  "name": "@batdongsan/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "studio": "prisma studio",
+    "seed": "ts-node --transpile-only prisma/seed.ts",
+    "import:listings": "ts-node --transpile-only scripts/import-listings.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.1",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.5.0",
+    "dotenv-cli": "^11.0.0",
+    "prisma": "^5.19.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

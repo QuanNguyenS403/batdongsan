@@ -31,3 +31,13 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# --- Bổ sung cho monorepo ---
+node_modules/
+dist/
+.next/
+.turbo/
+*.tsbuildinfo
+.env
+apps/api/uploads/
+packages/database/prisma/generated/

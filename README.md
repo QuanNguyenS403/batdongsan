@@ -1,5 +1,7 @@
 # README — Phân tích Mogi.vn & Kiến trúc đề xuất cho dự án Bất động sản tương tự
 
+> 🟢 **Cập nhật:** Code MVP đã được triển khai thực tế trong repo (monorepo `apps/api` + `apps/web` + `packages/database`). File này vẫn là tài liệu đặc tả/tầm nhìn đầy đủ — để biết **chính xác cái gì đã chạy được, cái gì còn TODO, và cách chạy thử ngay**, đọc [`TRANG-THAI-TRIEN-KHAI.md`](./TRANG-THAI-TRIEN-KHAI.md) trước.
+
 > Tài liệu này (1) phân tích toàn diện website tham chiếu **Mogi.vn** (giao diện, nội dung, bố cục, UX, frontend, backend suy luận) và (2) chuyển hóa các phân tích đó thành **bản thiết kế kiến trúc kỹ thuật** để thực thi một dự án website bất động sản (mua bán / cho thuê nhà đất) tương tự.
 >
 > Nguồn khảo sát: truy cập trực tiếp `mogi.vn` (trang chủ, trang danh sách tin theo khu vực, trang chi tiết tin đăng, trang giá nhà đất, trang dự án, trang tìm môi giới, trang phí thành viên/bảng giá dịch vụ) vào thời điểm viết tài liệu (08/2026). Các kết luận về công nghệ backend/frontend là **suy luận kỹ thuật dựa trên dấu vết quan sát được** (URL pattern, cấu trúc HTML, thẻ meta, subdomain...), không phải thông tin nội bộ chính thức từ đội ngũ Mogi — cần coi là giả thuyết tham khảo, không phải sự thật tuyệt đối.
