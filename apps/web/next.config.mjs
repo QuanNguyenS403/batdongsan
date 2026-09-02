@@ -11,6 +11,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // undefined khi build/dev dù .env gốc đã điền đầy đủ — lỗi rất khó nhận ra vì không throw,
 // code chỉ âm thầm dùng giá trị fallback "localhost" mặc định trong lib/api.ts.
 // Nạp SAU khi Next.js đã tự đọc .env local của riêng app (nếu có) — không ghi đè biến đã tồn tại.
+if (process.env.NODE_ENV === 'production') {
+  loadEnv({ path: join(__dirname, '..', '..', '.env.production') });
+}
 loadEnv({ path: join(__dirname, '..', '..', '.env') });
 
 /** @type {import('next').NextConfig} */

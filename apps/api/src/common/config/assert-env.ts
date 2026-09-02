@@ -55,4 +55,13 @@ export function assertRequiredSecrets(): void {
       );
     }
   }
+
+  // BẢO MẬT & VẬN HÀNH (#34): Trong môi trường production, KHÔNG được phép dùng mock SMS
+  if (isProduction && (!process.env.SMS_PROVIDER || process.env.SMS_PROVIDER === 'mock')) {
+    throw new Error(
+      `[CẤU HÌNH PRODUCTION KHÔNG HỢP LỆ] SMS_PROVIDER đang đặt là "${process.env.SMS_PROVIDER ?? 'chưa có'}" (chế độ mock).\n` +
+        `→ Trong môi trường production (NODE_ENV=production), KHÔNG được phép dùng mock SMS vì người dùng thật không thể nhận được OTP.\n` +
+        `Vui lòng cấu hình tài khoản SMS thật (esms, speedsms, twilio...) và API key tương ứng trong .env trước khi khởi động.`,
+    );
+  }
 }

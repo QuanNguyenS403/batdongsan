@@ -31,19 +31,25 @@ async function bootstrap() {
   // format {statusCode, message, timestamp} thống nhất mà frontend đang parse (data.message).
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const config = new DocumentBuilder()
-    .setTitle('Batdongsan API')
-    .setDescription('API cho nền tảng rao vặt bất động sản')
-    .setVersion('0.1')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  // BẢO MẬT & VẬN HÀNH (#37): Chỉ bật Swagger docs ở môi trường development/staging.
+  // Trong môi trường production (NODE_ENV=production), tắt hoàn toàn /docs để bảo vệ API surface.
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Batdongsan API')
+      .setDescription('API cho nền tảng rao vặt bất động sản')
+      .setVersion('0.1')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   const port = process.env.API_PORT ?? 4000;
   await app.listen(port);
   console.log(`🚀 API đang chạy tại http://localhost:${port}`);
-  console.log(`📘 Swagger docs tại http://localhost:${port}/docs`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`📘 Swagger docs tại http://localhost:${port}/docs`);
+  }
 }
 bootstrap();
 

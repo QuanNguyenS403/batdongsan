@@ -2,6 +2,7 @@
   "name": "batdongsan-monorepo",
   "private": true,
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
     "lint": "turbo run lint",
