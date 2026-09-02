@@ -107,6 +107,12 @@ async function main() {
         status: ListingStatus.active,
         publishedAt: new Date(),
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        images: {
+          create: [
+            { imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80', sortOrder: 0 },
+            { imageUrl: 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=800&q=80', sortOrder: 1 },
+          ],
+        },
       },
     });
 
@@ -128,6 +134,12 @@ async function main() {
         status: ListingStatus.active,
         publishedAt: new Date(),
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        images: {
+          create: [
+            { imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80', sortOrder: 0 },
+            { imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80', sortOrder: 1 },
+          ],
+        },
       },
     });
 

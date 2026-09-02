@@ -1,19 +1,39 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { isLoggedIn } from '@/lib/auth-client';
-import { ComingSoonNotice } from '@/components/ComingSoonNotice';
+import { authFetch, isLoggedIn } from '@/lib/auth-client';
+import { formatPrice, Listing, ListingListResponse } from '@/lib/api';
 
-/**
- * "BĐS đã lưu" — module backend SavedListing (bảng saved_listings trong CLAUDE.md § 2.3) CHƯA
- * được triển khai (chưa có module nào trong apps/api/src/modules/ liên quan lưu tin). Trang này
- * chỉ sửa lỗi ĐIỀU HƯỚNG (Header trỏ tới đây nhưng route không tồn tại → 404), không giả vờ đã
- * có tính năng lưu tin thật. Vẫn yêu cầu đăng nhập trước khi xem, đúng UX của khu vực /tai-khoan.
- */
 export default function TinDaLuuPage() {
   const router = useRouter();
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
+
+  const loadSaved = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch('/listings/saved/mine?pageSize=50');
+      if (res.status === 401) {
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        setListings([]);
+        return;
+      }
+      if (!res.ok) throw new Error('Không tải được danh sách tin đã lưu.');
+      const data: ListingListResponse = await res.json();
+      setListings(data.items);
+      setTotal(data.pagination.total);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -23,12 +43,120 @@ export default function TinDaLuuPage() {
     setCheckedAuth(true);
   }, [router]);
 
+  useEffect(() => {
+    if (checkedAuth) loadSaved();
+  }, [checkedAuth, loadSaved]);
+
+  async function handleUnsave(listingId: string) {
+    try {
+      const res = await authFetch(`/listings/${listingId}/save`, { method: 'POST' });
+      if (res.ok) {
+        // Cập nhật state loại bỏ tin vừa bỏ lưu
+        setListings((prev) => prev.filter((item) => item.id !== listingId));
+        setTotal((prev) => Math.max(0, prev - 1));
+      }
+    } catch {
+      alert('Không thể bỏ lưu tin đăng. Vui lòng thử lại.');
+    }
+  }
+
   if (!checkedAuth) return null;
 
   return (
-    <ComingSoonNotice
-      title="Bất động sản đã lưu"
-      description="Danh sách các tin đăng bạn đã bấm lưu để xem lại sau — cần bảng saved_listings và nút Lưu tin ở trang chi tiết (chưa triển khai)."
-    />
+    <div className="mx-auto max-w-5xl px-4 py-10">
+      <div className="flex items-center justify-between border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Bất động sản đã lưu</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Danh sách những tin đăng bất động sản bạn quan tâm và đã bấm lưu để theo dõi.
+          </p>
+        </div>
+        <span className="rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-600">
+          ❤️ {total} tin đã lưu
+        </span>
+      </div>
+
+      {loading && <p className="mt-6 text-sm text-gray-500">Đang tải danh sách tin đã lưu...</p>}
+      {error && <p className="mt-6 text-sm text-red-600">{error}</p>}
+
+      {!loading && !error && (
+        <>
+          {listings.length === 0 ? (
+            <div className="mt-8 rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+              <span className="text-4xl">🤍</span>
+              <h3 className="mt-3 text-base font-bold text-gray-800">Bạn chưa lưu bất động sản nào</h3>
+              <p className="mt-1 text-sm text-gray-500 max-w-md mx-auto">
+                Khi tìm kiếm nhà đất, hãy bấm vào nút &quot;Lưu tin&quot; trên trang chi tiết để lưu lại và xem lại bất cứ lúc nào.
+              </p>
+              <div className="mt-6 flex justify-center gap-3">
+                <Link
+                  href="/mua-ban"
+                  className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark"
+                >
+                  Khám phá Nhà đất bán
+                </Link>
+                <Link
+                  href="/thue"
+                  className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Khám phá Nhà cho thuê
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 divide-y rounded-2xl border bg-white shadow-sm">
+              {listings.map((listing) => (
+                <div key={listing.id} className="flex items-center gap-4 p-4 hover:bg-gray-50/50">
+                  <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                    {listing.images[0]?.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={listing.images[0].imageUrl} alt={listing.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-[10px] text-gray-400">Chưa có ảnh</div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/tin/${listing.slug}`}
+                      className="line-clamp-1 font-semibold text-gray-900 hover:text-brand-dark"
+                    >
+                      {listing.title}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-gray-500">{listing.addressDetail ?? listing.location.name}</p>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-gray-600">
+                      <span className="font-bold text-brand-dark text-sm">{formatPrice(listing.price)}</span>
+                      <span>•</span>
+                      <span>{listing.areaM2} m²</span>
+                      {listing.bedrooms != null && (
+                        <>
+                          <span>•</span>
+                          <span>{listing.bedrooms} PN</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <Link
+                      href={`/tin/${listing.slug}`}
+                      className="rounded-xl border border-gray-200 px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      Xem chi tiết
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleUnsave(listing.id)}
+                      className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                      title="Bỏ lưu tin này"
+                    >
+                      Bỏ lưu
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }

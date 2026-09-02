@@ -29,6 +29,7 @@ const FILTER_TABS = [
   { value: 'active', label: 'Đang hiển thị' },
   { value: 'rejected', label: 'Bị từ chối' },
   { value: 'expired', label: 'Hết hạn' },
+  { value: 'removed', label: 'Đã gỡ' },
 ];
 
 export default function QuanLyTinPage() {
@@ -73,6 +74,19 @@ export default function QuanLyTinPage() {
   useEffect(() => {
     if (checkedAuth) load(statusFilter);
   }, [checkedAuth, statusFilter, load]);
+
+  async function handleRemove(listingId: string) {
+    if (!confirm('Bạn có chắc chắn muốn gỡ tin đăng này? Tin sau khi gỡ sẽ không hiển thị công khai.')) {
+      return;
+    }
+    try {
+      const res = await authFetch(`/listings/${listingId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Không thể gỡ tin đăng.');
+      load(statusFilter);
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  }
 
   if (!checkedAuth) return null; // tránh nháy nội dung trước khi kịp kiểm tra đăng nhập + redirect
 
@@ -139,11 +153,21 @@ export default function QuanLyTinPage() {
                     <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
                       {status.label}
                     </span>
-                    {listing.status === 'active' && (
-                      <Link href={`/tin/${listing.slug}`} className="shrink-0 text-sm font-medium text-brand-dark underline">
-                        Xem tin
-                      </Link>
-                    )}
+                    <div className="flex shrink-0 items-center gap-3">
+                      {listing.status === 'active' && (
+                        <Link href={`/tin/${listing.slug}`} className="text-sm font-medium text-brand-dark hover:underline">
+                          Xem tin
+                        </Link>
+                      )}
+                      {listing.status !== 'removed' && (
+                        <button
+                          onClick={() => handleRemove(listing.id)}
+                          className="text-sm font-medium text-red-600 hover:underline"
+                        >
+                          Gỡ tin
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

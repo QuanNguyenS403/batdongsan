@@ -1,5 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -13,5 +16,43 @@ export class UsersService {
     });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng.');
     return { ...user, id: user.id.toString() };
+  }
+
+  /** Cập nhật thông tin tài khoản (fullName, avatarUrl) */
+  async updateProfile(id: bigint, dto: UpdateUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng.');
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        fullName: dto.fullName !== undefined ? dto.fullName : undefined,
+        avatarUrl: dto.avatarUrl !== undefined ? dto.avatarUrl : undefined,
+      },
+      select: { id: true, phone: true, fullName: true, avatarUrl: true, role: true, createdAt: true },
+    });
+
+    return { ...updated, id: updated.id.toString() };
+  }
+
+  /** Đổi mật khẩu cho người dùng đang đăng nhập */
+  async changePassword(id: bigint, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException('Không tìm thấy tài khoản.');
+    }
+
+    const matches = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!matches) {
+      throw new BadRequestException('Mật khẩu hiện tại không chính xác.');
+    }
+
+    const newHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash: newHash },
+    });
+
+    return { message: 'Đổi mật khẩu thành công.' };
   }
 }

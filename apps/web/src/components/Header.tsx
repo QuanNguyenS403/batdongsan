@@ -85,23 +85,38 @@ export function Header() {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-11 w-56 rounded-lg border bg-white py-2 shadow-lg">
-                <Link href="/tai-khoan/quan-ly-tin" className="block px-4 py-2 text-sm hover:bg-gray-50">
-                  Quản lý tin đăng
-                </Link>
-                <Link href="/tai-khoan/tin-da-luu" className="block px-4 py-2 text-sm hover:bg-gray-50">
-                  BĐS đã lưu
-                </Link>
-                <Link href="/tai-khoan/thong-tin" className="block px-4 py-2 text-sm hover:bg-gray-50">
-                  Thông tin tài khoản
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50"
-                >
-                  Đăng xuất
-                </button>
-              </div>
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-11 z-50 w-56 rounded-xl border bg-white py-2 shadow-lg">
+                  <Link
+                    href="/tai-khoan/quan-ly-tin"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-2 text-sm hover:bg-gray-50"
+                  >
+                    Quản lý tin đăng
+                  </Link>
+                  <Link
+                    href="/tai-khoan/tin-da-luu"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-2 text-sm hover:bg-gray-50"
+                  >
+                    BĐS đã lưu
+                  </Link>
+                  <Link
+                    href="/tai-khoan/thong-tin"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-2 text-sm hover:bg-gray-50"
+                  >
+                    Thông tin tài khoản
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50"
+                  >
+                    Đăng xuất
+                  </button>
+                </div>
+              </>
             )}
           </div>
         ) : (

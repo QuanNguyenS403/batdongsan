@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { fetchListings } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination } from '@/components/Pagination';
+import { SearchFilterBar } from '@/components/SearchFilterBar';
 
 export const metadata: Metadata = {
   title: 'Nhà đất bán',
@@ -20,6 +21,8 @@ export default async function MuaBanPage({ searchParams }: Props) {
     propertyType: searchParams.propertyType,
     priceMin: searchParams.priceMin,
     priceMax: searchParams.priceMax,
+    areaMin: searchParams.areaMin,
+    areaMax: searchParams.areaMax,
     page: searchParams.page ?? '1',
   }).catch(() => ({ items: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }));
 
@@ -29,6 +32,10 @@ export default async function MuaBanPage({ searchParams }: Props) {
         Nhà đất bán {searchParams.keyword ? `— "${searchParams.keyword}"` : 'trên toàn quốc'}
       </h1>
       <p className="mt-1 text-sm text-gray-500">{pagination.total.toLocaleString('vi-VN')} tin đăng phù hợp</p>
+
+      <div className="mt-6">
+        <SearchFilterBar basePath="/mua-ban" transactionType="sale" initialParams={searchParams} />
+      </div>
 
       {items.length === 0 ? (
         <p className="mt-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">

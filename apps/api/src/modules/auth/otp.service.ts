@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 
 interface OtpRecord {
   code: string;
@@ -34,7 +34,10 @@ export class OtpService {
     const existing = this.store.get(phone);
 
     if (existing && now - existing.windowStart < 60 * 60 * 1000 && existing.sentCount >= this.MAX_SENDS_PER_HOUR) {
-      throw new Error('Bạn đã yêu cầu OTP quá nhiều lần trong 1 giờ. Vui lòng thử lại sau.');
+      // BUG ĐÃ SỬA (audit 02/09/2026): ném generic Error sẽ bị HttpExceptionFilter bắt và biến
+      // thành 500 Internal Server Error với message chung chung, che giấu lý do thật. Phải ném
+      // HttpException với status TOO_MANY_REQUESTS (429) để client hiển thị đúng thông báo.
+      throw new HttpException('Bạn đã yêu cầu OTP quá nhiều lần trong 1 giờ. Vui lòng thử lại sau.', HttpStatus.TOO_MANY_REQUESTS);
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();

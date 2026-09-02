@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { fetchListingBySlug, formatPrice } from '@/lib/api';
 import { RevealPhoneButton } from './RevealPhoneButton';
+import { SaveListingButton } from './SaveListingButton';
+import { LoanCalculatorWidget } from '@/components/LoanCalculatorWidget';
+import { ReportListingModal } from '@/components/ReportListingModal';
 
 interface Props {
   params: { slug: string };
@@ -65,9 +68,19 @@ export default async function ListingDetailPage({ params }: Props) {
             </div>
           )}
 
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">{listing.title}</h1>
-          <p className="mt-1 text-gray-500">{listing.addressDetail ?? listing.location.name}</p>
-          <p className="mt-3 text-3xl font-bold text-brand-dark">{formatPrice(listing.price)}</p>
+          <div className="mt-6 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{listing.title}</h1>
+              <p className="mt-1 text-gray-500">{listing.addressDetail ?? listing.location.name}</p>
+              <p className="mt-3 text-3xl font-bold text-brand-dark">
+                {formatPrice(listing.price)}
+                {listing.transactionType === 'rent' && <span className="text-base font-normal text-gray-500"> / tháng</span>}
+              </p>
+            </div>
+            <div className="shrink-0">
+              <SaveListingButton listingId={listing.id} />
+            </div>
+          </div>
 
           {/* Thông tin chính */}
           <div className="mt-6 grid grid-cols-2 gap-4 rounded-xl border bg-white p-5 sm:grid-cols-3">
@@ -88,14 +101,22 @@ export default async function ListingDetailPage({ params }: Props) {
             </div>
           )}
 
-          <ReportForm listingId={listing.id} />
+          {/* Công cụ ước tính vay ngân hàng nếu là tin bán */}
+          {listing.transactionType === 'sale' && (
+            <LoanCalculatorWidget initialPrice={listing.price} />
+          )}
+
+          {/* Form báo cáo vi phạm thật */}
+          <ReportListingModal listingId={listing.id} />
         </div>
 
         {/* Sidebar liên hệ */}
         <aside>
           <div className="sticky top-20 rounded-xl border bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-gray-200" />
+              <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500">
+                {(listing.owner.fullName ?? 'U').charAt(0).toUpperCase()}
+              </div>
               <div>
                 <p className="font-semibold text-gray-900">{listing.owner.fullName ?? 'Người đăng tin'}</p>
                 <p className="text-xs text-gray-500">
@@ -124,16 +145,5 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-gray-500">{label}</p>
       <p className="font-medium text-gray-900">{value}</p>
     </div>
-  );
-}
-
-function ReportForm({ listingId }: { listingId: string }) {
-  return (
-    <details className="mt-4 text-sm text-gray-500">
-      <summary className="cursor-pointer hover:text-red-600">🚩 Báo cáo tin vi phạm</summary>
-      <p className="mt-2">
-        Chức năng báo cáo gọi tới <code>POST /listings/{listingId}/report</code> — cần nối form thật ở bản hoàn thiện.
-      </p>
-    </details>
   );
 }

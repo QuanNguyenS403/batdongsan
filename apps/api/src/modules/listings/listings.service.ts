@@ -203,7 +203,8 @@ export class ListingsService {
       data: {
         ownerId,
         locationId: dto.locationId,
-        projectId: dto.projectId,
+        // Ép kiểu BigInt cho projectId nếu có giá trị — tránh lỗi runtime của Prisma khi nhận number từ DTO
+        projectId: dto.projectId ? BigInt(dto.projectId) : undefined,
         transactionType: dto.transactionType,
         propertyType: dto.propertyType,
         title: dto.title,
@@ -234,12 +235,20 @@ export class ListingsService {
   async update(id: bigint, requester: { id: bigint; role: string }, dto: UpdateListingDto) {
     const listing = await this.assertOwnership(id, requester);
 
+    const updateData: Prisma.ListingUncheckedUpdateInput = {
+      ...dto,
+      projectId: dto.projectId !== undefined ? (dto.projectId ? BigInt(dto.projectId) : null) : undefined,
+      price: dto.price !== undefined ? BigInt(dto.price) : undefined,
+    };
+
+    // Khi người dùng đổi tiêu đề tin, tự động làm mới slug theo chuẩn "...-id{id}" để URL đồng bộ
+    if (dto.title) {
+      updateData.slug = `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-id${listing.id}`;
+    }
+
     const updated = await this.prisma.listing.update({
       where: { id: listing.id },
-      data: {
-        ...dto,
-        price: dto.price !== undefined ? BigInt(dto.price) : undefined,
-      },
+      data: updateData,
       select: PUBLIC_LISTING_SELECT,
     });
     return serialize(updated);
@@ -264,12 +273,6 @@ export class ListingsService {
       data: imageUrls.map((url) => ({ listingId: id, imageUrl: url, sortOrder: nextOrder++ })),
     });
 
-    // BUG ĐÃ SỬA (audit 01/09/2026): trước đây gọi `this.findOne(\`id${id}\`)` — chuỗi "id42"
-    // không khớp CẢ HAI regex trong findOne() (regex 1 cần dấu "-" trước "id", regex 2 cần
-    // toàn chuỗi số thuần) nên luôn throw NotFoundException ở đây, dù ảnh đã lưu DB thành công.
-    // Hệ quả: client luôn nhận lỗi 404 ngay sau khi upload ảnh xong, dù dữ liệu đã đúng.
-    // Dùng findOneForOwner (theo ID số + đã assertOwnership sẵn) thay vì findOne công khai —
-    // còn vì findOne giờ CHỈ trả tin active, trong khi tin vừa đăng ảnh thường vẫn đang pending.
     return this.findOneForOwner(id, requester);
   }
 
@@ -278,18 +281,22 @@ export class ListingsService {
       where: { id },
       include: { owner: { select: { phone: true } } },
     });
-    // Đồng bộ với findOne() — chỉ tin `active` mới được xem là "tồn tại công khai". Trước đây
-    // thiếu điều kiện này nghĩa là ai từng biết ID của 1 tin (kể cả tin đã gỡ/bị từ chối/chưa
-    // duyệt) vẫn có thể lấy được số điện thoại chủ tin qua endpoint này, dù trang chi tiết
-    // tương ứng đã báo "không tìm thấy".
     if (!listing || listing.status !== ListingStatus.active) {
       throw new NotFoundException('Không tìm thấy tin đăng.');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.phoneRevealLog.create({ data: { listingId: id, userId: requesterId } }),
-      this.prisma.listing.update({ where: { id }, data: { revealPhoneCount: { increment: 1 } } }),
-    ]);
+    // CHỐNG SPAM SỐ LIỆU (audit 02/09/2026): kiểm tra nếu user này đã bấm xem SĐT trước đó rồi
+    // thì không ghi thêm dòng log trùng lặp và không tăng ảo revealPhoneCount.
+    const alreadyRevealed = await this.prisma.phoneRevealLog.findFirst({
+      where: { listingId: id, userId: requesterId },
+    });
+
+    if (!alreadyRevealed) {
+      await this.prisma.$transaction([
+        this.prisma.phoneRevealLog.create({ data: { listingId: id, userId: requesterId } }),
+        this.prisma.listing.update({ where: { id }, data: { revealPhoneCount: { increment: 1 } } }),
+      ]);
+    }
 
     return { phone: listing.owner.phone };
   }
@@ -304,7 +311,68 @@ export class ListingsService {
     return { message: 'Cảm ơn bạn đã báo cáo. Đội ngũ kiểm duyệt sẽ xem xét sớm.' };
   }
 
-  private async assertOwnership(id: bigint, requester: { id: bigint; role: string }) {
+  /**
+   * Toggle lưu/bỏ lưu BĐS yêu thích (SavedListing) — hoàn thiện tính năng mục 16 README.
+   */
+  async toggleSave(listingId: bigint, userId: bigint) {
+    const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
+    if (!listing || listing.status !== ListingStatus.active) {
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt.');
+    }
+
+    const existing = await this.prisma.savedListing.findUnique({
+      where: { userId_listingId: { userId, listingId } },
+    });
+
+    if (existing) {
+      await this.prisma.savedListing.delete({
+        where: { userId_listingId: { userId, listingId } },
+      });
+      return { saved: false, message: 'Đã bỏ lưu tin đăng.' };
+    } else {
+      await this.prisma.savedListing.create({
+        data: { userId, listingId },
+      });
+      return { saved: true, message: 'Đã lưu tin đăng vào danh sách yêu thích.' };
+    }
+  }
+
+  async isSaved(listingId: bigint, userId: bigint) {
+    const existing = await this.prisma.savedListing.findUnique({
+      where: { userId_listingId: { userId, listingId } },
+    });
+    return { saved: !!existing };
+  }
+
+  async findSaved(userId: bigint, query: { page?: number; pageSize?: number }) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+
+    const [savedItems, total] = await this.prisma.$transaction([
+      this.prisma.savedListing.findMany({
+        where: { userId, listing: { status: ListingStatus.active } },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          listing: {
+            select: PUBLIC_LISTING_SELECT,
+          },
+        },
+      }),
+      this.prisma.savedListing.count({
+        where: { userId, listing: { status: ListingStatus.active } },
+      }),
+    ]);
+
+    return {
+      items: savedItems.map((s: { listing: any }) => serialize(s.listing)),
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    };
+  }
+
+  /** Public để Controller kiểm tra quyền trước khi ghi file upload vào đĩa */
+  async assertOwnership(id: bigint, requester: { id: bigint; role: string }) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
     if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
     if (listing.ownerId !== requester.id && requester.role !== 'admin') {

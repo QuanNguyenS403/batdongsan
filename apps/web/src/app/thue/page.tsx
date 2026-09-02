@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { fetchListings } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination } from '@/components/Pagination';
+import { SearchFilterBar } from '@/components/SearchFilterBar';
 
 export const metadata: Metadata = {
   title: 'Nhà đất cho thuê',
@@ -18,13 +19,23 @@ export default async function ThuePage({ searchParams }: Props) {
     keyword: searchParams.keyword,
     locationSlug: searchParams.locationSlug,
     propertyType: searchParams.propertyType,
+    priceMin: searchParams.priceMin,
+    priceMax: searchParams.priceMax,
+    areaMin: searchParams.areaMin,
+    areaMax: searchParams.areaMax,
     page: searchParams.page ?? '1',
   }).catch(() => ({ items: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900">Nhà đất cho thuê trên toàn quốc</h1>
+      <h1 className="text-2xl font-bold text-gray-900">
+        Nhà đất cho thuê {searchParams.keyword ? `— "${searchParams.keyword}"` : 'trên toàn quốc'}
+      </h1>
       <p className="mt-1 text-sm text-gray-500">{pagination.total.toLocaleString('vi-VN')} tin đăng phù hợp</p>
+
+      <div className="mt-6">
+        <SearchFilterBar basePath="/thue" transactionType="rent" initialParams={searchParams} />
+      </div>
 
       {items.length === 0 ? (
         <p className="mt-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">

@@ -56,6 +56,7 @@ export function fetchListingBySlug(slug: string) {
 
 export function formatPrice(price: string | number): string {
   const value = typeof price === 'string' ? Number(price) : price;
+  if (!value || value <= 0) return 'Thoả thuận';
   if (value >= 1_000_000_000) {
     const ty = Math.floor(value / 1_000_000_000);
     const trieu = Math.round((value % 1_000_000_000) / 1_000_000);
