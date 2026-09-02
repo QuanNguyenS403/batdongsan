@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+import Link from 'next/link';
+import { authFetch, isLoggedIn } from '@/lib/auth-client';
 
 /**
  * Trang đăng tin — phiên bản MVP 1 bước (form đơn), CHƯA phải wizard nhiều bước
@@ -20,8 +20,7 @@ export default function DangTinPage() {
     setError(null);
     setMessage(null);
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (!token) {
+    if (!isLoggedIn()) {
       setError('Vui lòng đăng nhập trước khi đăng tin.');
       return;
     }
@@ -43,15 +42,19 @@ export default function DangTinPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/listings`, {
+      const res = await authFetch('/listings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      if (res.status === 401) {
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        return;
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.message?.toString() ?? 'Đăng tin thất bại.');
 
-      setMessage('Đăng tin thành công! Tin của bạn đang chờ duyệt trước khi hiển thị công khai.');
+      setMessage('success');
       (e.target as HTMLFormElement).reset();
     } catch (err) {
       setError((err as Error).message);
@@ -111,7 +114,16 @@ export default function DangTinPage() {
           {loading ? 'Đang đăng...' : 'Đăng tin'}
         </button>
 
-        {message && <p className="text-sm text-green-700">{message}</p>}
+        {message === 'success' && (
+          <p className="text-sm text-green-700">
+            Đăng tin thành công! Tin của bạn đang <b>chờ duyệt</b> trước khi hiển thị công khai. Theo dõi trạng thái
+            tại{' '}
+            <Link href="/tai-khoan/quan-ly-tin" className="font-semibold underline">
+              trang Quản lý tin
+            </Link>
+            .
+          </p>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </form>
     </div>

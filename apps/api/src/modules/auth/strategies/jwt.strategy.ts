@@ -15,7 +15,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET ?? 'changeme_access',
+      // Không còn fallback mặc định — assertRequiredSecrets() trong main.ts (chạy TRƯỚC
+      // NestFactory.create(), tức trước khi constructor này được khởi tạo qua DI) đã đảm bảo
+      // biến này luôn được thiết lập hợp lệ. Phải dùng CHÍNH XÁC secret giống lúc ký token
+      // trong auth.service.ts#issueTokens, nếu không mọi token hợp lệ sẽ bị từ chối.
+      secretOrKey: process.env.JWT_ACCESS_SECRET as string,
     });
   }
 

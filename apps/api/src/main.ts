@@ -4,8 +4,13 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { assertRequiredSecrets } from './common/config/assert-env';
 
 async function bootstrap() {
+  // BẮT BUỘC chạy đầu tiên, trước cả NestFactory.create() — xem giải thích đầy đủ về lỗ hổng
+  // JWT secret mặc định (đã fix trong đợt audit 01/09/2026) tại common/config/assert-env.ts.
+  assertRequiredSecrets();
+
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({

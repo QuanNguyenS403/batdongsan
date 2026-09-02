@@ -3,14 +3,13 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { authFetch, clearTokens, getAccessToken } from '@/lib/auth-client';
 
 interface CurrentUser {
   id: string;
   fullName: string | null;
   phone: string;
 }
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 /**
  * TRƯỚC ĐÂY: Header là Server Component tĩnh, luôn hiển thị "Đăng nhập" + "Đăng tin" bất kể
@@ -25,28 +24,26 @@ export function Header() {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
+    if (!getAccessToken()) {
       setChecked(true);
       return;
     }
 
-    fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    // authFetch tự thử /auth/refresh khi accessToken hết hạn (15 phút) trước khi coi là chưa
+    // đăng nhập — trước đây gọi fetch() thẳng, khiến bất kỳ ai mở web quá 15 phút đều bị Header
+    // âm thầm xoá token và hiện lại nút "Đăng nhập" dù refreshToken (hạn 7 ngày) vẫn còn dùng được.
+    authFetch('/auth/me')
       .then((res) => {
         if (!res.ok) throw new Error('unauthorized');
         return res.json();
       })
       .then((data) => setUser(data))
-      .catch(() => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-      })
+      .catch(() => clearTokens())
       .finally(() => setChecked(true));
   }, []);
 
   function handleLogout() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearTokens();
     setUser(null);
     setMenuOpen(false);
     router.push('/');

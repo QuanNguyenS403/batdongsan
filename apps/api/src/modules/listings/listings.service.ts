@@ -122,7 +122,17 @@ export class ListingsService {
     return allIds;
   }
 
-  /** Chấp nhận cả slug đầy đủ ("...-id123") lẫn ID số thuần. */
+  /**
+   * Chấp nhận cả slug đầy đủ ("...-id123") lẫn ID số thuần.
+   *
+   * BẢO MẬT — PHÁT HIỆN QUA AUDIT ĐỘC LẬP (01/09/2026): trước đây hàm này chỉ loại trừ status
+   * `removed`, nghĩa là tin ở trạng thái `pending` (CHƯA được admin duyệt) hoặc `rejected`
+   * (đã bị từ chối) vẫn hiển thị công khai cho BẤT KỲ ai biết/đoán được ID — mà ID là số
+   * nguyên tăng dần nên hoàn toàn có thể duyệt tuần tự (1, 2, 3, 4...). Điều này vô hiệu hoá
+   * hoàn toàn mục đích của hàng đợi kiểm duyệt: nội dung spam/vi phạm/chưa kiểm tra vẫn lộ ra
+   * ngoài trước khi admin kịp xem. Sửa: endpoint công khai CHỈ trả tin `active`; chủ tin muốn
+   * xem tin của chính mình (dù đang pending/rejected) dùng `findOneForOwner` hoặc `findMine`.
+   */
   async findOne(idOrSlug: string) {
     const match = idOrSlug.match(/-id(\d+)$/) ?? idOrSlug.match(/^(\d+)$/);
     if (!match) throw new NotFoundException('Đường dẫn tin đăng không hợp lệ.');
@@ -132,14 +142,60 @@ export class ListingsService {
       where: { id },
       select: PUBLIC_LISTING_SELECT,
     });
-    if (!listing || listing.status === ListingStatus.removed) {
-      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin đã bị gỡ.');
+    // Cố tình trả cùng 1 thông báo lỗi cho "không tồn tại" và "tồn tại nhưng chưa active" —
+    // không phân biệt 2 trường hợp để không lộ thông tin rằng 1 ID nào đó có tồn tại hay không.
+    if (!listing || listing.status !== ListingStatus.active) {
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã bị gỡ.');
     }
 
     // Tăng view count (fire-and-forget, không chặn response)
     this.prisma.listing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => undefined);
 
     return serialize(listing);
+  }
+
+  /**
+   * Lấy 1 tin đăng theo ID số thuần cho CHÍNH CHỦ (hoặc admin) — trả về bất kể trạng thái
+   * (pending/active/rejected/expired/removed), dùng cho các thao tác nội bộ sau khi đã xác
+   * thực quyền sở hữu (addImages, và trang "Quản lý tin"), khác với findOne() công khai ở trên
+   * vốn chỉ phục vụ khách truy cập ẩn danh và chỉ trả tin active.
+   */
+  async findOneForOwner(id: bigint, requester: { id: bigint; role: string }) {
+    await this.assertOwnership(id, requester);
+    const listing = await this.prisma.listing.findUnique({ where: { id }, select: PUBLIC_LISTING_SELECT });
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    return serialize(listing);
+  }
+
+  /**
+   * Danh sách tin đăng của CHÍNH người gọi API, mọi trạng thái — phục vụ trang "Quản lý tin
+   * bất động sản" (trước đây HOÀN TOÀN CHƯA CÓ endpoint này: người đăng tin xong không có cách
+   * nào trong app để xem lại tin của mình, phải nhờ admin vào Prisma Studio tra thủ công — phá
+   * vỡ luồng "Đăng tin → Quản lý tin" vốn là yêu cầu MVP cốt lõi đã ghi trong CLAUDE.md/README.md).
+   */
+  async findMine(requesterId: bigint, query: { page?: number; pageSize?: number; status?: ListingStatus }) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const where: Prisma.ListingWhereInput = {
+      ownerId: requesterId,
+      ...(query.status ? { status: query.status } : {}),
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.listing.findMany({
+        where,
+        select: PUBLIC_LISTING_SELECT,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.listing.count({ where }),
+    ]);
+
+    return {
+      items: items.map(serialize),
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    };
   }
 
   async create(ownerId: bigint, dto: CreateListingDto) {
@@ -208,7 +264,13 @@ export class ListingsService {
       data: imageUrls.map((url) => ({ listingId: id, imageUrl: url, sortOrder: nextOrder++ })),
     });
 
-    return this.findOne(`id${id}`);
+    // BUG ĐÃ SỬA (audit 01/09/2026): trước đây gọi `this.findOne(\`id${id}\`)` — chuỗi "id42"
+    // không khớp CẢ HAI regex trong findOne() (regex 1 cần dấu "-" trước "id", regex 2 cần
+    // toàn chuỗi số thuần) nên luôn throw NotFoundException ở đây, dù ảnh đã lưu DB thành công.
+    // Hệ quả: client luôn nhận lỗi 404 ngay sau khi upload ảnh xong, dù dữ liệu đã đúng.
+    // Dùng findOneForOwner (theo ID số + đã assertOwnership sẵn) thay vì findOne công khai —
+    // còn vì findOne giờ CHỈ trả tin active, trong khi tin vừa đăng ảnh thường vẫn đang pending.
+    return this.findOneForOwner(id, requester);
   }
 
   async revealPhone(id: bigint, requesterId: bigint) {
@@ -216,7 +278,13 @@ export class ListingsService {
       where: { id },
       include: { owner: { select: { phone: true } } },
     });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    // Đồng bộ với findOne() — chỉ tin `active` mới được xem là "tồn tại công khai". Trước đây
+    // thiếu điều kiện này nghĩa là ai từng biết ID của 1 tin (kể cả tin đã gỡ/bị từ chối/chưa
+    // duyệt) vẫn có thể lấy được số điện thoại chủ tin qua endpoint này, dù trang chi tiết
+    // tương ứng đã báo "không tìm thấy".
+    if (!listing || listing.status !== ListingStatus.active) {
+      throw new NotFoundException('Không tìm thấy tin đăng.');
+    }
 
     await this.prisma.$transaction([
       this.prisma.phoneRevealLog.create({ data: { listingId: id, userId: requesterId } }),

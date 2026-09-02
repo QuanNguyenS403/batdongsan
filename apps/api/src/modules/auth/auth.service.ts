@@ -75,8 +75,11 @@ export class AuthService {
   async refresh(dto: RefreshTokenDto) {
     let payload: { sub: string; phone: string; role: string };
     try {
+      // Không còn fallback "?? 'changeme_refresh'" — assertRequiredSecrets() trong main.ts đã
+      // đảm bảo biến này luôn tồn tại và không phải giá trị placeholder trước khi app khởi động,
+      // nên ở đây chỉ cần đọc thẳng, tránh mọi khả năng vô tình dùng lại secret đoán trước được.
       payload = this.jwtService.verify(dto.refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET ?? 'changeme_refresh',
+        secret: process.env.JWT_REFRESH_SECRET as string,
       });
     } catch {
       throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.');
@@ -111,11 +114,11 @@ export class AuthService {
     const payload = { sub: user.id.toString(), phone: user.phone, role: user.role };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_ACCESS_SECRET ?? 'changeme_access',
+      secret: process.env.JWT_ACCESS_SECRET as string,
       expiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
     });
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET ?? 'changeme_refresh',
+      secret: process.env.JWT_REFRESH_SECRET as string,
       expiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
     });
 
