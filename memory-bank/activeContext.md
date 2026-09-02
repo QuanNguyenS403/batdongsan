@@ -1,17 +1,13 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc dở dang:** Không có — vừa hoàn thành 2 việc: (1) đợt audit nghiêm ngặt lần 2 (12 lỗi thật
-đã sửa, xem `TRANG-THAI-TRIEN-KHAI.md`), (2) chuyển đổi bộ tài liệu vận hành từ Cline sang AI
-agent chạy trên Gemini 3.7 Flash — `.clinerules/` đã xoá, thay bằng `GEMINI.md` ở gốc repo (đúng
-quy ước file ngữ cảnh dự án của hệ sinh thái Gemini, vai trò tương đương `CLAUDE.md`). Toàn bộ
-`skills/*.md` đã rà lại, không còn tham chiếu "Cline" nào ngoài 1 dòng ghi chú lịch sử trong
-`GEMINI.md`.
+**Việc vừa hoàn thành (02/09/2026):**
+1. Nhận bàn giao và tích hợp hoàn chỉnh 6 bản sửa lỗi từ Claude (#13-#18 trong `audit-fixes-2026-09-01.zip`) vào nhánh riêng `audit/mogi-completion-2026-09-02`.
+2. Kiểm định sâu độc lập và phát hiện, khắc phục triệt để 6 lỗi bảo mật & runtime (#19-#24).
+3. Hoàn thiện 8 tính năng cốt lõi và trải nghiệm người dùng theo chuẩn Mogi.vn (#25-#32): SearchFilterBar, Upload nhiều ảnh và chọn địa danh ở trang đăng tin, Gỡ tin đăng ở Quản lý tin, Form báo cáo vi phạm thật, BĐS đã lưu (SavedListing) thật, Công cụ tính vay trả góp mua nhà, Chỉnh sửa hồ sơ & đổi mật khẩu, Luồng Quên mật khẩu.
+4. Tự xác minh bằng build thật: `tsc --noEmit` API 0 lỗi, `next build` 16/16 routes 0 lỗi.
 
 **Việc tiếp theo đề xuất (chưa bắt đầu):**
-1. Chạy lại `pnpm install` trên máy thật để nhận 2 dependency mới (`dotenv`, `dotenv-cli`) từ
-   đợt audit lần 2, rồi test lại toàn bộ theo checklist QA đã đưa cho người dùng.
-2. Khi tiếp tục phát triển bằng agent Gemini, nạp `GEMINI.md` + `CLAUDE.md` + `README.md` +
-   `TRANG-THAI-TRIEN-KHAI.md` vào ngữ cảnh trước, sau đó theo cơ chế nhận lệnh mô tả trong
-   `skills/00-muc-luc-va-quy-trinh.md`.
-3. Nhận dữ liệu BĐS thật từ khách hàng → chạy `pnpm db:import-listings`.
-4. Tích hợp Meilisearch khi số lượng tin đủ lớn để cần tìm kiếm nâng cao.
+1. Merge nhánh `audit/mogi-completion-2026-09-02` vào `main` sau khi Quan kiểm tra.
+2. Nhận dữ liệu BĐS thật từ khách hàng → chạy `pnpm db:import-listings`.
+3. Tích hợp Meilisearch khi số lượng tin đủ lớn để cần tìm kiếm nâng cao (Giai đoạn 2-3).
+4. Tích hợp cổng thanh toán và các gói thành viên theo roadmap.

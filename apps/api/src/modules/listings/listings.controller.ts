@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -18,6 +19,7 @@ import { UploadsService } from '../uploads/uploads.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
+import { QueryMyListingsDto } from './dto/query-my-listings.dto';
 import { ReportListingDto } from './dto/report-listing.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -43,6 +45,36 @@ export class ListingsController {
   @Get()
   findAll(@Query() query: QueryListingsDto) {
     return this.listingsService.findAll(query);
+  }
+
+  /**
+   * Danh sách tin đăng của CHÍNH người gọi API (mọi trạng thái) — phục vụ trang "Quản lý tin".
+   * PHÁT HIỆN QUA AUDIT (01/09/2026): endpoint này TRƯỚC ĐÂY HOÀN TOÀN CHƯA TỒN TẠI — người
+   * dùng đăng tin xong không có cách nào trong app để xem lại tin của mình, phải nhờ admin
+   * vào Prisma Studio tra thủ công. Đây là thiếu sót phá vỡ luồng lõi "Đăng tin → Quản lý tin".
+   *
+   * QUAN TRỌNG VỀ THỨ TỰ ROUTE: route này PHẢI khai báo TRƯỚC `@Get(':idOrSlug')` bên dưới.
+   * NestJS khớp route theo thứ tự khai báo trong class — nếu đặt SAU, mọi request tới
+   * "GET /listings/mine" sẽ bị route ":idOrSlug" khớp trước, biến "mine" thành giá trị idOrSlug
+   * và không bao giờ tới được handler đúng (lỗi kinh điển khi thêm route tĩnh cạnh route động).
+   */
+  @ApiBearerAuth()
+  @Get('mine')
+  findMine(@CurrentUser() user: AuthUser, @Query() query: QueryMyListingsDto) {
+    return this.listingsService.findMine(user.id, query);
+  }
+
+  /**
+   * Danh sách BĐS đã lưu (SavedListing) của người dùng hiện tại — hoàn thiện mục 16 README.
+   * Cần khai báo TRƯỚC :idOrSlug để không bị coi là param động.
+   */
+  @ApiBearerAuth()
+  @Get('saved/mine')
+  findSaved(@CurrentUser() user: AuthUser, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.listingsService.findSaved(user.id, {
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Public()
@@ -92,8 +124,27 @@ export class ListingsController {
     @Param('id', ParseBigIntPipe) id: bigint,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Vui lòng chọn ít nhất 1 ảnh để tải lên.');
+    }
+    // BẢO MẬT (audit 02/09/2026): kiểm tra quyền sở hữu TRƯỚC KHI ghi file vào đĩa server.
+    // Trước đây uploadsService.saveListingImages chạy trước, ghi hàng chục file và convert webp
+    // vào ổ cứng rồi mới gọi assertOwnership, mở ra lỗ hổng làm tràn đĩa server (DoS).
+    await this.listingsService.assertOwnership(id, user);
     const urls = await this.uploadsService.saveListingImages(id.toString(), files);
     return this.listingsService.addImages(id, user, urls);
+  }
+
+  @ApiBearerAuth()
+  @Post(':id/save')
+  toggleSave(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.listingsService.toggleSave(id, user.id);
+  }
+
+  @ApiBearerAuth()
+  @Get(':id/is-saved')
+  isSaved(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.listingsService.isSaved(id, user.id);
   }
 
   @ApiBearerAuth()

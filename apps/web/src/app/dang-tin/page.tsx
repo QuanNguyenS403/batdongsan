@@ -1,36 +1,56 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { authFetch, isLoggedIn } from '@/lib/auth-client';
+
+interface LocationItem {
+  id: number;
+  name: string;
+  level: string;
+  slug: string;
+  parentId: number | null;
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
-/**
- * Trang đăng tin — phiên bản MVP 1 bước (form đơn), CHƯA phải wizard nhiều bước
- * như mô tả trong CLAUDE.md § 1.10. Bản hoàn thiện nên tách thành nhiều bước
- * (chọn loại hình → địa chỉ → chi tiết → ảnh → xem lại) để giảm bounce rate,
- * nhưng cấu trúc dữ liệu gửi lên API (CreateListingDto) đã đúng chuẩn cuối cùng.
- */
 export default function DangTinPage() {
+  const [locations, setLocations] = useState<LocationItem[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Tải danh sách địa danh để người dùng chọn dropdown thay vì phải tự gõ ID số thô
+    fetch(`${API_URL}/locations`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setLocations(data))
+      .catch(() => setLocations([]));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setMessage(null);
+    setUploadStatus(null);
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (!token) {
+    if (!isLoggedIn()) {
       setError('Vui lòng đăng nhập trước khi đăng tin.');
       return;
     }
 
     const form = new FormData(e.currentTarget);
+    const locationIdValue = form.get('locationId');
+    if (!locationIdValue) {
+      setError('Vui lòng chọn khu vực bất động sản.');
+      return;
+    }
+
     const payload = {
       transactionType: form.get('transactionType'),
       propertyType: form.get('propertyType'),
-      locationId: Number(form.get('locationId')),
+      locationId: Number(locationIdValue),
       title: form.get('title'),
       description: form.get('description'),
       price: Number(form.get('price')),
@@ -41,17 +61,49 @@ export default function DangTinPage() {
       addressDetail: form.get('addressDetail') || undefined,
     };
 
+    const imageFiles = form.getAll('images') as File[];
+    const validImageFiles = imageFiles.filter((f) => f && f.size > 0);
+
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/listings`, {
+      // 1. Tạo tin đăng
+      const res = await authFetch('/listings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      if (res.status === 401) {
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message?.toString() ?? 'Đăng tin thất bại.');
 
-      setMessage('Đăng tin thành công! Tin của bạn đang chờ duyệt trước khi hiển thị công khai.');
+      // 2. Upload ảnh đính kèm nếu có
+      if (validImageFiles.length > 0) {
+        setUploadStatus(`Đang tải lên ${validImageFiles.length} hình ảnh...`);
+        const imgFormData = new FormData();
+        validImageFiles.forEach((file) => {
+          imgFormData.append('files', file);
+        });
+
+        const imgRes = await authFetch(`/listings/${data.id}/images`, {
+          method: 'POST',
+          body: imgFormData,
+          // Không set Content-Type header để browser tự sinh multipart/form-data boundary
+        });
+
+        if (!imgRes.ok) {
+          const imgErr = await imgRes.json();
+          setUploadStatus(`Tin đã tạo nhưng không upload được ảnh: ${imgErr.message ?? 'Lỗi không xác định'}`);
+        } else {
+          setUploadStatus(`Đã tải lên thành công ${validImageFiles.length} ảnh.`);
+        }
+      }
+
+      setMessage('success');
       (e.target as HTMLFormElement).reset();
     } catch (err) {
       setError((err as Error).message);
@@ -67,52 +119,162 @@ export default function DangTinPage() {
         Tin đăng sẽ ở trạng thái <b>chờ duyệt</b> cho tới khi quản trị viên xác nhận (xem module Admin).
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-xl border bg-white p-6">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-xl border bg-white p-6 shadow-sm">
         <div className="grid grid-cols-2 gap-4">
-          <select name="transactionType" required className="rounded-lg border px-3 py-2 text-sm">
-            <option value="sale">Bán</option>
-            <option value="rent">Cho thuê</option>
-          </select>
-          <select name="propertyType" required className="rounded-lg border px-3 py-2 text-sm">
-            <option value="can-ho">Căn hộ</option>
-            <option value="nha-nguyen-can">Nhà nguyên căn</option>
-            <option value="dat">Đất</option>
-            <option value="shophouse">Shophouse</option>
-            <option value="phong-tro">Phòng trọ</option>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600">Hình thức giao dịch *</label>
+            <select name="transactionType" required className="w-full rounded-lg border px-3 py-2 text-sm">
+              <option value="sale">Bán</option>
+              <option value="rent">Cho thuê</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600">Loại bất động sản *</label>
+            <select name="propertyType" required className="w-full rounded-lg border px-3 py-2 text-sm">
+              <option value="can-ho">Căn hộ / Chung cư</option>
+              <option value="nha-nguyen-can">Nhà nguyên căn / Nhà phố</option>
+              <option value="dat">Đất nền</option>
+              <option value="shophouse">Shophouse</option>
+              <option value="phong-tro">Phòng trọ</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Chọn khu vực địa danh (từ API /locations thay cho ô input số thô) */}
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-gray-600">Khu vực (Tỉnh/Quận/Phường) *</label>
+          <select name="locationId" required className="w-full rounded-lg border px-3 py-2 text-sm">
+            <option value="">-- Chọn khu vực --</option>
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.level === 'province' ? `📍 ${loc.name}` : loc.level === 'district' ? `  └─ ${loc.name}` : `     └─ ${loc.name}`}
+              </option>
+            ))}
           </select>
         </div>
 
-        <input name="locationId" required type="number" placeholder="Mã khu vực (locationId — GET /locations)" className="w-full rounded-lg border px-3 py-2 text-sm" />
-        <input name="title" required minLength={10} placeholder="Tiêu đề tin đăng" className="w-full rounded-lg border px-3 py-2 text-sm" />
-        <textarea name="description" placeholder="Mô tả chi tiết" rows={4} className="w-full rounded-lg border px-3 py-2 text-sm" />
-
-        <div className="grid grid-cols-2 gap-4">
-          <input name="price" required type="number" placeholder="Giá (VNĐ)" className="rounded-lg border px-3 py-2 text-sm" />
-          <input name="areaM2" required type="number" step="0.1" placeholder="Diện tích (m²)" className="rounded-lg border px-3 py-2 text-sm" />
-          <input name="bedrooms" type="number" placeholder="Số phòng ngủ" className="rounded-lg border px-3 py-2 text-sm" />
-          <input name="bathrooms" type="number" placeholder="Số phòng tắm" className="rounded-lg border px-3 py-2 text-sm" />
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-gray-600">Tiêu đề tin đăng *</label>
+          <input
+            name="title"
+            required
+            minLength={10}
+            placeholder="VD: Căn hộ 2PN view sông tại Quận 7, đầy đủ nội thất"
+            className="w-full rounded-lg border px-3 py-2 text-sm"
+          />
         </div>
 
-        <select name="legalStatus" className="w-full rounded-lg border px-3 py-2 text-sm">
-          <option value="">-- Pháp lý --</option>
-          <option value="so_do">Sổ đỏ</option>
-          <option value="so_hong">Sổ hồng</option>
-          <option value="hop_dong">Hợp đồng mua bán</option>
-          <option value="dang_cho_so">Đang chờ sổ</option>
-        </select>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-gray-600">Mô tả chi tiết</label>
+          <textarea
+            name="description"
+            placeholder="Mô tả thông tin chi tiết về bất động sản, tiện ích xung quanh, hướng nhà..."
+            rows={4}
+            className="w-full rounded-lg border px-3 py-2 text-sm"
+          />
+        </div>
 
-        <input name="addressDetail" placeholder="Địa chỉ chi tiết" className="w-full rounded-lg border px-3 py-2 text-sm" />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600">Giá (VNĐ) *</label>
+            <input
+              name="price"
+              required
+              type="number"
+              placeholder="VD: 3500000000"
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600">Diện tích (m²) *</label>
+            <input
+              name="areaM2"
+              required
+              type="number"
+              step="0.1"
+              placeholder="VD: 75.5"
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600">Số phòng ngủ</label>
+            <input
+              name="bedrooms"
+              type="number"
+              placeholder="VD: 2"
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600">Số phòng tắm</label>
+            <input
+              name="bathrooms"
+              type="number"
+              placeholder="VD: 2"
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600">Pháp lý</label>
+            <select name="legalStatus" className="w-full rounded-lg border px-3 py-2 text-sm">
+              <option value="">-- Chưa xác định --</option>
+              <option value="so_do">Sổ đỏ</option>
+              <option value="so_hong">Sổ hồng</option>
+              <option value="hop_dong">Hợp đồng mua bán</option>
+              <option value="dang_cho_so">Đang chờ sổ</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600">Địa chỉ cụ thể</label>
+            <input
+              name="addressDetail"
+              placeholder="Số nhà, tên đường, tên toà nhà..."
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Upload hình ảnh đính kèm */}
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-gray-600">
+            Hình ảnh bất động sản (Tối đa 20 ảnh, định dạng JPG/PNG/WEBP, tối đa 10MB/ảnh)
+          </label>
+          <input
+            name="images"
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp"
+            className="w-full rounded-lg border border-dashed border-gray-300 p-3 text-sm text-gray-600 file:mr-4 file:rounded-full file:border-0 file:bg-brand file:px-4 file:py-1.5 file:text-xs file:font-semibold file:text-gray-900 hover:file:bg-brand-dark"
+          />
+        </div>
 
         <button
           type="submit"
           disabled={loading}
           className="w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark disabled:opacity-60"
         >
-          {loading ? 'Đang đăng...' : 'Đăng tin'}
+          {loading ? 'Đang xử lý...' : 'Đăng tin'}
         </button>
 
-        {message && <p className="text-sm text-green-700">{message}</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {uploadStatus && <p className="text-xs text-blue-600">{uploadStatus}</p>}
+
+        {message === 'success' && (
+          <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700">
+            <p className="font-semibold">Đăng tin thành công!</p>
+            <p className="mt-1">
+              Tin của bạn đang ở trạng thái <b>chờ duyệt</b> trước khi hiển thị công khai. Bạn có thể theo dõi trạng thái
+              và quản lý tin tại{' '}
+              <Link href="/tai-khoan/quan-ly-tin" className="font-bold underline">
+                trang Quản lý tin
+              </Link>
+              .
+            </p>
+          </div>
+        )}
+        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</p>}
       </form>
     </div>
   );

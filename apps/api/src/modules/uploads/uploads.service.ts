@@ -14,7 +14,11 @@ import sharp from 'sharp';
  */
 @Injectable()
 export class UploadsService {
-  private readonly uploadsRoot = join(process.cwd(), 'uploads');
+  // BUG ĐÃ SỬA (audit 02/09/2026): trước đây dùng `join(process.cwd(), 'uploads')`. Khi chạy monorepo
+  // từ thư mục gốc qua Turborepo (pnpm dev), process.cwd() là gốc monorepo, trong khi ServeStaticModule
+  // trong app.module.ts lại phục vụ từ `join(__dirname, '..', 'uploads')` (apps/api/uploads). Lệch thư
+  // mục khiến 100% ảnh upload xong đều trả về 404 Not Found khi xem. Đồng bộ về apps/api/uploads.
+  private readonly uploadsRoot = join(__dirname, '..', '..', '..', 'uploads');
 
   async saveListingImages(listingId: string, files: Express.Multer.File[]): Promise<string[]> {
     const dir = join(this.uploadsRoot, 'listings', listingId);

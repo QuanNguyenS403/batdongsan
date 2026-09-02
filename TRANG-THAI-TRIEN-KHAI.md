@@ -38,16 +38,45 @@ Sau khi merge nhánh đã chạy `prisma generate` thành công từ máy thật
 
 **Xác nhận sau khi sửa toàn bộ 12 lỗi trên:** đã chạy lại `tsc --noEmit` cho API (chỉ còn đúng 4 lỗi do chưa `prisma generate` trong sandbox — bản chất môi trường, không phải lỗi code) và `next build` cho web (**PASS 100%, 0 lỗi**) — verify thật bằng tool, không suy đoán.
 
-## 🚧 Chưa làm (đúng như đã thống nhất trong roadmap `CLAUDE.md § 2.8`)
+## 🔎 Đợt audit của Claude (01/09/2026) — tích hợp từ zip bàn giao (#13 - #18)
 
-- Tìm kiếm Meilisearch (đang dùng Prisma filter trực tiếp trong Postgres — đủ dùng tới vài chục nghìn tin)
+| # | Mức độ | Lỗi | Đã sửa bằng cách |
+|---|---|---|---|
+| 13 | 🔴 Nghiêm trọng | JWT secret fallback về giá trị placeholder công khai (`?? 'changeme_access'`) | Thêm `assert-env.ts` chặn khởi động ở production nếu secret thiếu hoặc là placeholder |
+| 14 | 🟠 Quan trọng | Tin `pending`/`rejected` bị lộ công khai qua ID đoán được | `findOne` và `revealPhone` chỉ trả tin `active`; thêm `findOneForOwner` cho chủ tin |
+| 15 | 🟠 Quan trọng | API "Quản lý tin" hoàn toàn chưa tồn tại | Thêm `GET /listings/mine` và trang `/tai-khoan/quan-ly-tin` |
+| 16 | 🟡 Trung bình | `addImages()` luôn trả lỗi 404 dù ảnh đã lưu thành công | Sửa `findOne("id42")` sang gọi `findOneForOwner` |
+| 17 | 🟡 Trung bình | `refreshToken` được lưu nhưng frontend không dùng | Thêm `authFetch` tự động refresh token khi gặp 401 |
+| 18 | 🟡 Trung bình | 6 liên kết điều hướng trong Header dẫn tới 404 | Tạo trang thật `/tai-khoan/thong-tin` và các trang ComingSoonNotice cho `/du-an`, `/moi-gioi`, `/gia-nha-dat`, `/tai-khoan/tin-da-luu` |
+
+## 🚀 Đợt audit sâu & hoàn thiện chuẩn Mogi.vn (Gemini Flash 3.7 — 02/09/2026) (#19 - #32)
+
+| # | Mức độ | Vấn đề | Đã sửa / Hoàn thiện bằng cách |
+|---|---|---|---|
+| 19 | 🔴 Bảo mật / DoS | `addImages()` ghi file vào đĩa server TRƯỚC KHI kiểm tra quyền sở hữu | Chuyển `assertOwnership()` lên đầu `addImages()`, validate `files.length > 0` chặn ghi file trái phép |
+| 20 | 🟠 Quan trọng | Đường dẫn `UploadsService` lệch với `ServeStaticModule` trong monorepo gây 404 ảnh | Đồng bộ `uploadsRoot` thành `apps/api/uploads` cố định |
+| 21 | 🟠 Quan trọng | Frontend Next.js gọi `/uploads/...` bị 404 do thiếu proxy | Thêm `rewrites()` trong `next.config.mjs` proxy `/uploads/:path*` sang backend API :4000 |
+| 22 | 🟠 Lỗi Runtime | `projectId` kiểu `number` trong DTO làm crash Prisma BigInt | Ép kiểu `BigInt(dto.projectId)` trong `create()` và `update()`; cập nhật slug khi đổi title |
+| 23 | 🟡 Trung bình | `OtpService` ném `new Error` bị filter biến thành lỗi 500 | Đổi sang ném `HttpException(..., HttpStatus.TOO_MANY_REQUESTS)` (429) |
+| 24 | 🟡 Trung bình | `PhoneRevealLog` bị spam tăng ảo lượt xem số điện thoại | Kiểm tra trùng lặp trước khi ghi log và tăng `revealPhoneCount` |
+| 25 | 🟡 UX Mogi | `/mua-ban` và `/thue` thiếu thanh lọc tìm kiếm | Xây dựng component `SearchFilterBar` đầy đủ loại hình, mức giá, diện tích, từ khoá |
+| 26 | 🟡 UX Mogi | Đăng tin thiếu upload ảnh và bắt nhập `locationId` số thô | Tải dropdown địa danh từ `/locations`, thêm input chọn file và tự động upload ảnh |
+| 27 | 🟡 UX Mogi | Quản lý tin thiếu nút Gỡ tin và tab "Đã gỡ" | Thêm nút Gỡ tin (DELETE API) kèm xác nhận và thêm tab lọc `removed` |
+| 28 | 🟡 UX Mogi | Báo cáo vi phạm trên trang chi tiết tin là text giả | Xây dựng `ReportListingModal` gửi báo cáo thật tới `POST /listings/:id/report` |
+| 29 | 🟢 Mogi Parity | BĐS đã lưu (SavedListing) chưa có API và UI | Thêm API `toggleSave`, `isSaved`, `findSaved`, nút "Lưu tin" và trang `/tai-khoan/tin-da-luu` thật |
+| 30 | 🟢 Mogi Parity | Thiếu công cụ tính vay trả góp mua nhà | Xây dựng `LoanCalculatorWidget` chuẩn ngân hàng trên trang chi tiết tin bán |
+| 31 | 🟢 Mogi Parity | Chưa thể chỉnh sửa thông tin và đổi mật khẩu | Thêm `PATCH /users/me`, `POST /users/me/change-password` và form thao tác trên trang thông tin |
+| 32 | 🟢 UX Auth | Trang đăng nhập thiếu luồng "Quên mật khẩu" | Thêm luồng khôi phục mật khẩu qua OTP ngay trên form đăng nhập |
+| 33 | 🟢 UX Mogi | Thẻ tin đăng thiếu nhãn đơn vị "/ tháng" cho tin thuê | Hiển thị "/ tháng" trên `ListingCard` khi transactionType là rent |
+
+## 🚧 Chưa làm (đúng lộ trình roadmap Giai đoạn 2-3)
+
+- Tích hợp Meilisearch / Elasticsearch
 - Google OAuth login
-- Gói thành viên + thanh toán VNPay/MoMo
-- Trang Dự án / Môi giới / Giá nhà đất (schema đã có sẵn: `Project`, `PriceIndex` — chưa có controller/UI)
-- Trang Admin kiểm duyệt tin (hiện tin mới luôn ở trạng thái `pending`, phải tự đổi status qua Prisma Studio để test)
-- Driver lưu ảnh S3/Cloudflare R2 thật (đang dùng local disk)
-- Redis cho OTP (đang dùng in-memory Map — **KHÔNG dùng khi chạy nhiều instance API song song**, phải đổi sang Redis trước khi lên production)
-- Docker Compose cho `apps/api`/`apps/web` (hiện chỉ có Postgres + Redis, app chạy trực tiếp bằng `pnpm dev`)
+- Gói thành viên VIP + cổng thanh toán VNPay/MoMo
+- Trang nội dung thật cho Dự án / Môi giới / Giá nhà đất (hiện là trang chờ thông báo trung thực)
+- Chuyển OTP store từ in-memory sang Redis khi scale nhiều server API
+- Trang Admin CMS kiểm duyệt tin đăng tập trung (hiện kiểm duyệt qua Prisma Studio)
 - Wizard đăng tin nhiều bước (hiện là form 1 trang)
 
 ## 📌 Trạng thái môi trường & Khởi chạy Local (Cập nhật 01/09/2026)

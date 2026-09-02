@@ -615,20 +615,20 @@ project-root/
 
 ## 16. Checklist đối chiếu tính năng với Mogi.vn
 
-- [ ] Tìm kiếm/lọc theo khu vực (tỉnh → quận/huyện → phường) + loại hình + giao dịch (mua/thuê)
-- [ ] Trang chi tiết tin với gallery ảnh, thông tin chính, mô tả, thông tin người đăng
-- [ ] Ẩn số điện thoại, yêu cầu đăng nhập để xem/liên hệ (content gating)
-- [ ] Đăng ký/đăng nhập bằng SĐT + OTP, và Google
-- [ ] Đăng tin, quản lý tin (làm mới, xoá, theo dõi trạng thái)
-- [ ] Lưu tin yêu thích + lưu tìm kiếm (nhận thông báo khi có tin mới phù hợp)
-- [ ] Module Dự án bất động sản (liên kết tới các tin thuộc dự án)
-- [ ] Module Môi giới/danh bạ (hồ sơ, xác thực, danh sách tin đang đăng)
-- [ ] Trang giá nhà đất theo khu vực (bảng + biểu đồ lịch sử)
+- [x] Tìm kiếm/lọc theo khu vực (tỉnh → quận/huyện → phường) + loại hình + giao dịch (mua/thuê) — *đã có SearchFilterBar trên /mua-ban và /thue*
+- [x] Trang chi tiết tin với gallery ảnh, thông tin chính, mô tả, thông tin người đăng
+- [x] Ẩn số điện thoại, yêu cầu đăng nhập để xem/liên hệ (content gating) — *đã có PhoneRevealLog + chống spam số liệu*
+- [x] Đăng ký/đăng nhập bằng SĐT + OTP, quên mật khẩu (Google OAuth theo lộ trình giai đoạn sau)
+- [x] Đăng tin, quản lý tin (gỡ tin/xoá, theo dõi trạng thái, upload nhiều ảnh thật)
+- [x] Lưu tin yêu thích (SavedListing, nút Lưu tin trang chi tiết, dashboard BĐS đã lưu thật)
+- [ ] Module Dự án bất động sản (liên kết tới các tin thuộc dự án) — *đang ở dạng trang chờ trung thực*
+- [ ] Module Môi giới/danh bạ (hồ sơ, xác thực, danh sách tin đang đăng) — *đang ở dạng trang chờ trung thực*
+- [ ] Trang giá nhà đất theo khu vực (bảng + biểu đồ lịch sử) — *đang ở dạng trang chờ trung thực*
 - [ ] Gói thành viên trả phí + dịch vụ đẩy tin/VIP
 - [ ] Blog/tin tức bất động sản (CMS tách biệt)
-- [ ] Report vi phạm tin đăng + trang quản trị kiểm duyệt
-- [ ] Công cụ ước tính khoản vay mua nhà
-- [ ] SEO: meta động, sitemap, breadcrumb, nội dung dài theo khu vực
+- [x] Report vi phạm tin đăng (ReportListingModal gửi báo cáo thật tới backend)
+- [x] Công cụ ước tính khoản vay mua nhà (LoanCalculatorWidget trên trang chi tiết)
+- [x] SEO: meta động, sitemap, breadcrumb, robots.ts
 - [ ] Đa kênh liên hệ (hotline, Zalo, mạng xã hội)
 
 ---

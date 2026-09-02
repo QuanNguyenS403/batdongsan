@@ -25,7 +25,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
           {listing.bedrooms != null && <span>{listing.bedrooms} PN</span>}
           {listing.bathrooms != null && <span>{listing.bathrooms} WC</span>}
         </div>
-        <p className="text-lg font-semibold text-brand-dark">{formatPrice(listing.price)}</p>
+        <p className="text-lg font-semibold text-brand-dark">
+          {formatPrice(listing.price)}
+          {listing.transactionType === 'rent' && <span className="text-xs font-normal text-gray-500"> / tháng</span>}
+        </p>
       </div>
     </Link>
   );
