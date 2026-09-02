@@ -40,12 +40,12 @@ export function LoanCalculatorWidget({ initialPrice }: LoanCalculatorWidgetProps
   }, [price, downPaymentPercent, loanTermYears, interestRate]);
 
   return (
-    <div className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
+    <div data-loan-calc className="mt-5 rounded-2xl border border-surface-border bg-white p-5 shadow-card">
       <div className="flex items-center gap-2">
-        <span className="text-xl">📊</span>
-        <h3 className="text-lg font-bold text-gray-900">Ước tính khoản vay mua nhà</h3>
+        <span className="text-xl">🏦</span>
+        <h3 className="text-base font-bold text-text-primary">Ước tính khoản vay mua nhà</h3>
       </div>
-      <p className="mt-1 text-xs text-gray-500">
+      <p className="mt-1 text-xs text-text-muted">
         Công cụ tính toán số tiền trả góp hàng tháng theo phương thức dư nợ giảm dần cố định (chuẩn ngân hàng).
       </p>
 
@@ -58,7 +58,7 @@ export function LoanCalculatorWidget({ initialPrice }: LoanCalculatorWidgetProps
             step="100000000"
             value={price}
             onChange={(e) => setPrice(Math.max(0, Number(e.target.value)))}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-dark"
+            className="input-field"
           />
         </div>
 
@@ -68,7 +68,7 @@ export function LoanCalculatorWidget({ initialPrice }: LoanCalculatorWidgetProps
           <select
             value={downPaymentPercent}
             onChange={(e) => setDownPaymentPercent(Number(e.target.value))}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-dark"
+            className="input-field"
           >
             <option value={20}>20% (Vay 80%)</option>
             <option value={30}>30% (Vay 70%)</option>
@@ -84,7 +84,7 @@ export function LoanCalculatorWidget({ initialPrice }: LoanCalculatorWidgetProps
           <select
             value={loanTermYears}
             onChange={(e) => setLoanTermYears(Number(e.target.value))}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-dark"
+            className="input-field"
           >
             <option value={5}>5 năm (60 tháng)</option>
             <option value={10}>10 năm (120 tháng)</option>
@@ -104,28 +104,28 @@ export function LoanCalculatorWidget({ initialPrice }: LoanCalculatorWidgetProps
             max="25"
             value={interestRate}
             onChange={(e) => setInterestRate(Number(e.target.value))}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-dark"
+            className="input-field"
           />
         </div>
       </div>
 
       {/* Kết quả ước tính */}
-      <div className="mt-6 grid grid-cols-2 gap-4 rounded-xl bg-gray-50 p-4 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-4 rounded-2xl bg-brand/5 p-4 sm:grid-cols-4">
         <div>
-          <p className="text-xs text-gray-500">Cần trả trước ({downPaymentPercent}%)</p>
-          <p className="mt-1 text-base font-bold text-gray-900">{formatPrice(calculation.downPayment)}</p>
+          <p className="text-xs text-text-muted">Cần trả trước ({downPaymentPercent}%)</p>
+          <p className="mt-1 text-base font-bold text-text-primary">{formatPrice(calculation.downPayment)}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-500">Số tiền vay ({100 - downPaymentPercent}%)</p>
-          <p className="mt-1 text-base font-bold text-gray-900">{formatPrice(calculation.loanAmount)}</p>
+          <p className="text-xs text-text-muted">Số tiền vay ({100 - downPaymentPercent}%)</p>
+          <p className="mt-1 text-base font-bold text-text-primary">{formatPrice(calculation.loanAmount)}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-500">Trả mỗi tháng (gốc + lãi)</p>
-          <p className="mt-1 text-base font-extrabold text-brand-dark">{formatPrice(calculation.monthlyPayment)}/tháng</p>
+          <p className="text-xs text-text-muted">Trả mỗi tháng (gốc + lãi)</p>
+          <p className="mt-1 text-base font-extrabold text-brand">{formatPrice(calculation.monthlyPayment)}/tháng</p>
         </div>
         <div>
-          <p className="text-xs text-gray-500">Tổng tiền lãi toàn kỳ</p>
-          <p className="mt-1 text-base font-bold text-gray-700">{formatPrice(calculation.totalInterest)}</p>
+          <p className="text-xs text-text-muted">Tổng tiền lãi toàn kỳ</p>
+          <p className="mt-1 text-base font-bold text-text-secondary">{formatPrice(calculation.totalInterest)}</p>
         </div>
       </div>
 

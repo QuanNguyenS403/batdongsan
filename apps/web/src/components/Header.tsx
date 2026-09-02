@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { authFetch, clearTokens, getAccessToken } from '@/lib/auth-client';
 
 interface CurrentUser {
@@ -11,27 +11,39 @@ interface CurrentUser {
   phone: string;
 }
 
-/**
- * TRƯỚC ĐÂY: Header là Server Component tĩnh, luôn hiển thị "Đăng nhập" + "Đăng tin" bất kể
- * người dùng đã đăng nhập hay chưa — sai lệch rõ so với UX của Mogi (đổi sang avatar dropdown
- * khi đã login) mà chính CLAUDE.md/README.md đã mô tả là yêu cầu bắt buộc. Phải chuyển sang
- * Client Component để đọc token trong localStorage và gọi /auth/me xác thực còn hạn hay không.
- */
+const NAV_LINKS = [
+  { href: '/mua-ban', label: 'Mua bán' },
+  { href: '/thue', label: 'Cho thuê' },
+  { href: '/du-an', label: 'Dự án' },
+  { href: '/moi-gioi', label: 'Môi giới' },
+  { href: '/gia-nha-dat', label: 'Giá nhà đất' },
+];
+
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!getAccessToken()) {
       setChecked(true);
       return;
     }
-
-    // authFetch tự thử /auth/refresh khi accessToken hết hạn (15 phút) trước khi coi là chưa
-    // đăng nhập — trước đây gọi fetch() thẳng, khiến bất kỳ ai mở web quá 15 phút đều bị Header
-    // âm thầm xoá token và hiện lại nút "Đăng nhập" dù refreshToken (hạn 7 ngày) vẫn còn dùng được.
     authFetch('/auth/me')
       .then((res) => {
         if (!res.ok) throw new Error('unauthorized');
@@ -49,87 +61,196 @@ export function Header() {
     router.push('/');
   }
 
+  const initials = user ? (user.fullName ?? user.phone).charAt(0).toUpperCase() : '';
+
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link href="/" className="text-xl font-bold text-brand-dark">
-          🏠 BatDongSan<span className="text-gray-900">.demo</span>
-        </Link>
+    <header
+      className={`sticky top-0 z-50 transition-shadow duration-200 ${
+        scrolled ? 'shadow-elevated' : 'shadow-sm'
+      }`}
+    >
+      {/* Tầng trên: teal — brand identity */}
+      <div className="bg-brand">
+        <div className="container-max flex h-9 items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-1.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded bg-white/20 text-sm font-bold text-white">
+              B
+            </span>
+            <span className="text-sm font-bold tracking-tight text-white">
+              BĐS<span className="font-normal opacity-80">.vn</span>
+            </span>
+          </Link>
 
-        <nav className="hidden gap-6 text-sm font-medium text-gray-700 md:flex">
-          <Link href="/mua-ban" className="hover:text-brand-dark">Tìm mua</Link>
-          <Link href="/thue" className="hover:text-brand-dark">Tìm thuê</Link>
-          <Link href="/du-an" className="hover:text-brand-dark">Dự án</Link>
-          <Link href="/moi-gioi" className="hover:text-brand-dark">Môi giới</Link>
-          <Link href="/gia-nha-dat" className="hover:text-brand-dark">Giá nhà đất</Link>
-        </nav>
-
-        {!checked ? (
-          <div className="h-9 w-24" />
-        ) : user ? (
-          <div className="relative flex items-center gap-3">
-            <Link
-              href="/dang-tin"
-              className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-brand-dark"
-            >
-              + Đăng tin
-            </Link>
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs">
-                {(user.fullName ?? user.phone).charAt(0).toUpperCase()}
-              </span>
-              {user.fullName ?? user.phone}
-            </button>
-
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-11 z-50 w-56 rounded-xl border bg-white py-2 shadow-lg">
-                  <Link
-                    href="/tai-khoan/quan-ly-tin"
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-4 py-2 text-sm hover:bg-gray-50"
-                  >
-                    Quản lý tin đăng
-                  </Link>
-                  <Link
-                    href="/tai-khoan/tin-da-luu"
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-4 py-2 text-sm hover:bg-gray-50"
-                  >
-                    BĐS đã lưu
-                  </Link>
-                  <Link
-                    href="/tai-khoan/thong-tin"
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-4 py-2 text-sm hover:bg-gray-50"
-                  >
-                    Thông tin tài khoản
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50"
-                  >
-                    Đăng xuất
-                  </button>
-                </div>
-              </>
+          <div className="flex items-center gap-4 text-xs text-white/80">
+            <span className="hidden sm:block">Hotline: 1900 xxxx</span>
+            {!checked ? (
+              <div className="h-4 w-16 skeleton rounded" />
+            ) : user ? (
+              <span className="font-medium text-white">Xin chào, {user.fullName?.split(' ').pop() ?? user.phone}</span>
+            ) : (
+              <Link href="/dang-nhap" className="font-medium text-white hover:text-brand-200 transition-colors">
+                Đăng nhập
+              </Link>
             )}
           </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            <Link href="/dang-nhap" className="text-sm font-medium text-gray-700 hover:text-brand-dark">
-              Đăng nhập
-            </Link>
-            <Link
-              href="/dang-tin"
-              className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-brand-dark"
+        </div>
+      </div>
+
+      {/* Tầng dưới: trắng — navigation */}
+      <div className="bg-white border-b border-surface-border">
+        <div className="container-max flex h-14 items-center justify-between gap-4">
+          {/* Navigation desktop */}
+          <nav className="hidden gap-1 md:flex">
+            {NAV_LINKS.map((link) => {
+              const active = pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
+                    active
+                      ? 'bg-brand/10 text-brand font-semibold'
+                      : 'text-text-secondary hover:bg-slate-50 hover:text-text-primary'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 ml-auto">
+            {!checked ? (
+              <div className="h-9 w-24 skeleton rounded-full" />
+            ) : user ? (
+              <>
+                <Link
+                  href="/dang-tin"
+                  className="btn-primary text-xs px-4 py-2 hidden sm:inline-flex"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Đăng tin
+                </Link>
+
+                {/* Avatar dropdown */}
+                <div className="relative">
+                  <button
+                    id="user-menu-button"
+                    onClick={() => setMenuOpen((v) => !v)}
+                    className="flex items-center gap-2 rounded-full border border-surface-border bg-white px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+                      {initials}
+                    </span>
+                    <svg className="h-3.5 w-3.5 text-text-muted" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </button>
+
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                      <div className="absolute right-0 top-11 z-50 w-56 rounded-2xl border border-surface-border bg-white py-2 shadow-modal animate-slide-down">
+                        <div className="px-4 py-2 border-b border-surface-border mb-1">
+                          <p className="text-sm font-semibold text-text-primary truncate">{user.fullName ?? user.phone}</p>
+                          <p className="text-xs text-text-muted truncate">{user.phone}</p>
+                        </div>
+                        {[
+                          { href: '/tai-khoan/quan-ly-tin', label: 'Quản lý tin đăng', icon: '📋' },
+                          { href: '/tai-khoan/tin-da-luu', label: 'BĐS đã lưu', icon: '❤️' },
+                          { href: '/tai-khoan/thong-tin', label: 'Thông tin tài khoản', icon: '⚙️' },
+                        ].map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-secondary hover:bg-slate-50 hover:text-text-primary transition-colors"
+                          >
+                            <span>{item.icon}</span>
+                            {item.label}
+                          </Link>
+                        ))}
+                        <div className="border-t border-surface-border mt-1 pt-1">
+                          <button
+                            onClick={handleLogout}
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                            </svg>
+                            Đăng xuất
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/dang-nhap"
+                  className="hidden text-sm font-medium text-text-secondary hover:text-brand transition-colors sm:block"
+                >
+                  Đăng nhập
+                </Link>
+                <Link href="/dang-tin" className="btn-primary text-xs px-4 py-2">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Đăng tin
+                </Link>
+              </>
+            )}
+
+            {/* Mobile hamburger */}
+            <button
+              id="mobile-menu-button"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="ml-1 flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-slate-50 md:hidden"
+              aria-label="Menu"
             >
-              + Đăng tin
-            </Link>
+              {mobileOpen ? (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile nav */}
+        {mobileOpen && (
+          <div className="border-t border-surface-border bg-white pb-4 animate-slide-down md:hidden">
+            <div className="container-max pt-2 space-y-0.5">
+              {NAV_LINKS.map((link) => {
+                const active = pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                      active ? 'bg-brand/10 text-brand' : 'text-text-secondary hover:bg-slate-50'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+              {user && (
+                <Link href="/dang-tin" className="btn-primary w-full mt-2 justify-center">
+                  + Đăng tin mới
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </div>

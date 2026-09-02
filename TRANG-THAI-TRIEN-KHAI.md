@@ -17,7 +17,48 @@
 | Build frontend | ✅ **Đã chạy thật, PASS** | `next build` compile + type-check thành công, 0 lỗi |
 | Build backend | ✅ **Đã chạy thật, PASS 100%** | `nest build` compile + type-check thành công, 0 lỗi sau khi đã `pnpm db:generate` |
 
+## 🎨 Đợt redesign + audit lần 5 (03/09/2026) — Phần B+C hoàn thành
+
+### Redesign UI/UX — PropTech Teal
+
+Thay toàn bộ màu vàng Mogi (`#fdce09`) bằng **Teal 600** (`#0d9488`) — đủ tương phản WCAG AA (4.62:1).
+Font hệ thống → **Inter** (Google Fonts, `next/font`). Các thay đổi:
+
+| File | Thay đổi |
+|---|---|
+| `tailwind.config.ts` | Design tokens hoàn chỉnh: brand teal, surface colors, text hierarchy, shadows, animations |
+| `globals.css` | Design system: `.btn-primary`, `.btn-secondary`, `.input-field`, `.filter-select`, `.listing-card`, `.skeleton`, `.container-max` |
+| `layout.tsx` | Inter font via `next/font/google`, metadata SEO hoàn chỉnh |
+| `Header.tsx` | 2 tầng (top bar teal + nav bar trắng), mobile hamburger, active state, dropdown avatar |
+| `ListingCard.tsx` | Tỷ lệ 16:10, badge loại/giao dịch, giá teal, hover image zoom + card lift, timestamp |
+| `Footer.tsx` | Full 4 cột (brand/mua bán/cho thuê/công cụ), teal tối |
+| `page.tsx` (trang chủ) | Hero gradient teal, tab Mua/Thuê, quick category pills, feature cards 3 cột |
+| `mua-ban/page.tsx`, `thue/page.tsx` | Breadcrumb, H1 động với tháng năm, empty state |
+| `Pagination.tsx` | Teal active page, icon arrows |
+| `ComingSoonNotice.tsx` | Icon circle teal, badge "Sắp ra mắt", 2 nút CTA |
+| `SearchFilterBar.tsx` | `.filter-select`, `.btn-primary`, `.btn-secondary` |
+| `tin/[slug]/page.tsx` | Layout 3:1 grid, sidebar sticky, gallery + thumbnails |
+| `tai-khoan/quan-ly-tin/page.tsx` | Tab filter teal, skeleton loading, empty state |
+| `LoanCalculatorWidget.tsx` | Result box bg-brand/5, `.input-field` |
+| `ReportListingModal.tsx` | Modal với backdrop-blur, animate-fade-in, success state |
+| `RevealPhoneButton.tsx`, `SaveListingButton.tsx` | `.btn-primary`, SVG icons thay emoji |
+
+### Bugs đã sửa đợt này (#34-#40)
+
+| # | Lỗi | Fix |
+|---|---|---|
+| 34 | Thuật ngữ không nhất quán (trang chủ links) | Đồng nhất "Mua bán" / "Cho thuê" |
+| 35 | Label `nha-nguyen-can`: "Nhà nguyên căn" vs "Nhà riêng" ở 2 chỗ khác nhau | Thống nhất "Nhà riêng / Nhà phố" |
+| 36 | Fallback `legalStatus` lộ slug thô (VD: `dang_cho_so`) | Map đầy đủ + fallback "Không xác định" |
+| 37 | Input giá không có hint format (3500000000 = ?) | Thêm helper text "= 3 tỷ 500 triệu" |
+| 38 | Trang `/dang-nhap` thiếu metadata SEO | Thêm `layout.tsx` riêng với `export const metadata` |
+| 39 | Breadcrumb 3 cấp thay vì 4 cấp (Mogi chuẩn) | Thêm cấp Quận vào breadcrumb trang chi tiết |
+| 40 | Metadata /du-an /moi-gioi /gia-nha-dat | Đã có từ trước ✅ (không cần sửa) |
+
+**Build verify:** `next build` → exit code 0, 16/16 pages generated.
+
 ## 🔎 Đợt audit nghiêm ngặt lần 2 (01/09/2026) — danh sách lỗi thật đã tìm & sửa
+
 
 Sau khi merge nhánh đã chạy `prisma generate` thành công từ máy thật, đã rà soát lại **toàn bộ** frontend + backend + cấu hình, tìm ra và sửa dứt điểm các lỗi sau (không phải tính năng thiếu theo roadmap — đây là lỗi/rủi ro THẬT trong phần code đã tuyên bố "xong"):
 

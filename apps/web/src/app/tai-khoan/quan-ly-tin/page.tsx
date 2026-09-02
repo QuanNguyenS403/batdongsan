@@ -88,93 +88,114 @@ export default function QuanLyTinPage() {
     }
   }
 
-  if (!checkedAuth) return null; // tránh nháy nội dung trước khi kịp kiểm tra đăng nhập + redirect
+  if (!checkedAuth) return null;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Quản lý tin đăng của tôi</h1>
-        <Link
-          href="/dang-tin"
-          className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-brand-dark"
-        >
-          + Đăng tin mới
-        </Link>
+    <div className="min-h-screen bg-surface-muted">
+      <div className="container-max py-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">Quản lý tin đăng</h1>
+            <p className="mt-0.5 text-sm text-text-muted">{total} tin trong tài khoản</p>
+          </div>
+          <Link href="/dang-tin" className="btn-primary">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Đăng tin mới
+          </Link>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setStatusFilter(tab.value)}
+              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                statusFilter === tab.value
+                  ? 'bg-brand text-white shadow-sm'
+                  : 'bg-white text-text-secondary ring-1 ring-surface-border hover:ring-brand hover:text-brand'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {loading && (
+          <div className="mt-6 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 rounded-2xl skeleton" />
+            ))}
+          </div>
+        )}
+        {error && (
+          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
+            {listings.length === 0 ? (
+              <div className="mt-6 rounded-2xl border border-dashed border-surface-border bg-white p-12 text-center">
+                <span className="text-4xl">📃</span>
+                <p className="mt-3 font-semibold text-text-primary">Chưa có tin nào ở trạng thái này</p>
+                <Link href="/dang-tin" className="btn-primary mt-4 inline-flex">
+                  Đăng tin đầu tiên
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-surface-border rounded-2xl border border-surface-border bg-white shadow-card overflow-hidden">
+                {listings.map((listing) => {
+                  const status = STATUS_LABEL[listing.status] ?? { label: listing.status, className: 'bg-gray-100 text-gray-600' };
+                  return (
+                    <div key={listing.id} className="flex items-center gap-4 p-4 hover:bg-surface-muted/50 transition-colors">
+                      <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                        {listing.images[0]?.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={listing.images[0].imageUrl} alt={listing.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-[10px] text-text-muted">
+                            Chưa có ảnh
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-text-primary">{listing.title}</p>
+                        <p className="text-sm text-text-muted">{listing.addressDetail ?? listing.location.name}</p>
+                        <p className="text-sm font-bold text-brand">{formatPrice(listing.price)}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
+                        {status.label}
+                      </span>
+                      <div className="flex shrink-0 items-center gap-3">
+                        {listing.status === 'active' && (
+                          <Link
+                            href={`/tin/${listing.slug}`}
+                            className="text-sm font-medium text-brand hover:text-brand-700 transition-colors"
+                          >
+                            Xem
+                          </Link>
+                        )}
+                        {listing.status !== 'removed' && (
+                          <button
+                            onClick={() => handleRemove(listing.id)}
+                            className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+                          >
+                            Gỡ tin
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-      <div className="mt-4 flex gap-2 overflow-x-auto border-b pb-2">
-        {FILTER_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setStatusFilter(tab.value)}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${
-              statusFilter === tab.value ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {loading && <p className="mt-6 text-sm text-gray-500">Đang tải...</p>}
-      {error && <p className="mt-6 text-sm text-red-600">{error}</p>}
-
-      {!loading && !error && (
-        <>
-          <p className="mt-4 text-sm text-gray-500">{total} tin đăng phù hợp bộ lọc</p>
-
-          {listings.length === 0 ? (
-            <div className="mt-6 rounded-xl border border-dashed p-10 text-center text-sm text-gray-500">
-              Chưa có tin đăng nào ở trạng thái này.{' '}
-              <Link href="/dang-tin" className="font-semibold text-brand-dark underline">
-                Đăng tin đầu tiên
-              </Link>
-              .
-            </div>
-          ) : (
-            <div className="mt-4 divide-y rounded-xl border bg-white">
-              {listings.map((listing) => {
-                const status = STATUS_LABEL[listing.status] ?? { label: listing.status, className: 'bg-gray-100 text-gray-600' };
-                return (
-                  <div key={listing.id} className="flex items-center gap-4 p-4">
-                    <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                      {listing.images[0]?.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={listing.images[0].imageUrl} alt={listing.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-[10px] text-gray-400">Chưa có ảnh</div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-gray-900">{listing.title}</p>
-                      <p className="text-sm text-gray-500">{listing.addressDetail ?? listing.location.name}</p>
-                      <p className="text-sm font-semibold text-brand-dark">{formatPrice(listing.price)}</p>
-                    </div>
-                    <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
-                      {status.label}
-                    </span>
-                    <div className="flex shrink-0 items-center gap-3">
-                      {listing.status === 'active' && (
-                        <Link href={`/tin/${listing.slug}`} className="text-sm font-medium text-brand-dark hover:underline">
-                          Xem tin
-                        </Link>
-                      )}
-                      {listing.status !== 'removed' && (
-                        <button
-                          onClick={() => handleRemove(listing.id)}
-                          className="text-sm font-medium text-red-600 hover:underline"
-                        >
-                          Gỡ tin
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }

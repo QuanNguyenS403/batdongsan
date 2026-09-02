@@ -132,7 +132,7 @@ export default function DangTinPage() {
             <label className="mb-1 block text-xs font-semibold text-gray-600">Loại bất động sản *</label>
             <select name="propertyType" required className="w-full rounded-lg border px-3 py-2 text-sm">
               <option value="can-ho">Căn hộ / Chung cư</option>
-              <option value="nha-nguyen-can">Nhà nguyên căn / Nhà phố</option>
+              <option value="nha-nguyen-can">Nhà riêng / Nhà phố</option>
               <option value="dat">Đất nền</option>
               <option value="shophouse">Shophouse</option>
               <option value="phong-tro">Phòng trọ</option>
@@ -184,6 +184,9 @@ export default function DangTinPage() {
               placeholder="VD: 3500000000"
               className="w-full rounded-lg border px-3 py-2 text-sm"
             />
+            <p className="mt-0.5 text-xs text-gray-400">
+              Nhập số nguyên (VNĐ) — VD: 3500000000 = 3 tỷ 500 triệu, 25000000 = 25 triệu
+            </p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold text-gray-600">Diện tích (m²) *</label>

@@ -12,7 +12,7 @@ interface SearchFilterBarProps {
 const PROPERTY_TYPES = [
   { value: '', label: 'Tất cả loại BĐS' },
   { value: 'can-ho', label: 'Căn hộ / Chung cư' },
-  { value: 'nha-nguyen-can', label: 'Nhà riêng / Nhà phố' },
+  { value: 'nha-nguyen-can', label: 'Nhà riêng / Nhà phố' }, // #35: thống nhất với dang-tin và ListingCard
   { value: 'dat', label: 'Đất nền / Đất thổ cư' },
   { value: 'shophouse', label: 'Shophouse / Mặt tiền' },
   { value: 'phong-tro', label: 'Phòng trọ / Nhà trọ' },
@@ -104,7 +104,7 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
   );
 
   return (
-    <form onSubmit={handleFilter} className="mb-6 rounded-2xl border bg-white p-4 shadow-sm">
+    <form onSubmit={handleFilter} className="mb-6 rounded-2xl border border-surface-border bg-white p-4 shadow-card">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {/* Từ khoá */}
         <div className="lg:col-span-2">
@@ -113,7 +113,7 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
             placeholder="Tìm theo tiêu đề, địa chỉ..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 px-3.5 py-2 text-sm outline-none focus:border-brand-dark"
+            className="input-field"
           />
         </div>
 
@@ -122,7 +122,7 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
           <select
             value={propertyType}
             onChange={(e) => setPropertyType(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-dark"
+            className="filter-select"
           >
             {PROPERTY_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -137,7 +137,7 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
           <select
             value={priceIndex}
             onChange={(e) => setPriceIndex(Number(e.target.value))}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-dark"
+            className="filter-select"
           >
             {pricePresets.map((p, idx) => (
               <option key={idx} value={idx}>
@@ -152,7 +152,7 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
           <select
             value={areaIndex}
             onChange={(e) => setAreaIndex(Number(e.target.value))}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-dark"
+            className="filter-select"
           >
             {AREA_PRESETS.map((a, idx) => (
               <option key={idx} value={idx}>
@@ -163,21 +163,24 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-end gap-2 border-t pt-3">
+      <div className="mt-3 flex items-center justify-end gap-2 border-t border-surface-border pt-3">
         {hasFilters && (
           <button
             type="button"
             onClick={handleReset}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            className="btn-secondary text-xs px-4 py-2"
           >
-            Đặt lại bộ lọc
+            Đặt lại
           </button>
         )}
         <button
           type="submit"
-          className="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-gray-900 shadow-sm hover:bg-brand-dark"
+          className="btn-primary text-xs px-5 py-2"
         >
-          Áp dụng lọc
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          Lọc kết quả
         </button>
       </div>
     </form>
