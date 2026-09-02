@@ -92,6 +92,11 @@
 - **Mô tả vấn đề:** Người dùng quên mật khẩu không thể vào tài khoản dù backend đã có sẵn endpoint `POST /auth/forgot-password/reset`.
 - **Đã sửa:** Thêm luồng "Quên mật khẩu": nhập SĐT -> gửi OTP -> nhập OTP và mật khẩu mới -> đặt lại mật khẩu và đăng nhập.
 
+### 🟢 #33 — UX MOGI: Hiển thị đơn vị giá thuê "/ tháng" trên thẻ BĐS (`ListingCard`)
+- **File:** `apps/web/src/components/ListingCard.tsx`
+- **Mô tả vấn đề:** Trên các trang danh sách `/mua-ban`, `/thue` và trang chủ, thẻ tin đăng cho thuê chỉ hiển thị giá số (ví dụ "15 triệu") mà thiếu đơn vị thời gian "/ tháng", gây nhầm lẫn giữa giá bán trọn gói và giá thuê hàng tháng.
+- **Đã sửa:** Kiểm tra `listing.transactionType === 'rent'` để bổ sung nhãn "/ tháng" trực quan chuẩn theo UX Mogi.vn.
+
 ---
 
 ## 3. Kết quả chạy build/typecheck thật (BƯỚC 4)
