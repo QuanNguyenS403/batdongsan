@@ -64,67 +64,68 @@ export default function TinDaLuuPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
-      <div className="flex items-center justify-between border-b pb-4">
+      <div className="flex items-center justify-between border-b border-surface-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bất động sản đã lưu</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Danh sách những tin đăng bất động sản bạn quan tâm và đã bấm lưu để theo dõi.
+          <h1 className="text-2xl font-bold text-text-primary">Bất động sản đã lưu</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Danh sách những bất động sản bạn đang theo dõi và quan tâm.
           </p>
         </div>
-        <span className="rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-bold text-red-600">
+        <span className="rounded-full bg-rose-50 border border-rose-200 px-3.5 py-1.5 text-xs font-bold text-rose-600">
           ❤️ {total} tin đã lưu
         </span>
       </div>
 
-      {loading && <p className="mt-6 text-sm text-gray-500">Đang tải danh sách tin đã lưu...</p>}
+      {loading && <p className="mt-6 text-sm text-text-muted">Đang tải danh sách tin đã lưu...</p>}
       {error && <p className="mt-6 text-sm text-red-600">{error}</p>}
 
       {!loading && !error && (
         <>
           {listings.length === 0 ? (
-            <div className="mt-8 rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+            <div className="mt-8 rounded-2xl border border-dashed border-surface-border bg-white p-12 text-center">
               <span className="text-4xl">🤍</span>
-              <h3 className="mt-3 text-base font-bold text-gray-800">Bạn chưa lưu bất động sản nào</h3>
-              <p className="mt-1 text-sm text-gray-500 max-w-md mx-auto">
-                Khi tìm kiếm nhà đất, hãy bấm vào nút &quot;Lưu tin&quot; trên trang chi tiết để lưu lại và xem lại bất cứ lúc nào.
+              <h3 className="mt-3 text-base font-bold text-text-primary">Bạn chưa lưu bất động sản nào</h3>
+              <p className="mt-1 text-sm text-text-secondary max-w-md mx-auto">
+                Khi tìm kiếm nhà đất, hãy bấm vào nút &quot;Lưu tin&quot; trên trang chi tiết để lưu lại và theo dõi bất cứ lúc nào.
               </p>
               <div className="mt-6 flex justify-center gap-3">
                 <Link
                   href="/mua-ban"
-                  className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark"
+                  className="btn-primary"
                 >
-                  Khám phá Nhà đất bán
+                  Khám phá Mua bán nhà đất
                 </Link>
                 <Link
                   href="/thue"
-                  className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  className="btn-secondary"
                 >
-                  Khám phá Nhà cho thuê
+                  Khám phá Cho thuê nhà đất
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="mt-6 divide-y rounded-2xl border bg-white shadow-sm">
+            <div className="mt-6 divide-y divide-surface-border rounded-2xl border border-surface-border bg-white shadow-card overflow-hidden">
               {listings.map((listing) => (
-                <div key={listing.id} className="flex items-center gap-4 p-4 hover:bg-gray-50/50">
-                  <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                <div key={listing.id} className="flex items-center gap-4 p-4 hover:bg-slate-50/50 transition-colors">
+                  <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                     {listing.images[0]?.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={listing.images[0].imageUrl} alt={listing.title} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-[10px] text-gray-400">Chưa có ảnh</div>
+                      <div className="flex h-full items-center justify-center text-[10px] text-text-muted">Chưa có ảnh</div>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/tin/${listing.slug}`}
-                      className="line-clamp-1 font-semibold text-gray-900 hover:text-brand-dark"
+                      className="line-clamp-1 font-semibold text-text-primary hover:text-brand transition-colors"
                     >
                       {listing.title}
                     </Link>
-                    <p className="mt-0.5 text-xs text-gray-500">{listing.addressDetail ?? listing.location.name}</p>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-gray-600">
-                      <span className="font-bold text-brand-dark text-sm">{formatPrice(listing.price)}</span>
+                    <p className="mt-0.5 text-xs text-text-muted">{listing.addressDetail ?? listing.location.name}</p>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-text-secondary">
+                      <span className="font-bold text-brand text-sm">{formatPrice(listing.price)}</span>
+                      {listing.transactionType === 'rent' && <span className="text-[11px] text-text-muted">/tháng</span>}
                       <span>•</span>
                       <span>{listing.areaM2} m²</span>
                       {listing.bedrooms != null && (
@@ -138,14 +139,14 @@ export default function TinDaLuuPage() {
                   <div className="flex shrink-0 items-center gap-3">
                     <Link
                       href={`/tin/${listing.slug}`}
-                      className="rounded-xl border border-gray-200 px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                      className="rounded-xl border border-surface-border bg-white px-3.5 py-1.5 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand transition-colors"
                     >
                       Xem chi tiết
                     </Link>
                     <button
                       type="button"
                       onClick={() => handleUnsave(listing.id)}
-                      className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                      className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
                       title="Bỏ lưu tin này"
                     >
                       Bỏ lưu

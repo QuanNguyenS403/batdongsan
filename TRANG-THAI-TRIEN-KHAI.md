@@ -110,6 +110,20 @@ Sau khi merge nhánh đã chạy `prisma generate` thành công từ máy thật
 | 32 | 🟢 UX Auth | Trang đăng nhập thiếu luồng "Quên mật khẩu" | Thêm luồng khôi phục mật khẩu qua OTP ngay trên form đăng nhập |
 | 33 | 🟢 UX Mogi | Thẻ tin đăng thiếu nhãn đơn vị "/ tháng" cho tin thuê | Hiển thị "/ tháng" trên `ListingCard` khi transactionType là rent |
 
+## 🎨 Đợt Redesign UI/UX PropTech Teal & Audit Runtime (03/09/2026) (#34 - #42)
+
+| # | Mức độ | Vấn đề | Đã sửa / Hoàn thiện bằng cách |
+|---|---|---|---|
+| 34 | 🎨 Redesign | Giao diện mang màu vàng đen bản sao Mogi.vn, thiếu cá tính nhận diện riêng | Tái thiết kế toàn diện theo phong cách **PropTech Teal** (`#0d9488`), phối màu Slate cao cấp, card tỷ lệ 16:10, typography và shadow hiện đại |
+| 35 | 🔴 WCAG AA | Các trang con (`/dang-nhap`, `/dang-tin`, `/tai-khoan/*`) sót class cũ `bg-brand text-gray-900` vi phạm tương phản | Thay thế 100% bằng design tokens `.btn-primary` (chữ trắng trên nền teal đạt chuẩn WCAG AA), `.input-field`, `text-brand` |
+| 36 | 🟠 Lỗi Runtime | `tin/[slug]/page.tsx` crash sập màn hình do truyền `onClick` vào Server Component | Chuyển button cuộn widget vay mua nhà sang thẻ `<a href="#loan-calculator">` chuẩn HTML, gán `id="loan-calculator"` |
+| 37 | 🟡 Trải nghiệm | Trang chi tiết tin thiếu Error Boundary & Fallback khi API 404/500 | Bọc `try/catch` an toàn trong `getListingOrNotFound` và `generateMetadata`, tạo trang `not-found.tsx` và `error.tsx` toàn cục |
+| 38 | 🟡 Thẩm mỹ | Tiền tố `[MẪU]` hiển thị thô ráp làm hỏng trải nghiệm người dùng xem demo | Tự động tách tiền tố `[MẪU]` khỏi tiêu đề hiển thị, thay bằng badge thanh lịch `Tin tham khảo` |
+| 39 | 🟡 Thẩm mỹ / UX | Enum `propertyType` và `legalStatus` lộ slug kebab-case thô nếu không khớp từ điển | Bổ sung đầy đủ từ điển loại hình BĐS, fallback thành `"Bất động sản"` và `"Chưa xác định"` |
+| 40 | 🟡 Đồng bộ | Thuật ngữ "Nhà đất bán" và "Mua bán" chưa đồng bộ giữa các trang | Chuẩn hóa thống nhất tên gọi chuyên nghiệp "Mua bán nhà đất" và "Cho thuê nhà đất" trên toàn bộ trang con |
+| 41 | 🟢 Parity Demo | Trang chủ và trang chi tiết bị trống/báo lỗi vàng khi database chưa nạp dữ liệu thật | Tách module `demo-data.ts` làm fallback tham khảo tinh tế, hiển thị đầy đủ hình ảnh và thông số để khách trải nghiệm trọn vẹn |
+| 42 | 🟢 Xác thực | Cần đảm bảo mã nguồn monorepo không phát sinh bất kỳ lỗi TypeScript/Build nào | Chạy `tsc --noEmit` và `next build`: toàn bộ **16/16 routes** biên dịch thành công 100% (exit code 0) |
+
 ## 🚧 Chưa làm (đúng lộ trình roadmap Giai đoạn 2-3)
 
 - Tích hợp Meilisearch / Elasticsearch

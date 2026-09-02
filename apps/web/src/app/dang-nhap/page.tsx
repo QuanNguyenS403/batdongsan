@@ -153,27 +153,40 @@ export default function DangNhapPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-16">
-      <div className="rounded-2xl border bg-white p-6 shadow-sm">
-        <h1 className="text-center text-xl font-bold text-gray-900">Đăng nhập / Đăng ký</h1>
-        <p className="mt-1 text-center text-xs text-gray-500">
-          Xác thực bằng số điện thoại (OTP). Ở môi trường dev, mã OTP hiện trong log server API (SMS_PROVIDER=mock).
-        </p>
+      <div className="rounded-2xl border border-surface-border bg-white p-7 shadow-elevated">
+        <div className="text-center">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-xl text-brand mb-3">
+            🔐
+          </div>
+          <h1 className="text-2xl font-bold text-text-primary">Đăng nhập / Đăng ký</h1>
+          <p className="mt-1 text-xs text-text-secondary">
+            Xác thực bằng số điện thoại (OTP). Ở môi trường dev, mã OTP hiển thị trong console log server.
+          </p>
+        </div>
 
-        {successMsg && <p className="mt-4 rounded-lg bg-green-50 p-3 text-center text-xs text-green-700">{successMsg}</p>}
+        {successMsg && (
+          <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-center text-xs font-medium text-emerald-700">
+            {successMsg}
+          </div>
+        )}
 
         {step === 'phone' && (
           <form onSubmit={handleCheckPhone} className="mt-6 space-y-3">
-            <input
-              required
-              placeholder="Số điện thoại của bạn"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-dark"
-            />
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">Số điện thoại</label>
+              <input
+                required
+                type="tel"
+                placeholder="Ví dụ: 0901234567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="input-field"
+              />
+            </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark disabled:opacity-60"
+              className="btn-primary w-full"
             >
               {loading ? 'Đang kiểm tra...' : 'Tiếp tục'}
             </button>
@@ -182,32 +195,35 @@ export default function DangNhapPage() {
 
         {step === 'login-password' && (
           <form onSubmit={handleLogin} className="mt-6 space-y-3">
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>SĐT: <b className="text-gray-900">{phone}</b></span>
+            <div className="flex items-center justify-between text-xs text-text-secondary">
+              <span>SĐT: <b className="text-text-primary">{phone}</b></span>
               <button
                 type="button"
                 onClick={() => setStep('phone')}
-                className="text-brand-dark hover:underline"
+                className="font-semibold text-brand hover:text-brand-700 hover:underline"
               >
                 Đổi SĐT
               </button>
             </div>
 
-            <input
-              required
-              type="password"
-              placeholder="Nhập mật khẩu của bạn"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-dark"
-            />
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">Mật khẩu</label>
+              <input
+                required
+                type="password"
+                placeholder="Nhập mật khẩu của bạn"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+              />
+            </div>
 
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={handleStartForgotPassword}
                 disabled={loading}
-                className="text-xs text-gray-500 hover:text-brand-dark hover:underline"
+                className="text-xs font-medium text-text-muted hover:text-brand hover:underline"
               >
                 Quên mật khẩu?
               </button>
@@ -216,7 +232,7 @@ export default function DangNhapPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark disabled:opacity-60"
+              className="btn-primary w-full"
             >
               {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
@@ -225,19 +241,19 @@ export default function DangNhapPage() {
 
         {step === 'forgot-password' && (
           <form onSubmit={handleResetPassword} className="mt-6 space-y-3">
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>Khôi phục mật khẩu: <b className="text-gray-900">{phone}</b></span>
+            <div className="flex items-center justify-between text-xs text-text-secondary">
+              <span>Khôi phục: <b className="text-text-primary">{phone}</b></span>
               <button
                 type="button"
                 onClick={() => setStep('login-password')}
-                className="text-brand-dark hover:underline"
+                className="font-semibold text-brand hover:text-brand-700 hover:underline"
               >
                 Quay lại
               </button>
             </div>
 
-            <p className="text-xs text-gray-500">
-              Đã gửi mã OTP tới {phone}. Vui lòng nhập mã và thiết lập mật khẩu mới:
+            <p className="text-xs text-text-secondary">
+              Mã OTP đã gửi tới {phone}. Vui lòng nhập mã và đặt mật khẩu mới:
             </p>
 
             <input
@@ -245,7 +261,7 @@ export default function DangNhapPage() {
               placeholder="Mã OTP (6 số)"
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-dark"
+              className="input-field"
             />
 
             <input
@@ -254,13 +270,13 @@ export default function DangNhapPage() {
               placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-dark"
+              className="input-field"
             />
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark disabled:opacity-60"
+              className="btn-primary w-full"
             >
               {loading ? 'Đang đặt lại...' : 'Xác nhận đổi mật khẩu'}
             </button>
@@ -269,24 +285,24 @@ export default function DangNhapPage() {
 
         {step === 'register-otp' && (
           <div className="mt-6 space-y-3">
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>Đăng ký mới: <b className="text-gray-900">{phone}</b></span>
+            <div className="flex items-center justify-between text-xs text-text-secondary">
+              <span>Đăng ký mới: <b className="text-text-primary">{phone}</b></span>
               <button
                 type="button"
                 onClick={() => setStep('phone')}
-                className="text-brand-dark hover:underline"
+                className="font-semibold text-brand hover:text-brand-700 hover:underline"
               >
                 Đổi SĐT
               </button>
             </div>
 
-            <p className="text-xs text-gray-500">Mã OTP đã được gửi tới số {phone}:</p>
+            <p className="text-xs text-text-secondary">Mã OTP đã được gửi tới số {phone}:</p>
             <input
               required
               placeholder="Mã OTP (6 số)"
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-dark"
+              className="input-field"
             />
             <button
               type="button"
@@ -297,7 +313,7 @@ export default function DangNhapPage() {
                 }
                 setStep('register-info');
               }}
-              className="w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark"
+              className="btn-primary w-full"
             >
               Tiếp tục
             </button>
@@ -306,32 +322,42 @@ export default function DangNhapPage() {
 
         {step === 'register-info' && (
           <form onSubmit={handleRegister} className="mt-6 space-y-3">
-            <input
-              required
-              placeholder="Họ và tên của bạn"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-dark"
-            />
-            <input
-              required
-              type="password"
-              placeholder="Tạo mật khẩu (tối thiểu 6 ký tự)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-brand-dark"
-            />
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">Họ và tên</label>
+              <input
+                required
+                placeholder="Họ và tên của bạn"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">Mật khẩu</label>
+              <input
+                required
+                type="password"
+                placeholder="Tạo mật khẩu (tối thiểu 6 ký tự)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+              />
+            </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-gray-900 hover:bg-brand-dark disabled:opacity-60"
+              className="btn-primary w-full"
             >
               {loading ? 'Đang đăng ký...' : 'Hoàn tất đăng ký'}
             </button>
           </form>
         )}
 
-        {error && <p className="mt-3 text-center text-xs text-red-600">{error}</p>}
+        {error && (
+          <div className="mt-4 rounded-xl bg-red-50 border border-red-200 p-3 text-center text-xs font-medium text-red-600">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );

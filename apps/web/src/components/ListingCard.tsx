@@ -9,6 +9,8 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   'phong-tro': 'Phòng trọ',
   'van-phong': 'Văn phòng',
   'kho-xuong': 'Kho xưởng',
+  'biet-thu': 'Biệt thự',
+  'nha-mat-pho': 'Nhà mặt phố',
 };
 
 function formatTimeAgo(dateStr: string | null | undefined): string {
@@ -24,8 +26,10 @@ function formatTimeAgo(dateStr: string | null | undefined): string {
 
 export function ListingCard({ listing }: { listing: Listing }) {
   const cover = listing.images[0]?.imageUrl;
-  const propertyLabel = PROPERTY_TYPE_LABEL[listing.propertyType] ?? listing.propertyType;
+  const propertyLabel = PROPERTY_TYPE_LABEL[listing.propertyType] ?? 'Bất động sản';
   const timeLabel = formatTimeAgo(listing.publishedAt);
+  const isSample = listing.title.startsWith('[MẪU]');
+  const displayTitle = isSample ? listing.title.replace(/^\[MẪU\]\s*/, '') : listing.title;
 
   return (
     <Link href={`/tin/${listing.slug}`} className="listing-card group">
@@ -35,7 +39,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={cover}
-            alt={listing.title}
+            alt={displayTitle}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -95,7 +99,12 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
         {/* Tiêu đề */}
         <p className="mt-1.5 line-clamp-2 text-sm font-semibold text-text-primary leading-snug group-hover:text-brand transition-colors">
-          {listing.title}
+          {isSample && (
+            <span className="mr-1.5 inline-flex items-center rounded bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 align-middle">
+              Tin tham khảo
+            </span>
+          )}
+          {displayTitle}
         </p>
 
         {/* Địa chỉ */}

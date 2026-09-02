@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { fetchListingBySlug, formatPrice } from '@/lib/api';
+import { ALL_DEMO_LISTINGS } from '@/lib/demo-data';
 import { RevealPhoneButton } from './RevealPhoneButton';
 import { SaveListingButton } from './SaveListingButton';
 import { LoanCalculatorWidget } from '@/components/LoanCalculatorWidget';
@@ -14,27 +15,35 @@ interface Props {
 async function getListingOrNotFound(slug: string) {
   try {
     return await fetchListingBySlug(slug);
-  } catch (err) {
-    if ((err as Error).message === 'NOT_FOUND') notFound();
-    throw err;
+  } catch {
+    const demo = ALL_DEMO_LISTINGS.find((item) => item.slug === slug);
+    if (demo) return demo;
+    notFound();
   }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const listing = await getListingOrNotFound(params.slug);
-  const desc = listing.description?.slice(0, 160) ?? `${listing.title} tại ${listing.location.name}`;
-  return {
-    title: listing.title,
-    description: desc,
-    openGraph: {
-      title: listing.title,
+  try {
+    const listing = await getListingOrNotFound(params.slug);
+    const desc = listing.description?.slice(0, 160) ?? `${listing.title} tại ${listing.location.name}`;
+    return {
+      title: `${listing.title} | BatDongSan.vn`,
       description: desc,
-      images: listing.images[0] ? [listing.images[0].imageUrl] : [],
-    },
-  };
+      openGraph: {
+        title: listing.title,
+        description: desc,
+        images: listing.images[0] ? [listing.images[0].imageUrl] : [],
+      },
+    };
+  } catch {
+    return {
+      title: 'Chi tiết bất động sản | BatDongSan.vn',
+      description: 'Thông tin chi tiết tin đăng mua bán, cho thuê bất động sản.',
+    };
+  }
 }
 
-// #36: Map đầy đủ, fallback là "Không xác định" thay vì lộ slug thô
+// Map đầy đủ nhãn tiếng Việt, fallback an toàn thay vì lộ slug thô
 const LEGAL_STATUS_LABEL: Record<string, string> = {
   so_do: 'Sổ đỏ',
   so_hong: 'Sổ hồng',
@@ -50,6 +59,8 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   'phong-tro': 'Phòng trọ',
   'van-phong': 'Văn phòng',
   'kho-xuong': 'Kho xưởng',
+  'biet-thu': 'Biệt thự',
+  'nha-mat-pho': 'Nhà mặt phố',
 };
 
 export default async function ListingDetailPage({ params }: Props) {
@@ -57,6 +68,8 @@ export default async function ListingDetailPage({ params }: Props) {
   const isSale = listing.transactionType === 'sale';
   const transactionLabel = isSale ? 'Mua bán' : 'Cho thuê';
   const transactionPath = isSale ? '/mua-ban' : '/thue';
+  const isSample = listing.title.startsWith('[MẪU]');
+  const displayTitle = isSample ? listing.title.replace(/^\[MẪU\]\s*/, '') : listing.title;
 
   return (
     <div className="min-h-screen bg-surface-muted">
@@ -74,7 +87,7 @@ export default async function ListingDetailPage({ params }: Props) {
             {listing.location.name}
           </Link>
           <span>›</span>
-          <span className="text-text-secondary font-medium line-clamp-1 max-w-xs">{listing.title}</span>
+          <span className="text-text-secondary font-medium line-clamp-1 max-w-xs">{displayTitle}</span>
         </nav>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -87,7 +100,7 @@ export default async function ListingDetailPage({ params }: Props) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={listing.images[0].imageUrl}
-                    alt={listing.title}
+                    alt={displayTitle}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -122,10 +135,15 @@ export default async function ListingDetailPage({ params }: Props) {
                       {isSale ? 'Bán' : 'Cho thuê'}
                     </span>
                     <span className="property-badge">
-                      {PROPERTY_TYPE_LABEL[listing.propertyType] ?? listing.propertyType}
+                      {PROPERTY_TYPE_LABEL[listing.propertyType] ?? 'Bất động sản'}
                     </span>
+                    {isSample && (
+                      <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                        Tin tham khảo
+                      </span>
+                    )}
                   </div>
-                  <h1 className="text-xl font-bold text-text-primary md:text-2xl">{listing.title}</h1>
+                  <h1 className="text-xl font-bold text-text-primary md:text-2xl">{displayTitle}</h1>
                   <p className="mt-1.5 flex items-center gap-1.5 text-sm text-text-muted">
                     <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -175,7 +193,11 @@ export default async function ListingDetailPage({ params }: Props) {
             )}
 
             {/* Công cụ tính vay */}
-            {isSale && <LoanCalculatorWidget initialPrice={listing.price} />}
+            {isSale && (
+              <div id="loan-calculator">
+                <LoanCalculatorWidget initialPrice={listing.price} />
+              </div>
+            )}
 
             {/* Báo vi phạm */}
             <ReportListingModal listingId={listing.id} />
@@ -218,12 +240,12 @@ export default async function ListingDetailPage({ params }: Props) {
                 <div className="rounded-2xl bg-gradient-to-br from-brand/5 to-brand/10 border border-brand/20 p-4">
                   <p className="text-sm font-semibold text-brand">🏦 Hỗ trợ vay mua nhà</p>
                   <p className="mt-1 text-xs text-text-secondary">Tính toán khoản vay phù hợp với tài chính của bạn.</p>
-                  <button
-                    onClick={() => document.querySelector('[data-loan-calc]')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="mt-3 text-xs font-semibold text-brand hover:text-brand-700 transition-colors"
+                  <a
+                    href="#loan-calculator"
+                    className="mt-3 inline-block text-xs font-semibold text-brand hover:text-brand-700 transition-colors"
                   >
                     Xem công cụ tính vay ↓
-                  </button>
+                  </a>
                 </div>
               )}
             </div>

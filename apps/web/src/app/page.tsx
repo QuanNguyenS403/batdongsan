@@ -2,12 +2,14 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { fetchListings } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
+import { DEMO_SALE_LISTINGS, DEMO_RENT_LISTINGS } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
   title: 'BatDongSan.vn — Mua bán, cho thuê nhà đất toàn quốc',
   description:
     'Tìm kiếm hàng nghìn tin mua bán, cho thuê nhà đất, căn hộ, đất nền uy tín trên toàn quốc. Cập nhật liên tục, miễn phí tra cứu.',
 };
+
 
 const QUICK_CATEGORIES = [
   { href: '/mua-ban?propertyType=can-ho', icon: '🏢', label: 'Căn hộ chung cư' },
@@ -59,7 +61,10 @@ export default async function HomePage() {
     errorMessage = 'Chưa kết nối được tới API — kiểm tra apps/api đã chạy chưa.';
   }
 
-  const hasListings = (saleListings?.items?.length ?? 0) + (rentListings?.items?.length ?? 0) > 0;
+  const saleItems = (saleListings?.items?.length ?? 0) > 0 ? saleListings!.items : DEMO_SALE_LISTINGS;
+  const rentItems = (rentListings?.items?.length ?? 0) > 0 ? rentListings!.items : DEMO_RENT_LISTINGS;
+  const isSaleDemo = (saleListings?.items?.length ?? 0) === 0;
+  const isRentDemo = (rentListings?.items?.length ?? 0) === 0;
 
   return (
     <div>
@@ -163,78 +168,58 @@ export default async function HomePage() {
       </section>
 
       {/* ── Tin đăng ── */}
-      <section className="container-max py-12">
-        {errorMessage && (
-          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            ⚠️ {errorMessage}
-          </div>
-        )}
-
-        {!hasListings && !errorMessage && (
-          <div className="rounded-2xl border border-surface-border bg-white p-10 text-center">
-            <span className="text-4xl">🏗️</span>
-            <p className="mt-3 font-semibold text-text-primary">Đang chuẩn bị dữ liệu</p>
-            <p className="mt-1 text-sm text-text-secondary">
-              Tin đăng bất động sản sẽ xuất hiện khi dữ liệu được nạp vào hệ thống.
-            </p>
-          </div>
-        )}
-
+      <section className="container-max py-12 space-y-12">
         {/* Tin bán */}
-        {(saleListings?.items?.length ?? 0) > 0 && (
-          <div className="mb-10">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-text-primary">Nhà đất bán mới nhất</h2>
-                <p className="mt-0.5 text-sm text-text-muted">
-                  {saleListings!.pagination.total.toLocaleString('vi-VN')} tin đăng
-                </p>
-              </div>
-              <Link
-                href="/mua-ban"
-                className="flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700 transition-colors"
-              >
-                Xem tất cả
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </Link>
+        <div>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-text-primary">Nhà đất bán mới nhất</h2>
+              <p className="mt-0.5 text-sm text-text-muted">
+                {isSaleDemo ? 'Bất động sản mua bán nổi bật' : `${saleListings!.pagination.total.toLocaleString('vi-VN')} tin đăng`}
+              </p>
             </div>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {saleListings!.items.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            <Link
+              href="/mua-ban"
+              className="flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700 transition-colors"
+            >
+              Xem tất cả
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </Link>
           </div>
-        )}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {saleItems.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        </div>
 
         {/* Tin thuê */}
-        {(rentListings?.items?.length ?? 0) > 0 && (
-          <div>
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-text-primary">Cho thuê mới nhất</h2>
-                <p className="mt-0.5 text-sm text-text-muted">
-                  {rentListings!.pagination.total.toLocaleString('vi-VN')} tin đăng
-                </p>
-              </div>
-              <Link
-                href="/thue"
-                className="flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700 transition-colors"
-              >
-                Xem tất cả
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </Link>
+        <div>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-text-primary">Cho thuê mới nhất</h2>
+              <p className="mt-0.5 text-sm text-text-muted">
+                {isRentDemo ? 'Bất động sản cho thuê nổi bật' : `${rentListings!.pagination.total.toLocaleString('vi-VN')} tin đăng`}
+              </p>
             </div>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {rentListings!.items.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            <Link
+              href="/thue"
+              className="flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700 transition-colors"
+            >
+              Xem tất cả
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </Link>
           </div>
-        )}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {rentItems.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        </div>
       </section>
     </div>
   );
