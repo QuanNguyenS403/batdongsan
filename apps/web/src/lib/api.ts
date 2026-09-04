@@ -28,8 +28,11 @@ export interface ListingListResponse {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // Chống treo SSR nếu backend phản hồi chậm hoặc đang cold start (timeout 3.5s an toàn)
+  const signal = init?.signal ?? AbortSignal.timeout(3500);
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
+    signal,
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
     // Trang danh sách/chi tiết cần dữ liệu tương đối mới — cache ngắn 60s (ISR-style) thay vì always dynamic hoàn toàn.
     next: { revalidate: 60 },

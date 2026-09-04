@@ -99,8 +99,17 @@ export class ListingsService {
     };
   }
 
+  // In-memory cache lưu cây địa danh để tránh 2-4 câu query đệ quy lặp đi lặp lại trên từng lượt tìm kiếm
+  private static readonly locationTreeCache = new Map<string, { ids: number[]; expiresAt: number }>();
+  private static readonly CACHE_TTL_MS = 60 * 60 * 1000; // 1 giờ
+
   /** Trả về ID của chính location này + toàn bộ con cháu (đệ quy) — dùng để browsing theo tỉnh vẫn thấy tin ở mọi quận/phường con. */
   private async resolveLocationIdsIncludingChildren(slug: string): Promise<number[]> {
+    const cached = ListingsService.locationTreeCache.get(slug);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.ids;
+    }
+
     const root = await this.prisma.location.findUnique({ where: { slug } });
     if (!root) return [];
 
@@ -118,6 +127,11 @@ export class ListingsService {
       allIds.push(...childIds);
       currentLevelIds = childIds;
     }
+
+    ListingsService.locationTreeCache.set(slug, {
+      ids: allIds,
+      expiresAt: Date.now() + ListingsService.CACHE_TTL_MS,
+    });
 
     return allIds;
   }

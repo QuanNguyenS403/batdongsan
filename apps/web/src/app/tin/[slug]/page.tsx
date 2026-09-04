@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -7,12 +8,14 @@ import { RevealPhoneButton } from './RevealPhoneButton';
 import { SaveListingButton } from './SaveListingButton';
 import { LoanCalculatorWidget } from '@/components/LoanCalculatorWidget';
 import { ReportListingModal } from '@/components/ReportListingModal';
+import { PropertyGallery } from './PropertyGallery';
 
 interface Props {
   params: { slug: string };
 }
 
-async function getListingOrNotFound(slug: string) {
+// React cache() tự động deduplicate request giữa generateMetadata và ListingDetailPage
+const getListingOrNotFound = cache(async (slug: string) => {
   try {
     return await fetchListingBySlug(slug);
   } catch {
@@ -20,7 +23,7 @@ async function getListingOrNotFound(slug: string) {
     if (demo) return demo;
     notFound();
   }
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
@@ -93,38 +96,8 @@ export default async function ListingDetailPage({ params }: Props) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Cột trái — nội dung chính */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Gallery */}
-            <div className="overflow-hidden rounded-2xl bg-slate-100">
-              <div className="aspect-video w-full">
-                {listing.images[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={listing.images[0].imageUrl}
-                    alt={displayTitle}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <svg className="h-16 w-16 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 21h18M3.75 3h16.5M4.5 3v18m15-18v18" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-              {listing.images.length > 1 && (
-                <div className="grid grid-cols-5 gap-1.5 p-1.5">
-                  {listing.images.slice(1, 6).map((img) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={img.imageUrl}
-                      src={img.imageUrl}
-                      alt=""
-                      className="aspect-square rounded-lg object-cover"
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Gallery tương tác mượt mà */}
+            <PropertyGallery images={listing.images} title={displayTitle} />
 
             {/* Tiêu đề + giá */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">

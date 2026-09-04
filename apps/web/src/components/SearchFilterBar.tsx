@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface SearchFilterBarProps {
@@ -11,11 +11,11 @@ interface SearchFilterBarProps {
 
 const PROPERTY_TYPES = [
   { value: '', label: 'Tất cả loại BĐS' },
-  { value: 'can-ho', label: 'Căn hộ / Chung cư' },
-  { value: 'nha-nguyen-can', label: 'Nhà riêng / Nhà phố' }, // #35: thống nhất với dang-tin và ListingCard
-  { value: 'dat', label: 'Đất nền / Đất thổ cư' },
-  { value: 'shophouse', label: 'Shophouse / Mặt tiền' },
-  { value: 'phong-tro', label: 'Phòng trọ / Nhà trọ' },
+  { value: 'nha_rieng', label: 'Nhà riêng / Nhà phố' },
+  { value: 'dat_nen', label: 'Đất nền / Đất thổ cư' },
+  { value: 'can_ho', label: 'Căn hộ / Chung cư' },
+  { value: 'phong_tro', label: 'Cho thuê phòng trọ' },
+  { value: 'mat_bang', label: 'Cho thuê mặt bằng' },
 ];
 
 const PRICE_PRESETS_SALE = [
@@ -48,6 +48,7 @@ const AREA_PRESETS = [
 
 export function SearchFilterBar({ basePath, transactionType = 'sale', initialParams = {} }: SearchFilterBarProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const [keyword, setKeyword] = useState(initialParams.keyword ?? '');
   const [propertyType, setPropertyType] = useState(initialParams.propertyType ?? '');
@@ -83,7 +84,9 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
     // Reset về trang 1 khi lọc mới
     params.set('page', '1');
 
-    router.push(`${basePath}?${params.toString()}`);
+    startTransition(() => {
+      router.push(`${basePath}?${params.toString()}`);
+    });
   }
 
   function handleReset() {
@@ -91,7 +94,9 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
     setPropertyType('');
     setPriceIndex(0);
     setAreaIndex(0);
-    router.push(basePath);
+    startTransition(() => {
+      router.push(basePath);
+    });
   }
 
   const hasFilters = !!(
@@ -175,12 +180,25 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
         )}
         <button
           type="submit"
-          className="btn-primary text-xs px-5 py-2"
+          disabled={isPending}
+          className="btn-primary text-xs px-5 py-2 disabled:opacity-75"
         >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-          Lọc kết quả
+          {isPending ? (
+            <>
+              <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              <span>Đang lọc...</span>
+            </>
+          ) : (
+            <>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <span>Lọc kết quả</span>
+            </>
+          )}
         </button>
       </div>
     </form>

@@ -12,36 +12,42 @@ export const metadata: Metadata = {
 
 
 const QUICK_CATEGORIES = [
-  { href: '/mua-ban?propertyType=can-ho', icon: '🏢', label: 'Căn hộ chung cư' },
-  { href: '/mua-ban?propertyType=nha-nguyen-can', icon: '🏠', label: 'Nhà riêng' },
-  { href: '/mua-ban?propertyType=dat', icon: '🌿', label: 'Đất nền' },
-  { href: '/mua-ban?propertyType=shophouse', icon: '🏪', label: 'Shophouse' },
-  { href: '/thue?propertyType=phong-tro', icon: '🛏️', label: 'Phòng trọ' },
-  { href: '/thue?propertyType=can-ho', icon: '🔑', label: 'Căn hộ cho thuê' },
+  { href: '/mua-ban', icon: '🏠', label: 'Bán bất động sản' },
+  { href: '/thue', icon: '🔑', label: 'Cho thuê bất động sản' },
+  { href: '/thue?propertyType=phong_tro', icon: '🛏️', label: 'Cho thuê trọ' },
+  { href: '/thue?propertyType=mat_bang', icon: '🏪', label: 'Cho thuê mặt bằng' },
 ];
 
 const FEATURE_CARDS = [
   {
-    href: '/du-an',
-    icon: '🏗️',
-    title: 'Dự án BĐS',
-    desc: 'Căn hộ, khu đô thị từ chủ đầu tư uy tín',
-    color: 'from-violet-500/10 to-violet-500/5',
-    border: 'border-violet-200',
+    href: '/mua-ban',
+    icon: '🏡',
+    title: 'Bán Bất Động Sản',
+    desc: 'Nhà riêng, đất nền, căn hộ pháp lý chuẩn, giá trực tiếp chính chủ',
+    color: 'from-teal-500/10 to-teal-500/5',
+    border: 'border-teal-200',
   },
   {
-    href: '/gia-nha-dat',
-    icon: '📊',
-    title: 'Giá nhà đất',
-    desc: 'Bảng giá tham khảo theo quận, cập nhật hàng tháng',
+    href: '/thue',
+    icon: '🔑',
+    title: 'Cho Thuê Bất Động Sản',
+    desc: 'Căn hộ chung cư, nhà nguyên căn đầy đủ tiện nghi, vị trí đẹp',
+    color: 'from-blue-500/10 to-blue-500/5',
+    border: 'border-blue-200',
+  },
+  {
+    href: '/thue?propertyType=phong_tro',
+    icon: '🛏️',
+    title: 'Cho Thuê Phòng Trọ',
+    desc: 'Phòng trọ khép kín, sạch sẽ, giờ giấc tự do, an ninh đảm bảo',
     color: 'from-amber-500/10 to-amber-500/5',
     border: 'border-amber-200',
   },
   {
-    href: '/moi-gioi',
-    icon: '🤝',
-    title: 'Môi giới uy tín',
-    desc: 'Danh bạ môi giới chuyên nghiệp đã xác thực',
+    href: '/thue?propertyType=mat_bang',
+    icon: '🏪',
+    title: 'Cho Thuê Mặt Bằng',
+    desc: 'Mặt bằng kinh doanh phố lớn, vỉa hè rộng, tiềm năng thương mại cao',
     color: 'from-rose-500/10 to-rose-500/5',
     border: 'border-rose-200',
   },
@@ -73,36 +79,48 @@ export default async function HomePage() {
         <div className="container-max py-14 lg:py-20">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/20">
-              🏡 Sàn bất động sản uy tín
+              🏡 Bất động sản Nguyễn Đức Quân — Hotline/Zalo: 0981 753 082
             </div>
             <h1 className="text-4xl font-bold leading-tight text-text-primary md:text-5xl lg:text-[3.25rem]">
-              Tìm nhà đất{' '}
+              Bán & Cho thuê{' '}
               <span className="bg-gradient-to-r from-brand to-brand-700 bg-clip-text text-transparent">
-                nhanh & an tâm
+                Bất động sản uy tín
               </span>
             </h1>
             <p className="mt-4 text-base text-text-secondary md:text-lg">
-              Hàng nghìn tin đăng mua bán, cho thuê nhà đất, căn hộ trên toàn quốc.
+              Chuyên Bán BĐS, Cho thuê BĐS, Cho thuê phòng trọ & Cho thuê mặt bằng kinh doanh.
               <br className="hidden md:block" />
-              Cập nhật liên tục — miễn phí tra cứu.
+              Thông tin minh bạch, tư vấn tận tâm trực tiếp từ chính chủ.
             </p>
 
             {/* Search bar */}
             <div className="mt-8">
               {/* Tabs */}
               <div className="mb-0 flex justify-center">
-                <div className="inline-flex rounded-t-xl overflow-hidden border-b-0">
+                <div className="inline-flex rounded-t-xl overflow-hidden border-b-0 flex-wrap">
                   <Link
                     href="/mua-ban"
-                    className="bg-white px-6 py-2.5 text-sm font-semibold text-brand border-x border-t border-surface-border rounded-tl-xl"
+                    className="bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand border-x border-t border-surface-border rounded-tl-xl"
                   >
-                    🏠 Mua bán
+                    🏠 Bán BĐS
                   </Link>
                   <Link
                     href="/thue"
-                    className="bg-slate-50 px-6 py-2.5 text-sm font-medium text-text-secondary border-r border-t border-surface-border rounded-tr-xl hover:bg-white hover:text-brand transition-colors"
+                    className="bg-slate-50 px-5 py-2.5 text-xs sm:text-sm font-medium text-text-secondary border-r border-t border-surface-border hover:bg-white hover:text-brand transition-colors"
                   >
-                    🔑 Cho thuê
+                    🔑 Cho thuê BĐS
+                  </Link>
+                  <Link
+                    href="/thue?propertyType=phong_tro"
+                    className="bg-slate-50 px-5 py-2.5 text-xs sm:text-sm font-medium text-text-secondary border-r border-t border-surface-border hover:bg-white hover:text-brand transition-colors"
+                  >
+                    🛏️ Cho thuê trọ
+                  </Link>
+                  <Link
+                    href="/thue?propertyType=mat_bang"
+                    className="bg-slate-50 px-5 py-2.5 text-xs sm:text-sm font-medium text-text-secondary border-r border-t border-surface-border rounded-tr-xl hover:bg-white hover:text-brand transition-colors"
+                  >
+                    🏪 Cho thuê mặt bằng
                   </Link>
                 </div>
               </div>
@@ -113,7 +131,7 @@ export default async function HomePage() {
               >
                 <input
                   name="keyword"
-                  placeholder="Nhập khu vực, tên đường, dự án..."
+                  placeholder="Nhập khu vực, loại hình BĐS, mức giá cần tìm..."
                   className="flex-1 px-5 py-4 text-sm text-text-primary placeholder:text-text-muted outline-none"
                 />
                 <button
@@ -146,10 +164,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Feature Cards ── */}
+      {/* ── 4 Feature Cards Dịch vụ ── */}
       <section className="border-b border-surface-border bg-white">
         <div className="container-max py-8">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {FEATURE_CARDS.map((card) => (
               <Link
                 key={card.href}

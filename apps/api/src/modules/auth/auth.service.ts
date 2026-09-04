@@ -8,13 +8,22 @@ import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
-function serializeUser(user: { id: bigint; phone: string; fullName: string | null; avatarUrl: string | null; role: string; createdAt: Date }) {
+function serializeUser(user: {
+  id: bigint;
+  phone: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+  role: string;
+  isBlocked?: boolean;
+  createdAt: Date;
+}) {
   return {
     id: user.id.toString(),
     phone: user.phone,
     fullName: user.fullName,
     avatarUrl: user.avatarUrl,
     role: user.role,
+    isBlocked: user.isBlocked ?? false,
     createdAt: user.createdAt,
   };
 }
@@ -61,6 +70,10 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
     if (!user || !user.passwordHash) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng.');
 
+    if (user.isBlocked) {
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa do vi phạm chính sách. Vui lòng liên hệ quản trị viên.');
+    }
+
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng.');
 
@@ -86,7 +99,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: BigInt(payload.sub) } });
-    if (!user) throw new UnauthorizedException();
+    if (!user || user.isBlocked) throw new UnauthorizedException('Tài khoản không hợp lệ hoặc đã bị khóa.');
 
     return this.issueTokens(user);
   }

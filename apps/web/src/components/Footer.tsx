@@ -1,23 +1,21 @@
 import Link from 'next/link';
 
 const FOOTER_LINKS = {
-  'Mua bán': [
-    { href: '/mua-ban?propertyType=can-ho', label: 'Căn hộ chung cư' },
-    { href: '/mua-ban?propertyType=nha-nguyen-can', label: 'Nhà riêng / Nhà phố' },
-    { href: '/mua-ban?propertyType=dat', label: 'Đất nền / Thổ cư' },
-    { href: '/mua-ban?propertyType=shophouse', label: 'Shophouse / Mặt tiền' },
+  'Bán BĐS': [
+    { href: '/mua-ban?propertyType=nha_rieng', label: 'Nhà riêng / Nhà phố' },
+    { href: '/mua-ban?propertyType=dat_nen', label: 'Đất nền / Thổ cư' },
+    { href: '/mua-ban?propertyType=can_ho', label: 'Căn hộ chung cư' },
+    { href: '/mua-ban', label: 'Tất cả BĐS bán' },
   ],
-  'Cho thuê': [
-    { href: '/thue?propertyType=can-ho', label: 'Cho thuê căn hộ' },
-    { href: '/thue?propertyType=phong-tro', label: 'Phòng trọ / Nhà trọ' },
-    { href: '/thue?propertyType=van-phong', label: 'Văn phòng' },
-    { href: '/thue?propertyType=kho-xuong', label: 'Kho xưởng' },
+  'Cho thuê BĐS': [
+    { href: '/thue?propertyType=can_ho', label: 'Cho thuê căn hộ' },
+    { href: '/thue?propertyType=nha_rieng', label: 'Cho thuê nhà riêng' },
+    { href: '/thue', label: 'Tất cả BĐS cho thuê' },
   ],
-  'Công cụ': [
-    { href: '/gia-nha-dat', label: 'Giá nhà đất tham khảo' },
-    { href: '/du-an', label: 'Dự án bất động sản' },
-    { href: '/moi-gioi', label: 'Tìm môi giới uy tín' },
-    { href: '/dang-tin', label: 'Đăng tin BĐS miễn phí' },
+  'Phòng trọ & Mặt bằng': [
+    { href: '/thue?propertyType=phong_tro', label: 'Cho thuê phòng trọ' },
+    { href: '/thue?propertyType=mat_bang', label: 'Cho thuê mặt bằng kinh doanh' },
+    { href: '/dang-nhap', label: 'Đăng nhập tài khoản' },
   ],
 };
 
@@ -38,18 +36,18 @@ export function Footer() {
               </span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-white/60">
-              Sàn giao dịch bất động sản trực tuyến — kết nối người mua, người bán và
-              môi giới uy tín trên toàn quốc.
+              Bất động sản <strong>Nguyễn Đức Quân</strong> — Cung cấp dịch vụ Bán BĐS, Cho thuê BĐS,
+              Cho thuê phòng trọ và Cho thuê mặt bằng kinh doanh uy tín, chính chủ.
             </p>
             <p className="mt-4 text-sm text-white/60">
-              📞 Hotline:{' '}
-              <a href="tel:1900xxxx" className="font-semibold text-brand-300 hover:text-white transition-colors">
-                1900 xxxx
+              📞 Hotline / Zalo:{' '}
+              <a href="tel:0981753082" className="font-bold text-brand-300 hover:text-white transition-colors">
+                0981 753 082
               </a>
             </p>
             <p className="mt-1 text-sm text-white/60">
-              ✉️ Email:{' '}
-              <span className="font-semibold text-brand-300">hello@bds.vn</span>
+              👤 Phụ trách:{' '}
+              <span className="font-semibold text-brand-300">Nguyễn Đức Quân</span>
             </p>
           </div>
 

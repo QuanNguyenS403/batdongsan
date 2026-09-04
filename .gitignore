@@ -42,3 +42,4 @@ dist/
 .env
 apps/api/uploads/
 packages/database/prisma/generated/
+data/

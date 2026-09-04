@@ -40,7 +40,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
           <img
             src={cover}
             alt={displayTitle}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            style={{ willChange: 'transform', transform: 'translateZ(0)' }}
           />
         ) : (
           <div className="flex h-full items-center justify-center">

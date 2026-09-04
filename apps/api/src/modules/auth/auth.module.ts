@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { OtpService } from './otp.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @Module({
   imports: [PassportModule, JwtModule.register({})],
@@ -19,6 +20,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
     // Thứ tự đăng ký: Throttler chạy trước để chặn spam SỚM nhất, trước cả khi tốn công kiểm tra JWT.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard }, // toàn bộ API yêu cầu JWT trừ route @Public()
+    { provide: APP_GUARD, useClass: RolesGuard }, // kiểm tra vai trò nếu route có @Roles()
   ],
   exports: [OtpService],
 })

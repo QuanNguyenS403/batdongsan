@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { fetchListings } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination } from '@/components/Pagination';
@@ -33,7 +34,7 @@ export default async function MuaBanPage({ searchParams }: Props) {
       <div className="container-max py-8">
         {/* Breadcrumb */}
         <nav className="mb-4 flex items-center gap-2 text-xs text-text-muted">
-          <a href="/" className="hover:text-brand transition-colors">Trang chủ</a>
+          <Link href="/" className="hover:text-brand transition-colors">Trang chủ</Link>
           <span>›</span>
           <span className="text-text-secondary font-medium">Mua bán nhà đất</span>
         </nav>

@@ -9,14 +9,14 @@ interface CurrentUser {
   id: string;
   fullName: string | null;
   phone: string;
+  role?: string;
 }
 
 const NAV_LINKS = [
-  { href: '/mua-ban', label: 'Mua bán' },
-  { href: '/thue', label: 'Cho thuê' },
-  { href: '/du-an', label: 'Dự án' },
-  { href: '/moi-gioi', label: 'Môi giới' },
-  { href: '/gia-nha-dat', label: 'Giá nhà đất' },
+  { href: '/mua-ban', label: 'Bán BĐS' },
+  { href: '/thue', label: 'Cho thuê BĐS' },
+  { href: '/thue?propertyType=phong_tro', label: 'Cho thuê trọ' },
+  { href: '/thue?propertyType=mat_bang', label: 'Cho thuê mặt bằng' },
 ];
 
 export function Header() {
@@ -28,8 +28,24 @@ export function Header() {
   const [checked, setChecked] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  function isLinkActive(href: string) {
+    if (href.includes('?')) {
+      return pathname === href.split('?')[0];
+    }
+    return pathname === href;
+  }
+
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 8);
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrolled(window.scrollY > 8);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -83,7 +99,13 @@ export function Header() {
           </Link>
 
           <div className="flex items-center gap-4 text-xs text-white/80">
-            <span className="hidden sm:block">Hotline: 1900 xxxx</span>
+            <a
+              href="tel:0981753082"
+              className="hidden sm:inline-flex items-center gap-1.5 hover:text-white transition-colors"
+            >
+              <span>📞</span>
+              <span>Hotline/Zalo: <strong className="text-white">0981 753 082</strong></span>
+            </a>
             {!checked ? (
               <div className="h-4 w-16 skeleton rounded" />
             ) : user ? (
@@ -103,7 +125,7 @@ export function Header() {
           {/* Navigation desktop */}
           <nav className="hidden gap-1 md:flex">
             {NAV_LINKS.map((link) => {
-              const active = pathname.startsWith(link.href);
+              const active = isLinkActive(link.href);
               return (
                 <Link
                   key={link.href}
@@ -126,6 +148,16 @@ export function Header() {
               <div className="h-9 w-24 skeleton rounded-full" />
             ) : user ? (
               <>
+                {user.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm"
+                  >
+                    <span>⚙️</span>
+                    <span>Quản trị</span>
+                  </Link>
+                )}
+
                 <Link
                   href="/dang-tin"
                   className="btn-primary text-xs px-4 py-2 hidden sm:inline-flex"
@@ -159,6 +191,16 @@ export function Header() {
                           <p className="text-sm font-semibold text-text-primary truncate">{user.fullName ?? user.phone}</p>
                           <p className="text-xs text-text-muted truncate">{user.phone}</p>
                         </div>
+                        {user.role === 'admin' && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-teal-700 bg-teal-50/60 hover:bg-teal-100/70 transition-colors mb-1"
+                          >
+                            <span>⚙️</span>
+                            <span>Trang Quản trị Hệ thống</span>
+                          </Link>
+                        )}
                         {[
                           { href: '/tai-khoan/quan-ly-tin', label: 'Quản lý tin đăng', icon: '📋' },
                           { href: '/tai-khoan/tin-da-luu', label: 'BĐS đã lưu', icon: '❤️' },
@@ -232,7 +274,7 @@ export function Header() {
           <div className="border-t border-surface-border bg-white pb-4 animate-slide-down md:hidden">
             <div className="container-max pt-2 space-y-0.5">
               {NAV_LINKS.map((link) => {
-                const active = pathname.startsWith(link.href);
+                const active = isLinkActive(link.href);
                 return (
                   <Link
                     key={link.href}
@@ -246,9 +288,20 @@ export function Header() {
                 );
               })}
               {user && (
-                <Link href="/dang-tin" className="btn-primary w-full mt-2 justify-center">
-                  + Đăng tin mới
-                </Link>
+                <>
+                  {user.role === 'admin' && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white font-bold py-3 text-sm mt-2"
+                    >
+                      <span>⚙️</span>
+                      <span>Vào Trang Quản trị</span>
+                    </Link>
+                  )}
+                  <Link href="/dang-tin" className="btn-primary w-full mt-2 justify-center">
+                    + Đăng tin mới
+                  </Link>
+                </>
               )}
             </div>
           </div>

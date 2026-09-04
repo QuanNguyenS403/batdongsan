@@ -59,11 +59,15 @@ async function main() {
   const passwordHash = await bcrypt.hash('Demo@123', 10);
 
   const admin = await prisma.user.upsert({
-    where: { phone: '0900000001' },
-    update: {},
+    where: { phone: '0981753082' },
+    update: {
+      fullName: 'Nguyễn Đức Quân',
+      role: 'admin',
+      passwordHash,
+    },
     create: {
-      phone: '0900000001',
-      fullName: 'Quản trị viên',
+      phone: '0981753082',
+      fullName: 'Nguyễn Đức Quân',
       passwordHash,
       role: 'admin',
       isPhoneVerified: true,
@@ -83,7 +87,7 @@ async function main() {
   });
 
   console.log('✅ Seed địa danh + tài khoản demo xong.');
-  console.log('   Đăng nhập demo: SĐT 0900000001 hoặc 0900000002 / mật khẩu: Demo@123');
+  console.log('   Đăng nhập quản trị: SĐT 0981753082 / mật khẩu: Demo@123');
 
   // ---------- 3. Tin đăng MẪU (chỉ để kiểm tra giao diện — xoá khi có dữ liệu thật) ----------
   const existingDemo = await prisma.listing.count({ where: { title: { startsWith: '[MẪU]' } } });

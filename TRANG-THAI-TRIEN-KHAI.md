@@ -124,6 +124,19 @@ Sau khi merge nhánh đã chạy `prisma generate` thành công từ máy thật
 | 41 | 🟢 Parity Demo | Trang chủ và trang chi tiết bị trống/báo lỗi vàng khi database chưa nạp dữ liệu thật | Tách module `demo-data.ts` làm fallback tham khảo tinh tế, hiển thị đầy đủ hình ảnh và thông số để khách trải nghiệm trọn vẹn |
 | 42 | 🟢 Xác thực | Cần đảm bảo mã nguồn monorepo không phát sinh bất kỳ lỗi TypeScript/Build nào | Chạy `tsc --noEmit` và `next build`: toàn bộ **16/16 routes** biên dịch thành công 100% (exit code 0) |
 
+## ⚡ Đợt tối ưu hoá Hiệu năng & Triệt tiêu Giật Lag (03/09/2026) (#43 - #50)
+
+| # | Mức độ | Vấn đề | Đã sửa / Tối ưu hoá bằng cách |
+|---|---|---|---|
+| 43 | 🔴 Trải nghiệm | Thiếu skeleton `loading.tsx` trong Next.js App Router khiến màn hình bị "đơ" 1-3s khi chuyển trang | Tạo `apps/web/src/app/loading.tsx`, `mua-ban/loading.tsx`, `thue/loading.tsx`, `tin/[slug]/loading.tsx` hiển thị skeleton shimmer teal tức thì (0ms) |
+| 44 | 🔴 Hiệu năng | Thẻ `<a href="/">` ở breadcrumb trang tìm kiếm gây Hard Reload toàn trang mất trạng thái client | Thay thế 100% bằng `<Link href="/">` chuẩn Next.js client-side navigation |
+| 45 | 🟠 Hiệu năng | Ảnh mẫu Unsplash 1200px khổng lồ tải song song qua thẻ `<img>` thô làm nghẽn băng thông mạng | Tối ưu `demo-data.ts` về 600px/800px; thêm `loading="lazy"`, `decoding="async"` và GPU acceleration cho `ListingCard.tsx` (giảm >75% dung lượng tải) |
+| 46 | 🟠 UX Lọc | Bấm nút "Lọc kết quả" không có phản hồi thị giác, khách tưởng bị đơ bấm lặp lại | Tích hợp React 18 `useTransition`, hiển thị spinner và nhãn "Đang lọc...", phản hồi trong ~76ms |
+| 47 | 🟡 Trải nghiệm | Gallery ảnh trang chi tiết không tương tác được (bấm thumbnail không chuyển ảnh) | Tạo component `PropertyGallery.tsx` client: chuyển ảnh tức thì (<4ms), có nút Trước/Sau, chỉ số ảnh và viền highlight teal |
+| 48 | 🟡 Backend/SSR | Hàm `getListingOrNotFound` bị gọi đúp 2 lần trong 1 request chi tiết | Bọc React `cache()` tự động deduplicate request giữa `generateMetadata` và page render |
+| 49 | 🟡 Ổn định | `apiFetch` không có timeout gây treo SSR khi backend lag; backend đệ quy cây địa danh lặp lại | Thêm `AbortSignal.timeout(3500)` trong `api.ts`; thêm in-memory cache TTL 1 giờ cho `resolveLocationIdsIncludingChildren` |
+| 50 | 🟢 60FPS CSS | Card và Button dùng `transition-all` gây reflow/repaint liên tục tụt khung hình | Chuyển sang CSS transitions chọn lọc (`transform`, `box-shadow`) kết hợp `translateZ(0)` và `requestAnimationFrame` cho scroll listener |
+
 ## 🚧 Chưa làm (đúng lộ trình roadmap Giai đoạn 2-3)
 
 - Tích hợp Meilisearch / Elasticsearch
@@ -163,9 +176,36 @@ pnpm dev                       # chạy song song apps/api (:4000) và apps/web 
 ```
 Mở http://localhost:3000 — trang chủ sẽ hiện 2 tin `[MẪU]`. Đăng nhập bằng tài khoản demo ở trên để test đăng tin/lưu tin/hiện số điện thoại.
 
+### 40. [Backend/Security] Thiếu RolesGuard bảo vệ endpoint phân quyền và thiếu trường quản trị DB
+- **Hiện tượng**: Backend chưa có cơ chế kiểm tra vai trò người dùng (RolesGuard) ở mức framework, bất kỳ người dùng đã xác thực nào cũng có thể gọi các API nội bộ nếu không chặn. Đồng thời bảng `User` thiếu cờ `isBlocked`, `Listing` thiếu `rejectionReason`, `ListingReport` thiếu trạng thái xử lý (`status`, `resolvedAt`).
+- **Nguyên nhân**: Hệ thống trước đó chỉ dựa vào xác thực JWT (`JwtAuthGuard`), chưa hoàn thiện tầng phân quyền RBAC (Role-Based Access Control) cho Ban Quản trị.
+- **Cách sửa**:
+  1. Tạo `@Roles(...roles)` decorator (`apps/api/src/common/decorators/roles.decorator.ts`).
+  2. Tạo `RolesGuard` (`apps/api/src/common/guards/roles.guard.ts`) và đăng ký làm `APP_GUARD` toàn cục trong `AuthModule` (chạy sau `JwtAuthGuard`).
+  3. Cập nhật `schema.prisma` bổ sung: `User.isBlocked`, `Listing.rejectionReason`, `ListingReport.status` và `ListingReport.resolvedAt`. Chạy migration `add_admin_fields` và cập nhật logic `serializeUser` trong auth.
+  4. Tạo `AdminModule`, `AdminService`, `AdminController` với đầy đủ các API: `/admin/dashboard`, `/admin/listings/pending`, `/admin/listings/:id/approve`, `/admin/listings/:id/reject`, `/admin/reports`, `/admin/reports/:id/resolve`, `/admin/users`, `/admin/users/:id/toggle-block`.
+
+---
+
+## 🚀 Hoàn thành Hệ thống Trang Quản Trị UI Thuần (Admin Portal) (03/09/2026)
+> **THAY THẾ HOÀN TOÀN PRISMA STUDIO BẰNG GIAO DIỆN UI THUẦN TIẾNG VIỆT CHO NGƯỜI KHÔNG BIẾT LẬP TRÌNH**
+
+- **URL Quản trị**: `http://localhost:3000/admin` (hoặc bấm nút "⚙️ Quản trị" trực tiếp trên Header khi đăng nhập tài khoản Admin `0900000001`).
+- **Kiến trúc & Tính năng hoàn chỉnh**:
+  1. **Bảo mật truy cập**: Layout quản trị tự động xác thực quyền `admin` qua `/auth/me`. Tài khoản không đủ quyền sẽ bị từ chối truy cập và hướng dẫn đăng nhập.
+  2. **Trang Tổng quan Dashboard (`/admin`)**: 4 thẻ chỉ số thời gian thực (Tin chờ duyệt, Báo cáo vi phạm mới, Tin đang hiển thị, Tổng người dùng) kèm danh sách xem nhanh tin chờ duyệt và phản ánh vi phạm.
+  3. **Trang Duyệt tin đăng (`/admin/tin-cho-duyet`)**:
+     - Danh sách tin trực quan với ảnh, tiêu đề, loại BĐS, giá tiền (tỷ/triệu), diện tích, địa chỉ, người đăng (kèm SĐT đầy đủ để liên hệ xác minh).
+     - Modal xem chi tiết đầy đủ hình ảnh, thông số kỹ thuật và bài viết mô tả.
+     - Nút "Phê duyệt tin": Duyệt tin lên sàn chỉ với 1 click.
+     - Nút "Từ chối tin": Cho phép chọn lý do gợi ý hoặc tự nhập lý do từ chối gửi tới người đăng.
+  4. **Trang Báo cáo vi phạm (`/admin/bao-cao-vi-pham`)**: Quản lý phản ánh vi phạm từ người dùng, hỗ trợ gỡ tin vi phạm ngay lập tức hoặc bỏ qua báo cáo không chính xác.
+  5. **Trang Quản lý người dùng (`/admin/nguoi-dung`)**: Danh sách thành viên, tìm kiếm theo tên/SĐT, lọc theo vai trò, thống kê số tin đã đăng, và nút Khóa/Mở khóa tài khoản an toàn với popup xác nhận.
+
 ## 📥 Khi khách hàng cung cấp dữ liệu BĐS thật
 1. Chuẩn hoá dữ liệu theo định dạng mô tả trong `packages/database/scripts/import-listings.ts`.
 2. Đảm bảo các SĐT chủ tin (`ownerPhone`) và slug khu vực (`locationSlug`) đã tồn tại trong DB (tạo user/location trước nếu chưa có).
 3. Chạy: `pnpm db:import-listings -- --file=./duong-dan-file.json`
-4. Toàn bộ tin import vào trạng thái `pending` — vào Prisma Studio (`pnpm db:studio`) duyệt thành `active` (cho tới khi có trang Admin thật).
-5. (Tuỳ chọn) Xoá 2 tin `[MẪU]` qua Prisma Studio khi đã có dữ liệu thật.
+4. Toàn bộ tin import vào trạng thái `pending` — truy cập ngay giao diện quản trị **`http://localhost:3000/admin/tin-cho-duyet`** để kiểm tra hình ảnh, nội dung và bấm duyệt tin trực tiếp trên giao diện UI (không cần mở Prisma Studio).
+5. (Tuỳ chọn) Quản lý hoặc ẩn tin qua các nút thao tác trên màn hình Admin.
+

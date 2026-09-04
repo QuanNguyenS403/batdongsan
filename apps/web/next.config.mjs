@@ -18,7 +18,10 @@ loadEnv({ path: join(__dirname, '..', '..', '.env') });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  compress: true,
+  poweredByHeader: false,
   images: {
+    minimumCacheTTL: 86400,
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'https', hostname: '**' },
