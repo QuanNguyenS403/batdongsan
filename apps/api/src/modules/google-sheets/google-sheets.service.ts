@@ -92,7 +92,7 @@ Row:     ${JSON.stringify(rowData, null, 2)}
     createdAt?: Date | string;
     slug?: string;
   }) {
-    const siteUrl = this.config.get<string>('NEXT_PUBLIC_SITE_URL', 'http://localhost:3000');
+    const siteUrl = this.config?.get<string>('NEXT_PUBLIC_SITE_URL') ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
     const link = listing.slug ? `${siteUrl}/tin/${listing.slug}` : `${siteUrl}/admin/tin-cho-duyet`;
 
     const row = [

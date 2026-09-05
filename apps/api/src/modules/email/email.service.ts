@@ -45,7 +45,7 @@ export class EmailService {
   }
 
   private async sendEmail(to: string, subject: string, html: string, textSummary: string): Promise<boolean> {
-    const from = this.config.get<string>('SMTP_FROM', 'BĐS Cho Thuê <no-reply@batdongsan.vn>');
+    const from = this.config?.get<string>('SMTP_FROM') ?? process.env.SMTP_FROM ?? 'BĐS Cho Thuê <no-reply@batdongsan.vn>';
 
     if (this.isMock || !this.transporter) {
       this.logger.log(`\n📧 ========== [MOCK EMAIL NOTIFICATION] ==========
@@ -152,7 +152,7 @@ Content: ${textSummary}
    * (c) Thông báo cho Quản trị viên (Admin): Có tin mới cần duyệt
    */
   async sendNewListingToAdmin(listing: { id: bigint | string; title: string; propertyType: string; price: bigint | number; ownerPhone?: string }) {
-    const adminEmail = this.config.get<string>('ADMIN_NOTIFICATION_EMAIL', 'admin@batdongsan.vn');
+    const adminEmail = this.config?.get<string>('ADMIN_NOTIFICATION_EMAIL') ?? process.env.ADMIN_NOTIFICATION_EMAIL ?? 'admin@batdongsan.vn';
     const subject = `[ADMIN CẦN DUYỆT] Tin cho thuê mới #${listing.id}: ${listing.title}`;
     const summary = `Có tin cho thuê mới cần duyệt từ SĐT ${listing.ownerPhone ?? 'Chưa rõ'}. Tiêu đề: "${listing.title}". Giá: ${Number(listing.price).toLocaleString('vi-VN')} đ/tháng.`;
     const html = `
@@ -176,7 +176,7 @@ Content: ${textSummary}
    * (d) Thông báo cho Quản trị viên (Admin): Có báo cáo vi phạm mới
    */
   async sendNewReportToAdmin(report: { id: bigint | string; reason: string; note?: string | null; listingTitle?: string; listingId?: bigint | string; reporterPhone?: string }) {
-    const adminEmail = this.config.get<string>('ADMIN_NOTIFICATION_EMAIL', 'admin@batdongsan.vn');
+    const adminEmail = this.config?.get<string>('ADMIN_NOTIFICATION_EMAIL') ?? process.env.ADMIN_NOTIFICATION_EMAIL ?? 'admin@batdongsan.vn';
     const subject = `[CẢNH BÁO VI PHẠM] Báo cáo mới cho tin #${report.listingId ?? ''}: ${report.reason}`;
     const summary = `Có báo cáo vi phạm mới từ SĐT ${report.reporterPhone ?? 'Ẩn danh'}. Lý do: ${report.reason}. Tin: "${report.listingTitle ?? ''}". Ghi chú: ${report.note ?? 'Không có'}.`;
     const html = `
