@@ -90,16 +90,10 @@ export default function TinDaLuuPage() {
               </p>
               <div className="mt-6 flex justify-center gap-3">
                 <Link
-                  href="/mua-ban"
+                  href="/thue"
                   className="btn-primary"
                 >
-                  Khám phá Mua bán nhà đất
-                </Link>
-                <Link
-                  href="/thue"
-                  className="btn-secondary"
-                >
-                  Khám phá Cho thuê nhà đất
+                  Khám phá phòng trọ & căn hộ cho thuê
                 </Link>
               </div>
             </div>

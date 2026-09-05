@@ -51,10 +51,10 @@ export function ComingSoonNotice({ title, description }: Props) {
               ← Trang chủ
             </a>
             <a
-              href="/mua-ban"
+              href="/thue"
               className="btn-primary"
             >
-              Xem tin đăng
+              Xem phòng cho thuê
             </a>
           </div>
         </div>

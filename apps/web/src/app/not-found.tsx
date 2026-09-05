@@ -16,8 +16,8 @@ export default function NotFound() {
           <Link href="/" className="btn-primary w-full sm:w-auto">
             ← Về trang chủ
           </Link>
-          <Link href="/mua-ban" className="btn-secondary w-full sm:w-auto">
-            Xem nhà đất bán
+          <Link href="/thue" className="btn-secondary w-full sm:w-auto">
+            Tìm phòng cho thuê
           </Link>
         </div>
       </div>

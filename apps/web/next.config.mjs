@@ -36,6 +36,15 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/mua-ban',
+        destination: '/thue',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

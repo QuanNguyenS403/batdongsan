@@ -28,4 +28,19 @@ export class QueryAdminListingsDto {
   @IsOptional()
   @IsString()
   keyword?: string;
+
+  @ApiPropertyOptional({ description: 'Hình thức giao dịch: sale | rent' })
+  @IsOptional()
+  @IsString()
+  transactionType?: string;
+
+  @ApiPropertyOptional({ description: 'Loại hình BĐS cụ thể' })
+  @IsOptional()
+  @IsString()
+  propertyType?: string;
+
+  @ApiPropertyOptional({ description: 'Nhóm chuyên mục: mua_bds | thue_bds | thue_tro | thue_mat_bang' })
+  @IsOptional()
+  @IsString()
+  categoryGroup?: string;
 }

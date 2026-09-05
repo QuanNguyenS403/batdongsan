@@ -1,13 +1,31 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+export interface UniversityItem {
+  id: number;
+  name: string;
+  abbreviation: string | null;
+  slug: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  activeListingCount?: number;
+}
+
 export interface Listing {
   id: string;
   title: string;
   slug: string;
   description: string | null;
-  transactionType: 'sale' | 'rent';
+  transactionType: 'rent';
   propertyType: string;
   price: string;
+  depositAmount?: string | number | null;
+  minLeaseMonths?: number | null;
+  utilitiesIncluded?: boolean;
+  electricityPricePerKwh?: number | null;
+  waterPricePerM3?: number | null;
+  waterPriceFlat?: number | null;
+  amenities?: Record<string, any> | null;
   areaM2: string;
   bedrooms: number | null;
   bathrooms: number | null;
@@ -20,6 +38,17 @@ export interface Listing {
   location: { id: number; name: string; slug: string; level: string };
   project: { id: string; name: string; slug: string } | null;
   owner: { id: string; fullName: string | null; avatarUrl: string | null; createdAt: string };
+  nearbyUniversities?: {
+    distanceMeters: number | null;
+    travelTimeMinutes: number | null;
+    university: {
+      id: number;
+      name: string;
+      abbreviation: string | null;
+      slug: string;
+      address?: string | null;
+    };
+  }[];
 }
 
 export interface ListingListResponse {
@@ -55,6 +84,13 @@ export function fetchListings(searchParams: Record<string, string | undefined>) 
 
 export function fetchListingBySlug(slug: string) {
   return apiFetch<Listing>(`/listings/${slug}`);
+}
+
+export function fetchUniversities(params?: { locationSlug?: string; keyword?: string }) {
+  const query = new URLSearchParams();
+  if (params?.locationSlug) query.set('locationSlug', params.locationSlug);
+  if (params?.keyword) query.set('keyword', params.keyword);
+  return apiFetch<UniversityItem[]>(`/universities?${query.toString()}`);
 }
 
 export function formatPrice(price: string | number): string {

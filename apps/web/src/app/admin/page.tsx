@@ -224,7 +224,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100">
             <Link
-              href="/mua-ban"
+              href="/thue"
               target="_blank"
               className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1"
             >
@@ -310,9 +310,43 @@ export default function AdminDashboardPage() {
                     <h3 className="text-sm font-semibold text-slate-900 truncate">
                       {item.title}
                     </h3>
-                    <p className="text-xs text-teal-600 font-bold mt-1">
-                      {formatPriceVND(item.price)} • {item.areaM2} m²
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {(() => {
+                        const isRoom =
+                          item.propertyType === 'phong_tro' ||
+                          item.propertyType === 'phong-tro' ||
+                          item.propertyType === 'phong-tro-sinh-vien' ||
+                          item.propertyType === 'ky_tuc_xa' ||
+                          item.propertyType === 'can_ho_mini';
+                        const isCommercial =
+                          item.propertyType === 'mat_bang' ||
+                          item.propertyType === 'mat-bang' ||
+                          item.propertyType === 'mat-bang-kinh-doanh' ||
+                          item.propertyType === 'cua_hang' ||
+                          item.propertyType === 'kho_xuong' ||
+                          item.propertyType === 'shophouse';
+
+                        const label = isRoom
+                          ? 'Thuê trọ'
+                          : isCommercial
+                          ? 'Mặt bằng'
+                          : 'Căn hộ / Nhà';
+                        const color = isRoom
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : isCommercial
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : 'bg-teal-50 text-teal-700 border-teal-200';
+
+                        return (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${color}`}>
+                            {label}
+                          </span>
+                        );
+                      })()}
+                      <span className="text-xs text-teal-600 font-bold">
+                        {formatPriceVND(item.price)} • {item.areaM2} m²
+                      </span>
+                    </div>
                     <p className="text-[11px] text-slate-400 mt-0.5 truncate">
                       Người đăng: {item.owner.fullName ?? item.owner.phone} ({item.owner.phone})
                     </p>

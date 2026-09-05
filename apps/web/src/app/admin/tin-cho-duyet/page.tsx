@@ -12,6 +12,13 @@ interface ListingItem {
   transactionType: string;
   propertyType: string;
   price: string;
+  depositAmount?: string | number | null;
+  minLeaseMonths?: number | null;
+  utilitiesIncluded?: boolean;
+  electricityPricePerKwh?: number | null;
+  waterPricePerM3?: number | null;
+  waterPriceFlat?: number | null;
+  amenities?: Record<string, any> | null;
   areaM2: number;
   bedrooms?: number | null;
   bathrooms?: number | null;
@@ -23,9 +30,18 @@ interface ListingItem {
   images: { imageUrl: string; sortOrder: number }[];
   location?: { name: string } | null;
   owner: { id: string; fullName: string | null; phone: string; avatarUrl?: string | null };
+  nearbyUniversities?: {
+    distanceMeters?: number | null;
+    travelTimeMinutes?: number | null;
+    university: {
+      name: string;
+      abbreviation?: string | null;
+    };
+  }[];
 }
 
-function formatPriceVND(priceStr: string): string {
+function formatPriceVND(priceStr?: string | number | null): string {
+  if (!priceStr) return '—';
   try {
     const price = BigInt(priceStr);
     if (price >= 1_000_000_000n) {
@@ -38,19 +54,46 @@ function formatPriceVND(priceStr: string): string {
     }
     return `${price.toLocaleString('vi-VN')} đ`;
   } catch {
-    return priceStr;
+    return String(priceStr);
   }
 }
 
 const PROPERTY_TYPE_NAMES: Record<string, string> = {
+  'phong-tro-sinh-vien': 'Phòng trọ sinh viên',
+  phong_tro_sinh_vien: 'Phòng trọ sinh viên',
+  'phong-tro-nguoi-di-lam': 'Phòng trọ người đi làm',
+  phong_tro_nguoi_di_lam: 'Phòng trọ người đi làm',
+  'ky-tuc-xa-tu-nhan': 'Ký túc xá tư nhân / Sleepbox',
+  ky_tuc_xa: 'Ký túc xá tư nhân / Sleepbox',
+  studio: 'Căn hộ Studio',
+  'can-ho-chung-cu': 'Căn hộ chung cư',
   can_ho: 'Căn hộ chung cư',
-  nha_rieng: 'Nhà riêng',
-  nha_pho: 'Nhà mặt phố',
-  dat_nen: 'Đất nền',
-  biet_thu: 'Biệt thự',
-  kho_xuong: 'Kho xưởng',
+  'nha-nguyen-can': 'Nhà nguyên căn',
+  nha_rieng: 'Nhà nguyên căn',
+  'mat-bang-kinh-doanh': 'Mặt bằng kinh doanh',
   mat_bang: 'Mặt bằng kinh doanh',
-  khac: 'BĐS khác',
+  cua_hang: 'Cửa hàng / Ki-ốt',
+  shophouse: 'Shophouse khối đế',
+  kho_xuong: 'Kho xưởng / Bãi đất',
+  phong_tro: 'Phòng trọ',
+  'phong-tro': 'Phòng trọ',
+};
+
+const AMENITY_LABELS: Record<string, string> = {
+  wifi: 'Wifi tốc độ cao',
+  air_conditioner: 'Máy lạnh',
+  mezzanine: 'Gác lửng',
+  parking: 'Nhà để xe',
+  security_camera: 'Camera / An ninh 24/7',
+  free_time: 'Giờ giấc tự do',
+  private_bathroom: 'Vệ sinh khép kín',
+  water_heater: 'Bình nóng lạnh',
+  washing_machine: 'Máy giặt',
+  refrigerator: 'Tủ lạnh',
+  kitchen: 'Kệ bếp nấu ăn',
+  elevator: 'Thang máy',
+  balcony: 'Ban công',
+  fingerprint_lock: 'Khóa vân tay',
 };
 
 const DEFAULT_REASONS = [
@@ -59,6 +102,7 @@ const DEFAULT_REASONS = [
   'Nội dung có dấu hiệu lừa đảo / quảng cáo spam',
   'Tin đăng trùng lặp với tin đã tồn tại trên sàn',
   'Địa chỉ hoặc vị trí bất động sản không chính xác',
+  'Thông tin điện nước/chi phí dịch vụ không minh bạch',
 ];
 
 export default function AdminPendingListingsPage() {
@@ -69,6 +113,7 @@ export default function AdminPendingListingsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('pending');
+  const [categoryFilter, setCategoryFilter] = useState(''); // '' | 'thue_tro' | 'thue_studio' | 'thue_bds' | 'thue_mat_bang'
 
   // Modal Chi tiết
   const [selectedListing, setSelectedListing] = useState<ListingItem | null>(null);
@@ -84,7 +129,7 @@ export default function AdminPendingListingsPage() {
 
   useEffect(() => {
     loadListings();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, categoryFilter]);
 
   function showToast(text: string, type: 'success' | 'error' = 'success') {
     setToastMessage({ type, text });
@@ -99,6 +144,9 @@ export default function AdminPendingListingsPage() {
         pageSize: '10',
         status: statusFilter,
       });
+      if (categoryFilter) {
+        params.set('categoryGroup', categoryFilter);
+      }
       if (searchKeyword.trim()) {
         params.set('keyword', searchKeyword.trim());
       }
@@ -125,20 +173,22 @@ export default function AdminPendingListingsPage() {
   }
 
   async function handleApprove(id: string) {
-    if (!confirm('Xác nhận phê duyệt tin đăng này lên sàn?')) return;
+    if (!confirm('Xác nhận phê duyệt tin đăng phòng này lên sàn?')) return;
     setSubmittingAction(true);
     try {
-      const res = await authFetch(`/admin/listings/${id}/approve`, { method: 'POST' });
+      const res = await authFetch(`/admin/listings/${id}/approve`, {
+        method: 'PATCH',
+      });
       if (res.ok) {
-        showToast('✅ Đã phê duyệt tin đăng thành công! Tin đã xuất hiện công khai.');
-        if (selectedListing?.id === id) setSelectedListing(null);
+        showToast('✓ Đã phê duyệt tin thành công');
+        setSelectedListing(null);
         loadListings();
       } else {
-        const err = await res.json();
-        showToast(err.message ?? 'Không thể duyệt tin', 'error');
+        const data = await res.json();
+        showToast(data.message ?? 'Duyệt tin thất bại', 'error');
       }
-    } catch {
-      showToast('Có lỗi xảy ra trong quá trình duyệt tin', 'error');
+    } catch (err) {
+      showToast('Lỗi kết nối máy chủ', 'error');
     } finally {
       setSubmittingAction(false);
     }
@@ -148,65 +198,59 @@ export default function AdminPendingListingsPage() {
     if (!rejectingListing) return;
     const finalReason = customReason.trim() || rejectReason;
     if (!finalReason) {
-      alert('Vui lòng chọn hoặc nhập lý do từ chối.');
+      showToast('Vui lòng chọn hoặc nhập lý do từ chối', 'error');
       return;
     }
 
     setSubmittingAction(true);
     try {
       const res = await authFetch(`/admin/listings/${rejectingListing.id}/reject`, {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: finalReason }),
+        body: JSON.stringify({ rejectionReason: finalReason }),
       });
-
       if (res.ok) {
-        showToast('Đã từ chối tin đăng và thông báo lý do.');
+        showToast('✓ Đã từ chối tin đăng');
         setRejectingListing(null);
-        setRejectReason('');
+        setSelectedListing(null);
         setCustomReason('');
-        if (selectedListing?.id === rejectingListing.id) setSelectedListing(null);
         loadListings();
       } else {
-        const err = await res.json();
-        showToast(err.message ?? 'Không thể từ chối tin', 'error');
+        const data = await res.json();
+        showToast(data.message ?? 'Từ chối thất bại', 'error');
       }
-    } catch {
-      showToast('Có lỗi xảy ra khi từ chối tin', 'error');
+    } catch (err) {
+      showToast('Lỗi kết nối máy chủ', 'error');
     } finally {
       setSubmittingAction(false);
     }
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Toast thông báo */}
+    <div className="space-y-6">
+      {/* Toast */}
       {toastMessage && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-xl border text-sm font-semibold flex items-center gap-3 transition-all transform translate-y-0 ${
+          className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium animate-in fade-in slide-in-from-bottom-5 duration-200 ${
             toastMessage.type === 'success'
-              ? 'bg-emerald-600 text-white border-emerald-500'
-              : 'bg-rose-600 text-white border-rose-500'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-red-50 text-red-800 border-red-200'
           }`}
         >
-          <span>{toastMessage.text}</span>
-          <button onClick={() => setToastMessage(null)} className="opacity-80 hover:opacity-100 text-xs">
-            ✕
-          </button>
+          {toastMessage.text}
         </div>
       )}
 
-      {/* Header và Bộ lọc */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {/* Header & Tabs trạng thái */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Kiểm duyệt Tin đăng</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Xem xét, đối chiếu thông tin và phê duyệt tin trước khi hiển thị cho người mua/thuê.
+          <h1 className="text-xl font-bold text-slate-900">Kiểm duyệt tin cho thuê phòng</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Tổng cộng <b>{total}</b> tin đăng theo bộ lọc hiện tại.
           </p>
         </div>
 
-        {/* Tab Trạng thái */}
-        <div className="flex bg-slate-200/70 p-1 rounded-xl text-xs font-semibold self-start">
+        <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
           <button
             onClick={() => {
               setStatusFilter('pending');
@@ -214,11 +258,11 @@ export default function AdminPendingListingsPage() {
             }}
             className={`px-4 py-2 rounded-lg transition-all ${
               statusFilter === 'pending'
-                ? 'bg-white text-slate-900 shadow-sm'
+                ? 'bg-white text-teal-700 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Chờ duyệt ({statusFilter === 'pending' ? total : '...'})
+            Chờ duyệt
           </button>
           <button
             onClick={() => {
@@ -247,6 +291,34 @@ export default function AdminPendingListingsPage() {
             Đã từ chối
           </button>
         </div>
+      </div>
+
+      {/* Thanh lọc theo chuyên mục cho thuê */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Chuyên mục:</span>
+        {[
+          { key: '', label: 'Tất cả' },
+          { key: 'thue_tro', label: '🛏️ Phòng trọ SV / Người đi làm' },
+          { key: 'thue_studio', label: '🛋️ Studio / Căn hộ mini' },
+          { key: 'thue_bds', label: '🏢 Căn hộ / Nhà nguyên căn' },
+          { key: 'thue_mat_bang', label: '🏪 Mặt bằng kinh doanh' },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => {
+              setCategoryFilter(tab.key);
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              categoryFilter === tab.key
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Thanh tìm kiếm */}
@@ -295,7 +367,7 @@ export default function AdminPendingListingsPage() {
           </h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto">
             {statusFilter === 'pending'
-              ? 'Toàn bộ tin đăng đã được xử lý. Khi có thành viên đăng tin mới, hệ thống sẽ tự động cập nhật vào đây.'
+              ? 'Toàn bộ tin đăng đã được xử lý. Khi có người đăng tin mới, hệ thống sẽ tự động cập nhật vào đây.'
               : 'Thử điều chỉnh từ khóa tìm kiếm hoặc chuyển sang bộ lọc khác.'}
           </p>
         </div>
@@ -322,8 +394,8 @@ export default function AdminPendingListingsPage() {
                     Chưa có ảnh
                   </div>
                 )}
-                <div className="absolute top-2 left-2 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-slate-900/70 text-white backdrop-blur-sm">
-                  {listing.transactionType === 'ban' ? 'Bán' : 'Cho thuê'}
+                <div className="absolute top-2 left-2 px-2 py-0.5 rounded text-[11px] font-bold bg-teal-600/90 text-white backdrop-blur-sm">
+                  Cho thuê
                 </div>
                 <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[11px] font-bold bg-black/60 text-white backdrop-blur-sm">
                   📷 {listing.images?.length ?? 0} ảnh
@@ -337,12 +409,17 @@ export default function AdminPendingListingsPage() {
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
                       {PROPERTY_TYPE_NAMES[listing.propertyType] ?? listing.propertyType}
                     </span>
+                    {listing.utilitiesIncluded && (
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ⚡ Bao điện nước
+                      </span>
+                    )}
                     <span className="text-xs text-slate-400">
-                      Mã tin: #{listing.id}
+                      Mã: #{listing.id}
                     </span>
                     <span className="text-xs text-slate-400">•</span>
                     <span className="text-xs text-slate-400">
-                      Gửi lúc: {new Date(listing.createdAt).toLocaleString('vi-VN')}
+                      {new Date(listing.createdAt).toLocaleDateString('vi-VN')}
                     </span>
                   </div>
 
@@ -355,90 +432,72 @@ export default function AdminPendingListingsPage() {
 
                   <div className="mt-2 flex items-baseline gap-4 flex-wrap">
                     <span className="text-lg font-extrabold text-teal-600">
-                      {formatPriceVND(listing.price)}
+                      {formatPriceVND(listing.price)} / tháng
                     </span>
+                    {listing.depositAmount && (
+                      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                        Cọc: {formatPriceVND(listing.depositAmount)}
+                      </span>
+                    )}
                     <span className="text-sm font-semibold text-slate-700">
                       📐 {listing.areaM2} m²
                     </span>
-                    {listing.bedrooms && (
+                    {listing.bedrooms != null && (
                       <span className="text-xs text-slate-600">🛏️ {listing.bedrooms} PN</span>
                     )}
-                    {listing.bathrooms && (
+                    {listing.bathrooms != null && (
                       <span className="text-xs text-slate-600">🚿 {listing.bathrooms} WC</span>
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-500 mt-1.5 line-clamp-1">
-                    📍 {listing.addressDetail ? `${listing.addressDetail}, ` : ''}{listing.location?.name ?? 'Chưa xác định'}
+                  <p className="mt-2 text-xs text-slate-500 line-clamp-1">
+                    📍 {listing.addressDetail ? `${listing.addressDetail}, ` : ''}
+                    {listing.location?.name ?? 'Chưa rõ khu vực'}
                   </p>
-
-                  {listing.rejectionReason && (
-                    <div className="mt-2.5 p-2 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
-                      <strong>Lý do từ chối trước đó:</strong> {listing.rejectionReason}
-                    </div>
-                  )}
                 </div>
 
-                {/* Khối người đăng + Nút hành động */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 text-xs text-slate-600">
-                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center font-bold text-[10px] text-slate-700">
-                      {(listing.owner.fullName ?? listing.owner.phone).charAt(0).toUpperCase()}
+                {/* Footer card */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
+                      {(listing.owner.fullName ?? 'U').charAt(0).toUpperCase()}
                     </div>
-                    <span>
-                      Người đăng: <strong className="text-slate-800">{listing.owner.fullName ?? 'Chưa đặt tên'}</strong>
-                    </span>
-                    <span className="text-slate-400">•</span>
-                    <span className="font-mono font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">
-                      📞 {listing.owner.phone}
-                    </span>
+                    <div>
+                      <span className="text-xs font-semibold text-slate-800">
+                        {listing.owner.fullName ?? 'Chủ phòng'}
+                      </span>
+                      <span className="text-xs text-slate-400 ml-1.5 font-mono">
+                        ({listing.owner.phone})
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Nút hành động */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setSelectedListing(listing)}
-                      className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                      className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                     >
-                      Xem chi tiết
+                      Chi tiết
                     </button>
 
                     {listing.status === 'pending' && (
                       <>
                         <button
-                          disabled={submittingAction}
                           onClick={() => {
                             setRejectingListing(listing);
                             setRejectReason(DEFAULT_REASONS[0]);
                           }}
-                          className="px-3.5 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors disabled:opacity-50"
+                          className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors"
                         >
                           Từ chối
                         </button>
                         <button
-                          disabled={submittingAction}
                           onClick={() => handleApprove(listing.id)}
-                          className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors disabled:opacity-50 flex items-center gap-1"
+                          className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors"
                         >
-                          <span>Duyệt tin</span>
-                          <span>✓</span>
+                          Phê duyệt
                         </button>
                       </>
-                    )}
-
-                    {listing.status === 'active' && (
-                      <span className="px-3 py-1 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg">
-                        Đang hiển thị
-                      </span>
-                    )}
-
-                    {listing.status === 'rejected' && (
-                      <button
-                        onClick={() => handleApprove(listing.id)}
-                        className="px-3.5 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
-                      >
-                        Duyệt lại
-                      </button>
                     )}
                   </div>
                 </div>
@@ -449,21 +508,21 @@ export default function AdminPendingListingsPage() {
           {/* Phân trang */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-4">
-              <p className="text-xs text-slate-500">
-                Hiển thị trang {page} trên {totalPages} (tổng số {total} tin)
-              </p>
+              <span className="text-xs text-slate-500">
+                Trang {page} / {totalPages}
+              </span>
               <div className="flex gap-2">
                 <button
                   disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 disabled:opacity-40"
                 >
                   ← Trang trước
                 </button>
                 <button
                   disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 disabled:opacity-40"
                 >
                   Trang sau →
                 </button>
@@ -481,7 +540,7 @@ export default function AdminPendingListingsPage() {
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-teal-600 uppercase tracking-wider">
-                  Xem chi tiết tin đăng #{selectedListing.id}
+                  Chi tiết tin cho thuê #{selectedListing.id}
                 </span>
                 <h3 className="text-lg font-bold text-slate-900 line-clamp-1">
                   {selectedListing.title}
@@ -520,9 +579,21 @@ export default function AdminPendingListingsPage() {
               {/* Thông số cốt lõi */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <div>
-                  <span className="text-xs text-slate-400">Mức giá:</span>
+                  <span className="text-xs text-slate-400">Giá thuê / tháng:</span>
                   <p className="text-base font-bold text-teal-600">
                     {formatPriceVND(selectedListing.price)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400">Tiền đặt cọc:</span>
+                  <p className="text-base font-bold text-slate-800">
+                    {formatPriceVND(selectedListing.depositAmount)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400">Hợp đồng tối thiểu:</span>
+                  <p className="text-base font-bold text-slate-800">
+                    {selectedListing.minLeaseMonths ? `${selectedListing.minLeaseMonths} tháng` : 'Linh hoạt'}
                   </p>
                 </div>
                 <div>
@@ -531,24 +602,89 @@ export default function AdminPendingListingsPage() {
                     {selectedListing.areaM2} m²
                   </p>
                 </div>
-                <div>
-                  <span className="text-xs text-slate-400">Phòng ngủ / WC:</span>
-                  <p className="text-base font-bold text-slate-800">
-                    {selectedListing.bedrooms ?? 0} PN / {selectedListing.bathrooms ?? 0} WC
-                  </p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400">Pháp lý:</span>
-                  <p className="text-sm font-semibold text-slate-800">
-                    {selectedListing.legalStatus ?? 'Chưa rõ'}
-                  </p>
-                </div>
               </div>
+
+              {/* Chi phí điện nước minh bạch */}
+              <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-2">
+                  ⚡ Biểu giá dịch vụ & Điện nước
+                </h4>
+                {selectedListing.utilitiesIncluded ? (
+                  <p className="text-sm font-semibold text-emerald-700">
+                    ✓ Miễn phí hoàn toàn / Đã bao trọn tiền điện nước trong giá thuê.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-500">Giá điện:</span>
+                      <p className="font-bold text-slate-800">
+                        {selectedListing.electricityPricePerKwh ? `${selectedListing.electricityPricePerKwh.toLocaleString('vi-VN')} đ/kWh` : 'Chưa nhập'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Giá nước (m³):</span>
+                      <p className="font-bold text-slate-800">
+                        {selectedListing.waterPricePerM3 ? `${selectedListing.waterPricePerM3.toLocaleString('vi-VN')} đ/m³` : 'Chưa nhập'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Nước khoán / người:</span>
+                      <p className="font-bold text-slate-800">
+                        {selectedListing.waterPriceFlat ? `${selectedListing.waterPriceFlat.toLocaleString('vi-VN')} đ/tháng` : 'Không áp dụng'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Tiện ích */}
+              {selectedListing.amenities && Object.keys(selectedListing.amenities).length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Tiện ích phòng
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(selectedListing.amenities).map(([key, val]) => {
+                      if (!val) return null;
+                      return (
+                        <span
+                          key={key}
+                          className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-medium border border-slate-200"
+                        >
+                          ✓ {AMENITY_LABELS[key] ?? key}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Trường đại học lân cận */}
+              {selectedListing.nearbyUniversities && selectedListing.nearbyUniversities.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    🎓 Trường đại học lân cận
+                  </h4>
+                  <div className="space-y-1.5">
+                    {selectedListing.nearbyUniversities.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs border border-slate-100">
+                        <span className="font-semibold text-slate-800">
+                          {item.university.abbreviation ? `[${item.university.abbreviation}] ` : ''}
+                          {item.university.name}
+                        </span>
+                        <span className="text-teal-700 font-bold">
+                          {item.distanceMeters ? `~${(item.distanceMeters / 1000).toFixed(1)} km` : 'Gần trường'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Địa chỉ */}
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Địa chỉ bất động sản
+                  Địa chỉ phòng
                 </h4>
                 <p className="text-sm text-slate-800">
                   {selectedListing.addressDetail ? `${selectedListing.addressDetail}, ` : ''}
@@ -633,7 +769,7 @@ export default function AdminPendingListingsPage() {
             </div>
 
             <p className="text-xs text-slate-500">
-              Vui lòng chọn hoặc nhập lý do từ chối. Lý do này sẽ được ghi nhận để người đăng tin biết nguyên nhân và chỉnh sửa lại:
+              Vui lòng chọn hoặc nhập lý do từ chối. Lý do này sẽ được ghi nhận và gửi thông báo qua email tới chủ phòng:
             </p>
 
             <div className="space-y-2">

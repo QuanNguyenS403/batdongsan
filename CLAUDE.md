@@ -4,7 +4,9 @@
 > Phần 1 là **phân tích thực tế** website tham chiếu (mogi.vn, truy cập trực tiếp ngày 30/08/2026).
 > Phần 2 trở đi là **đặc tả kiến trúc đề xuất** cho dự án mới, được suy ra từ phần 1 nhưng điều chỉnh theo hướng gọn nhẹ, dễ triển khai, dễ maintain một mình.
 >
-> **Giả định đưa ra:** vì bạn chưa nói rõ tên/quy mô dự án, tài liệu này mặc định đây là một **sàn giao dịch bất động sản dạng rao vặt (classifieds marketplace)** giống Mogi — người dùng đăng tin mua/bán/cho thuê, người khác tìm kiếm/lọc/liên hệ. Nếu dự án của bạn hẹp hơn (VD: chỉ quản lý dự án của 1 chủ đầu tư, hoặc chỉ web catalog không cho đăng tin công khai), báo lại để cắt bớt phần "marketplace 2 chiều" — kiến trúc dữ liệu và trang chi tiết BĐS vẫn dùng được nguyên.
+> **Định hướng chiến lược (Pivot 05/09/2026):** Dự án chính thức chuyển dịch 100% thành **nền tảng trung gian (broker) chuyên sâu "Cho thuê"** (phòng trọ sinh viên, nhà nguyên căn, căn hộ chung cư, studio, mặt bằng kinh doanh). **Loại bỏ hoàn toàn mảng mua bán nhà đất**. Nền tảng kết nối trực tiếp Người thuê / Sinh viên với Chủ trọ / Môi giới qua SĐT/Zalo; nền tảng **KHÔNG xử lý giao dịch cọc hay tiền thuê**. Nguồn thu từ bên cung (phí đẩy tin, dịch vụ gia tăng). Toàn bộ kiến trúc và tính năng tập trung vào tìm kiếm có cấu trúc, minh bạch chi phí dịch vụ/điện nước và tìm phòng gần trường đại học.
+>
+> Tham khảo Mogi.vn ở Phần 1 để kế thừa kinh nghiệm kiến trúc và SEO, nhưng đặc tả kỹ thuật từ Phần 2 đã được chuẩn hóa 100% cho mô hình cho thuê.
 
 ---
 

@@ -1,6 +1,6 @@
 # README — Phân tích Mogi.vn & Kiến trúc đề xuất cho dự án Bất động sản tương tự
 
-> 🟢 **Cập nhật:** Code MVP đã được triển khai thực tế trong repo (monorepo `apps/api` + `apps/web` + `packages/database`). File này vẫn là tài liệu đặc tả/tầm nhìn đầy đủ — để biết **chính xác cái gì đã chạy được, cái gì còn TODO, và cách chạy thử ngay**, đọc [`TRANG-THAI-TRIEN-KHAI.md`](./TRANG-THAI-TRIEN-KHAI.md) trước.
+> 🟢 **Cập nhật quan trọng (Pivot 05/09/2026):** Dự án đã chính thức **PIVOT 100% sang mô hình Nền tảng trung gian (broker) chuyên biệt "Cho thuê"** (phòng trọ sinh viên, studio, căn hộ chung cư, nhà nguyên căn, mặt bằng kinh doanh). Loại bỏ hoàn toàn mảng mua bán nhà đất. Nền tảng kết nối trực tiếp Người thuê với Chủ phòng/Môi giới qua SĐT/Zalo; nền tảng KHÔNG xử lý cọc hay tiền thuê. Bổ sung hệ thống thông báo Email và đồng bộ Google Sheets cho quản trị viên. Chi tiết trạng thái thực thi: xem [`TRANG-THAI-TRIEN-KHAI.md`](./TRANG-THAI-TRIEN-KHAI.md).
 
 > Tài liệu này (1) phân tích toàn diện website tham chiếu **Mogi.vn** (giao diện, nội dung, bố cục, UX, frontend, backend suy luận) và (2) chuyển hóa các phân tích đó thành **bản thiết kế kiến trúc kỹ thuật** để thực thi một dự án website bất động sản (mua bán / cho thuê nhà đất) tương tự.
 >

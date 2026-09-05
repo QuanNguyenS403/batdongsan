@@ -1,30 +1,38 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (03/09/2026 — Review Backend & Xây dựng Hệ thống Trang Quản Trị UI Thuần):**
-1. **Kiểm tra và chuẩn bị môi trường toàn diện**:
-   - Docker Postgres 16 & Redis 7 đang hoạt động ổn định.
-   - Prisma Client v5.22.0 và Database seed sẵn sàng.
-2. **Khắc phục lỗ hổng phân quyền & Hoàn thiện Backend RBAC (Lỗi #40)**:
-   - Tạo `@Roles(...roles)` decorator và `RolesGuard` toàn cục bảo vệ các endpoint nội bộ của hệ thống.
-   - User thường (`role !== 'admin'`) truy cập `/admin/*` bị trả về đúng `403 Forbidden`.
-   - Bổ sung schema: `User.isBlocked`, `Listing.rejectionReason`, `ListingReport.status` và `ListingReport.resolvedAt`.
-   - Migration `add_admin_fields` áp dụng thành công.
-   - Xây dựng `AdminModule` (`admin.service.ts`, `admin.controller.ts`, các DTOs) cung cấp đầy đủ API: dashboard thống kê, duyệt tin, từ chối tin có lý do, xử lý báo cáo vi phạm, quản lý và khóa/mở khóa người dùng.
-3. **Xây dựng Hệ thống Trang Quản Trị UI Thuần (`/admin/*`) thay thế hoàn toàn Prisma Studio**:
-   - Giao diện PropTech hiện đại, thuần tiếng Việt 100%, thiết kế trực quan cho người không biết kỹ thuật.
-   - `admin/layout.tsx`: Sidebar cố định/drawer, menu điều hướng, topbar, bảo vệ auth tự động.
-   - `admin/page.tsx`: Dashboard 4 thẻ chỉ số thời gian thực và xem nhanh tin/báo cáo.
-   - `admin/tin-cho-duyet/page.tsx`: Danh sách tin chờ duyệt, modal xem chi tiết tin đầy đủ ảnh & thông số, nút Phê duyệt 1-click, nút Từ chối kèm modal chọn lý do.
-   - `admin/bao-cao-vi-pham/page.tsx`: Quản lý báo cáo vi phạm từ người dùng, thao tác Gỡ bỏ tin vi phạm hoặc Bỏ qua báo cáo.
-   - `admin/nguoi-dung/page.tsx`: Quản lý danh sách thành viên, tìm kiếm theo SĐT/tên, lọc vai trò, khóa/mở khóa tài khoản an toàn.
-   - `Header.tsx`: Thêm nút "⚙️ Quản trị" nổi bật cho tài khoản Admin cả trên desktop, avatar menu và mobile menu.
-4. **Kiểm thử tự động & Xác minh thực tế**:
-   - `pnpm --filter @batdongsan/api build`: PASS 100% (exit code 0).
-   - `pnpm --filter @batdongsan/web build`: PASS 100% 20/20 routes (exit code 0).
-   - Node test: Xác minh RolesGuard chặn 403 user thường, cho phép 200 admin.
-   - Browser Subagent: Đăng nhập admin, tương tác toàn bộ màn hình UI, mở popup chi tiết tin, chụp ảnh và ghi hình video thành công.
+**Việc vừa hoàn thành (05/09/2026 — PIVOT CHIẾN LƯỢC: CHUYÊN BIỆT HÓA 100% "CHO THUÊ"):**
+1. **Chiến lược & Định vị mới**:
+   - Pivot 100% sang nền tảng trung gian (broker) chuyên biệt cho thuê: phòng trọ sinh viên, nhà nguyên căn, căn hộ chung cư, studio, mặt bằng kinh doanh.
+   - Xóa bỏ hoàn toàn mảng mua bán nhà đất trên toàn bộ hệ thống (schema, API, UI, tài liệu).
+   - Mô hình trung gian kết nối Người thuê với Chủ trọ qua SĐT/Zalo; không xử lý cọc hay thanh toán tiền thuê.
+2. **Tái cấu trúc Schema & Dữ liệu (`packages/database`)**:
+   - Enum `TransactionType`: Xóa `sale`, chỉ giữ `rent`.
+   - `Listing`: Bổ sung các trường chuyên sâu cho thuê trọ (`depositAmount`, `minLeaseMonths`, `utilitiesIncluded`, `electricityPricePerKwh`, `waterPricePerM3`, `waterPriceFlat`, `amenities`).
+   - Thêm bảng `University` và `ListingUniversity` (lưu `distanceMeters`, `travelTimeMinutes`) phục vụ lọc "gần trường ĐH".
+   - Seed data: Nạp sẵn 7+ trường đại học trọng điểm và danh sách tin mẫu phòng trọ/studio cho thuê.
+3. **Backend NestJS (`apps/api`)**:
+   - `EmailModule`: Nodemailer SMTP + driver MOCK in console chuẩn ASCII box gửi thông báo giao dịch cho chủ trọ và admin.
+   - `GoogleSheetsModule`: Google Sheets API + driver MOCK đồng bộ 1 chiều tin chờ duyệt và báo cáo vi phạm sang Google Sheets.
+   - `UniversitiesModule`: Danh sách trường ĐH và API tìm phòng theo trường.
+   - Loại bỏ code chết `sale`, tích hợp serialize rental fields và hook email/sheets bất đồng bộ.
+4. **Frontend Next.js (`apps/web`)**:
+   - Triệt tiêu dấu vết "Mua bán", 301 redirect vĩnh viễn `/mua-ban` → `/thue`.
+   - Trang chủ (`/`): Tái thiết kế 100% tập trung tìm phòng cho thuê, phím tắt theo trường ĐH lớn, 3 mục khám phá phòng trọ / studio / căn hộ.
+   - Bộ lọc `SearchFilterBar`: Thêm lọc theo trường ĐH, tiện ích, dải giá thuê theo tháng.
+   - Trang chi tiết (`/tin/[slug]`): Thay `LoanCalculatorWidget` bằng `MoveInCostEstimator`, bảng minh bạch chi phí điện nước, danh sách tiện ích, trường ĐH lân cận.
+   - Form Đăng tin (`/dang-tin`): Form chuyên sâu phòng cho thuê đầy đủ tiện ích, điện nước, cọc, trường lân cận.
+   - Admin (`/admin/tin-cho-duyet`): Bỏ filter mua bán, hiển thị rõ ràng biểu phí điện nước, cọc, tiện ích, trường ĐH trong modal xem tin.
+5. **Xác minh chất lượng & Build**:
+   - `@batdongsan/api build`: PASS 100% (exit code 0).
+   - `@batdongsan/web build`: PASS 100% (22/22 routes, exit code 0).
+6. **Tài liệu chiến lược**:
+   - Cập nhật `CLAUDE.md`, `README.md`, `TRANG-THAI-TRIEN-KHAI.md`, `memory-bank/*`.
+
+**Trạng thái môi trường & Cấu hình:**
+- Driver Email: MOCK (in console chuẩn ASCII) -> Sẵn sàng cắm SMTP khi có config trong `.env`.
+- Driver Google Sheets: MOCK (in console) -> Sẵn sàng kết nối khi có `GOOGLE_SHEETS_SPREADSHEET_ID` và `GOOGLE_SHEETS_CREDENTIALS_JSON`.
 
 **Việc tiếp theo đề xuất:**
-1. Nhận dữ liệu BĐS thật từ khách hàng → chạy `pnpm db:import-listings` và duyệt tin trực tiếp qua giao diện `/admin/tin-cho-duyet`.
-2. Tích hợp Meilisearch khi số lượng tin đủ lớn để cần tìm kiếm nâng cao (Giai đoạn 2-3).
-3. Tích hợp cổng thanh toán VNPAY/MoMo cho các gói tin VIP theo roadmap.
+1. Cấu hình credentials thật cho SMTP email và Google Sheets service account khi có thông tin từ Quan.
+2. Thêm dữ liệu trường ĐH bổ sung cho các tỉnh thành khác (Đà Nẵng, Cần Thơ, Hải Phòng...).
+3. Phát triển gói môi giới chuyên nghiệp (đẩy tin VIP theo tuần mùa tựu trường) theo roadmap giai đoạn 2.

@@ -13,10 +13,10 @@ interface CurrentUser {
 }
 
 const NAV_LINKS = [
-  { href: '/mua-ban', label: 'Bán BĐS' },
-  { href: '/thue', label: 'Cho thuê BĐS' },
-  { href: '/thue?propertyType=phong_tro', label: 'Cho thuê trọ' },
-  { href: '/thue?propertyType=mat_bang', label: 'Cho thuê mặt bằng' },
+  { href: '/thue', label: 'Tất cả BĐS thuê' },
+  { href: '/cho-thue-tro', label: 'Phòng trọ SV' },
+  { href: '/thue?categoryGroup=thue_studio', label: 'Studio & Căn hộ' },
+  { href: '/cho-thue-mat-bang', label: 'Mặt bằng kinh doanh' },
 ];
 
 export function Header() {

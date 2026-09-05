@@ -2,6 +2,50 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🔄 PIVOT CHIẾN LƯỢC — Chuyên biệt hoá "Cho thuê" 100% (05/09/2026)
+
+### Tầm nhìn & Quyết định cốt lõi
+- **Chuyển dịch 100% sang mảng "Cho thuê":** Bỏ hoàn toàn mảng mua bán nhà đất. Nền tảng trở thành **broker trung gian** chuyên sâu cho thuê: phòng trọ sinh viên, nhà nguyên căn, căn hộ chung cư, studio độc lập, ký túc xá tư nhân / sleepbox, và mặt bằng kinh doanh.
+- **Giải quyết bài toán then chốt:** Không tốn chi phí mua data mua bán phức tạp, loại bỏ rào cản xác minh sổ đỏ/sổ hồng; nguồn cung dồi dào do chủ trọ chủ động đăng tin để lấp đầy phòng; chu kỳ giao dịch ngắn và lặp lại liên tục theo mùa tựu trường/năm học.
+- **Mô hình vận hành:** Nền tảng trung gian kết nối Người thuê/Sinh viên với Chủ trọ/Môi giới qua SĐT/Zalo trực tiếp — platform KHÔNG xử lý cọc hay tiền thuê. Miễn phí cho người thuê, thu phí đẩy tin/gói thành viên từ chủ phòng/môi giới.
+
+### Chi tiết thay đổi hệ thống
+
+#### 1. Schema Prisma (`packages/database/prisma/schema.prisma`)
+- Enum `TransactionType`: Xóa giá trị `sale`, chỉ giữ `rent`.
+- Model `Listing`: Bổ sung các trường chuyên sâu cho thuê trọ:
+  - `depositAmount`: Tiền đặt cọc (BigInt, VNĐ).
+  - `minLeaseMonths`: Thời hạn hợp đồng tối thiểu (tháng).
+  - `utilitiesIncluded`: Boolean — đã bao gồm tiền điện nước trong giá thuê hay chưa.
+  - `electricityPricePerKwh`: Đơn giá điện niêm yết (đ/kWh).
+  - `waterPricePerM3`: Đơn giá nước theo khối (đ/m³).
+  - `waterPriceFlat`: Đơn giá nước khoán theo đầu người (đ/tháng).
+  - `amenities`: Json lưu danh sách tiện ích phòng (wifi, máy lạnh, gác lửng, chỗ để xe, an ninh camera, giờ tự do, vệ sinh khép kín, bình nóng lạnh, máy giặt, tủ lạnh, bếp, thang máy, ban công, khóa vân tay).
+- Thêm model `University` và bảng liên kết nhiều-nhiều `ListingUniversity` (lưu `distanceMeters`, `travelTimeMinutes`) phục vụ tính năng lọc "gần trường X" cực kỳ quan trọng cho sinh viên.
+- Seed data (`seed.ts`): Nạp sẵn 7+ trường đại học trọng điểm (ĐHQG TP.HCM, ĐH Bách Khoa TP.HCM, ĐH Kinh Tế TP.HCM UEH, ĐH Tôn Đức Thắng, ĐH Bách Khoa Hà Nội, ĐH Kinh Tế Quốc Dân NEU, ĐHQG Hà Nội) và các tin đăng mẫu phòng trọ/studio chuẩn ngữ cảnh cho thuê.
+
+#### 2. Backend NestJS (`apps/api`)
+- **`EmailModule` (MỚI):** Tích hợp Nodemailer SMTP với driver MOCK in console chuẩn ASCII box khi chưa cấu hình credentials thật. Hỗ trợ gửi thông báo: (1) Chủ phòng khi tin được tiếp nhận chờ duyệt, (2) Chủ phòng khi tin được duyệt/bị từ chối kèm lý do, (3) Admin khi có tin mới cần duyệt, (4) Admin khi có báo cáo vi phạm mới.
+- **`GoogleSheetsModule` (MỚI):** Tích hợp Google Sheets API (service account) với driver MOCK an toàn. Tự động đồng bộ 1 chiều ghi dòng mới vào sheet "Tin chờ duyệt" và "Báo cáo vi phạm" cho người vận hành không rành kỹ thuật.
+- **`UniversitiesModule` (MỚI):** Endpoint `/universities` cung cấp danh sách trường ĐH và hỗ trợ tìm kiếm phòng trọ theo `universitySlug` hoặc `universityId`.
+- **`ListingsModule` & `AdminModule`:** Cập nhật DTOs, loại bỏ hoàn toàn các nhánh mã `sale`, bổ sung serialization cho các trường dịch vụ điện nước và trường đại học, gắn hook bất đồng bộ tới `EmailService` và `GoogleSheetsService`.
+
+#### 3. Frontend Next.js (`apps/web`)
+- **Triệt tiêu dấu vết "Mua bán":** Header, footer, breadcrumbs, liên kết nội bộ đều xóa bỏ `Mua BĐS`. Thêm 301 redirect vĩnh viễn `/mua-ban` → `/thue` trong cả `next.config.mjs` và page route.
+- **Trang chủ (`/`):** Tái định vị 100% xoay quanh tìm phòng cho thuê, phím tắt tìm phòng theo các trường ĐH lớn, 3 cụm danh mục mũi nhọn: Phòng trọ SV giá mềm, Căn hộ Studio, Căn hộ chung cư.
+- **Bộ lọc tìm kiếm (`SearchFilterBar`):** Thêm dropdown chọn trường đại học, checkbox lọc tiện ích phòng, các phân khúc giá thuê theo tháng (<2tr, 2-3.5tr, 3.5-5tr, 5-8tr, 8-15tr, >15tr).
+- **Trang chi tiết (`/tin/[slug]`):**
+  - Bỏ `LoanCalculatorWidget` và banner vay ngân hàng.
+  - Thêm component tương tác `MoveInCostEstimator`: Công cụ tính toán chi phí tháng đầu khi dọn vào (tiền cọc + tiền phòng tháng đầu + ước tính điện nước/wifi).
+  - Thêm thẻ "Minh bạch chi phí dịch vụ & Điện nước".
+  - Thêm thẻ "Gần các trường Đại học" (hiển thị khoảng cách km và số phút đi xe).
+  - Thêm danh sách tiện ích trực quan với biểu tượng sinh động.
+  - Thêm cẩm nang "Lưu ý an toàn khi thuê trọ" trong sidebar.
+- **Trang đăng tin (`/dang-tin`):** Chuyên sâu cho thuê phòng: chọn trường ĐH, biểu giá điện nước, hạn hợp đồng, tiền cọc, danh sách tiện ích có sẵn.
+- **Trang duyệt tin admin (`/admin/tin-cho-duyet`):** Hiển thị chi tiết biểu phí điện nước, tiền cọc, tiện ích, trường ĐH lân cận trong modal xem xét tin.
+
+---
+
 ## ✅ Đã xây dựng và verify được
 
 | Phần | Trạng thái | Ghi chú |

@@ -1,13 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TransactionType } from '@batdongsan/database';
-import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 
 export class CreateListingDto {
-  @ApiProperty({ enum: TransactionType })
+  @ApiPropertyOptional({ enum: TransactionType, default: TransactionType.rent })
+  @IsOptional()
   @IsEnum(TransactionType)
-  transactionType!: TransactionType;
+  transactionType?: TransactionType = TransactionType.rent;
 
-  @ApiProperty({ example: 'can-ho', description: 'nha | can-ho | dat | shophouse | phong-tro | van-phong...' })
+  @ApiProperty({ example: 'phong-tro-sinh-vien', description: 'phong-tro-sinh-vien | phong-tro-nguoi-di-lam | can-ho-chung-cu | nha-nguyen-can | studio | mat-bang-kinh-doanh | ky-tuc-xa-tu-nhan' })
   @IsString()
   propertyType!: string;
 
@@ -15,7 +16,7 @@ export class CreateListingDto {
   @IsInt()
   locationId!: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Mã khu trọ / chung cư mini (RentalCompound/Project)' })
   @IsOptional()
   @IsInt()
   projectId?: number;
@@ -30,13 +31,73 @@ export class CreateListingDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 3500000000 })
+  @ApiProperty({ example: 3500000, description: 'Giá thuê hàng tháng (VNĐ/tháng)' })
   @IsNotEmpty()
   @IsNumber()
   @Min(0)
   price!: number;
 
-  @ApiProperty({ example: 72.5 })
+  @ApiPropertyOptional({ example: 3500000, description: 'Tiền cọc yêu cầu (VNĐ)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  depositAmount?: number;
+
+  @ApiPropertyOptional({ example: 6, description: 'Thời hạn hợp đồng tối thiểu (tháng)' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  minLeaseMonths?: number;
+
+  @ApiPropertyOptional({ example: false, description: 'Giá thuê đã bao gồm điện nước chưa' })
+  @IsOptional()
+  @IsBoolean()
+  utilitiesIncluded?: boolean;
+
+  @ApiPropertyOptional({ example: 3500, description: 'Đơn giá điện (đ/kWh)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  electricityPricePerKwh?: number;
+
+  @ApiPropertyOptional({ example: 18000, description: 'Đơn giá nước (đ/m3)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  waterPricePerM3?: number;
+
+  @ApiPropertyOptional({ example: 100000, description: 'Giá nước khoán theo đầu người hoặc theo tháng (đ)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  waterPriceFlat?: number;
+
+  @ApiPropertyOptional({ description: 'Tiện ích có sẵn dạng JSON object (wifi, airConditioner, mezzanine...)' })
+  @IsOptional()
+  amenities?: Record<string, any>;
+
+  @ApiPropertyOptional({ description: 'Danh sách ID các trường đại học lân cận', type: [Number] })
+  @IsOptional()
+  @IsArray()
+  nearbyUniversityIds?: number[];
+
+  @ApiPropertyOptional({
+    description: 'Chi tiết khoảng cách các trường ĐH',
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        universityId: { type: 'number' },
+        distanceMeters: { type: 'number' },
+        travelTimeMinutes: { type: 'number' },
+      },
+    },
+  })
+  @IsOptional()
+  @IsArray()
+  universityDistances?: { universityId: number; distanceMeters?: number; travelTimeMinutes?: number }[];
+
+  @ApiProperty({ example: 25 })
   @IsNumber()
   @Min(0)
   areaM2!: number;
@@ -44,7 +105,7 @@ export class CreateListingDto {
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Max(50) bedrooms?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Max(50) bathrooms?: number;
 
-  @ApiPropertyOptional({ example: 'so_hong', description: 'so_do | so_hong | hop_dong | dang_cho_so' })
+  @ApiPropertyOptional({ example: 'hop_dong_6_thang', description: 'hop_dong_6_thang | hop_dong_1_nam | linh_hoat | khong_can_hop_dong' })
   @IsOptional()
   @IsString()
   legalStatus?: string;

@@ -11,6 +11,9 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { HealthModule } from './modules/health/health.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { EmailModule } from './modules/email/email.module';
+import { GoogleSheetsModule } from './modules/google-sheets/google-sheets.module';
+import { UniversitiesModule } from './modules/universities/universities.module';
 
 @Module({
   imports: [
@@ -36,6 +39,9 @@ import { AdminModule } from './modules/admin/admin.module';
     ListingsModule,
     HealthModule,
     AdminModule,
+    EmailModule,
+    GoogleSheetsModule,
+    UniversitiesModule,
   ],
 })
 export class AppModule {}

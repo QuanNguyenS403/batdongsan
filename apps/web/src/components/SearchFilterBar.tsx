@@ -3,65 +3,93 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface UniversityOption {
+  slug: string;
+  name: string;
+  abbreviation?: string | null;
+}
+
 interface SearchFilterBarProps {
-  basePath: string; // '/mua-ban' hoặc '/thue'
-  transactionType?: 'sale' | 'rent';
+  basePath: string; // '/thue', '/cho-thue-tro', '/cho-thue-mat-bang'
+  transactionType?: 'rent';
   initialParams?: { [key: string]: string | undefined };
+  propertyTypes?: { value: string; label: string }[];
+  universities?: UniversityOption[];
+  customPricePresets?: { label: string; min: string; max: string }[];
+  customAreaPresets?: { label: string; min: string; max: string }[];
+  placeholder?: string;
 }
 
 const PROPERTY_TYPES = [
-  { value: '', label: 'Tất cả loại BĐS' },
-  { value: 'nha_rieng', label: 'Nhà riêng / Nhà phố' },
-  { value: 'dat_nen', label: 'Đất nền / Đất thổ cư' },
-  { value: 'can_ho', label: 'Căn hộ / Chung cư' },
-  { value: 'phong_tro', label: 'Cho thuê phòng trọ' },
-  { value: 'mat_bang', label: 'Cho thuê mặt bằng' },
+  { value: '', label: 'Tất cả loại BĐS thuê' },
+  { value: 'phong_tro', label: 'Phòng trọ sinh viên' },
+  { value: 'ky_tuc_xa', label: 'Ký túc xá / Sleepbox' },
+  { value: 'can_ho_mini', label: 'Căn hộ mini / Studio' },
+  { value: 'can_ho', label: 'Căn hộ chung cư' },
+  { value: 'nha_rieng', label: 'Nhà riêng / Nguyên căn' },
+  { value: 'mat_bang', label: 'Mặt bằng kinh doanh' },
 ];
 
-const PRICE_PRESETS_SALE = [
-  { label: 'Tất cả mức giá', min: '', max: '' },
-  { label: 'Dưới 1 tỷ', min: '', max: '1000000000' },
-  { label: '1 - 2 tỷ', min: '1000000000', max: '2000000000' },
-  { label: '2 - 3 tỷ', min: '2000000000', max: '3000000000' },
-  { label: '3 - 5 tỷ', min: '3000000000', max: '5000000000' },
-  { label: '5 - 10 tỷ', min: '5000000000', max: '10000000000' },
-  { label: 'Trên 10 tỷ', min: '10000000000', max: '' },
+const DEFAULT_UNIVERSITIES: UniversityOption[] = [
+  { slug: '', name: 'Tất cả trường ĐH' },
+  { slug: 'dhqg-tphcm', name: 'ĐHQG TP.HCM (Khu Đô thị)', abbreviation: 'ĐHQG HCM' },
+  { slug: 'dh-bach-khoa-tphcm', name: 'ĐH Bách Khoa TP.HCM', abbreviation: 'Bách Khoa' },
+  { slug: 'dh-kinh-te-tphcm', name: 'ĐH Kinh tế TP.HCM', abbreviation: 'UEH' },
+  { slug: 'dh-ton-duc-thang', name: 'ĐH Tôn Đức Thắng', abbreviation: 'TDTU' },
+  { slug: 'dhqg-ha-noi', name: 'ĐHQG Hà Nội (Cầu Giấy)', abbreviation: 'VNU HN' },
+  { slug: 'dh-bach-khoa-ha-noi', name: 'ĐH Bách Khoa Hà Nội', abbreviation: 'HUST' },
+  { slug: 'dh-kinh-te-quoc-dan', name: 'ĐH Kinh tế Quốc dân', abbreviation: 'NEU' },
+  { slug: 'dh-ngoai-thuong-hn', name: 'ĐH Ngoại thương', abbreviation: 'FTU' },
 ];
 
 const PRICE_PRESETS_RENT = [
-  { label: 'Tất cả mức giá', min: '', max: '' },
-  { label: 'Dưới 5 triệu', min: '', max: '5000000' },
-  { label: '5 - 10 triệu', min: '5000000', max: '10000000' },
-  { label: '10 - 20 triệu', min: '10000000', max: '20000000' },
-  { label: '20 - 40 triệu', min: '20000000', max: '40000000' },
-  { label: 'Trên 40 triệu', min: '40000000', max: '' },
+  { label: 'Tất cả mức giá thuê', min: '', max: '' },
+  { label: 'Dưới 2 triệu', min: '', max: '2000000' },
+  { label: '2 - 3.5 triệu', min: '2000000', max: '3500000' },
+  { label: '3.5 - 5 triệu', min: '3500000', max: '5000000' },
+  { label: '5 - 8 triệu', min: '5000000', max: '8000000' },
+  { label: '8 - 15 triệu', min: '8000000', max: '15000000' },
+  { label: 'Trên 15 triệu', min: '15000000', max: '' },
 ];
 
 const AREA_PRESETS = [
   { label: 'Tất cả diện tích', min: '', max: '' },
-  { label: 'Dưới 30 m²', min: '', max: '30' },
-  { label: '30 - 50 m²', min: '30', max: '50' },
+  { label: 'Dưới 20 m²', min: '', max: '20' },
+  { label: '20 - 35 m²', min: '20', max: '35' },
+  { label: '35 - 50 m²', min: '35', max: '50' },
   { label: '50 - 80 m²', min: '50', max: '80' },
-  { label: '80 - 150 m²', min: '80', max: '150' },
-  { label: 'Trên 150 m²', min: '150', max: '' },
+  { label: 'Trên 80 m²', min: '80', max: '' },
 ];
 
-export function SearchFilterBar({ basePath, transactionType = 'sale', initialParams = {} }: SearchFilterBarProps) {
+export function SearchFilterBar({
+  basePath,
+  initialParams = {},
+  propertyTypes: propPropertyTypes,
+  universities = DEFAULT_UNIVERSITIES,
+  customPricePresets,
+  customAreaPresets,
+  placeholder = 'Tìm theo tiêu đề, đường, trường ĐH...',
+}: SearchFilterBarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [keyword, setKeyword] = useState(initialParams.keyword ?? '');
   const [propertyType, setPropertyType] = useState(initialParams.propertyType ?? '');
+  const [universitySlug, setUniversitySlug] = useState(initialParams.universitySlug ?? '');
+  const [utilitiesIncluded, setUtilitiesIncluded] = useState(initialParams.utilitiesIncluded === 'true');
+
+  const availablePropertyTypes = propPropertyTypes ?? PROPERTY_TYPES;
 
   // Tìm preset giá tương ứng
-  const pricePresets = transactionType === 'rent' ? PRICE_PRESETS_RENT : PRICE_PRESETS_SALE;
+  const pricePresets = customPricePresets ?? PRICE_PRESETS_RENT;
   const initialPriceIndex = pricePresets.findIndex(
     (p) => p.min === (initialParams.priceMin ?? '') && p.max === (initialParams.priceMax ?? ''),
   );
   const [priceIndex, setPriceIndex] = useState(initialPriceIndex >= 0 ? initialPriceIndex : 0);
 
   // Tìm preset diện tích tương ứng
-  const initialAreaIndex = AREA_PRESETS.findIndex(
+  const areaPresets = customAreaPresets ?? AREA_PRESETS;
+  const initialAreaIndex = areaPresets.findIndex(
     (a) => a.min === (initialParams.areaMin ?? '') && a.max === (initialParams.areaMax ?? ''),
   );
   const [areaIndex, setAreaIndex] = useState(initialAreaIndex >= 0 ? initialAreaIndex : 0);
@@ -72,6 +100,8 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
 
     if (keyword.trim()) params.set('keyword', keyword.trim());
     if (propertyType) params.set('propertyType', propertyType);
+    if (universitySlug) params.set('universitySlug', universitySlug);
+    if (utilitiesIncluded) params.set('utilitiesIncluded', 'true');
 
     const price = pricePresets[priceIndex];
     if (price.min) params.set('priceMin', price.min);
@@ -92,6 +122,8 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
   function handleReset() {
     setKeyword('');
     setPropertyType('');
+    setUniversitySlug('');
+    setUtilitiesIncluded(false);
     setPriceIndex(0);
     setAreaIndex(0);
     startTransition(() => {
@@ -102,24 +134,42 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
   const hasFilters = !!(
     keyword ||
     propertyType ||
+    universitySlug ||
+    utilitiesIncluded ||
     pricePresets[priceIndex].min ||
     pricePresets[priceIndex].max ||
-    AREA_PRESETS[areaIndex].min ||
-    AREA_PRESETS[areaIndex].max
+    areaPresets[areaIndex].min ||
+    areaPresets[areaIndex].max
   );
 
   return (
     <form onSubmit={handleFilter} className="mb-6 rounded-2xl border border-surface-border bg-white p-4 shadow-card">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
         {/* Từ khoá */}
         <div className="lg:col-span-2">
           <input
             type="text"
-            placeholder="Tìm theo tiêu đề, địa chỉ..."
+            placeholder={placeholder}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             className="input-field"
           />
+        </div>
+
+        {/* Trường Đại học */}
+        <div>
+          <select
+            value={universitySlug}
+            onChange={(e) => setUniversitySlug(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">🎓 Gần trường ĐH</option>
+            {universities.map((u) => (
+              <option key={u.slug} value={u.slug}>
+                {u.abbreviation ? `${u.abbreviation} — ${u.name}` : u.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Loại BĐS */}
@@ -129,7 +179,7 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
             onChange={(e) => setPropertyType(e.target.value)}
             className="filter-select"
           >
-            {PROPERTY_TYPES.map((t) => (
+            {availablePropertyTypes.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
@@ -159,7 +209,7 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
             onChange={(e) => setAreaIndex(Number(e.target.value))}
             className="filter-select"
           >
-            {AREA_PRESETS.map((a, idx) => (
+            {areaPresets.map((a, idx) => (
               <option key={idx} value={idx}>
                 {a.label}
               </option>
@@ -168,38 +218,77 @@ export function SearchFilterBar({ basePath, transactionType = 'sale', initialPar
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-end gap-2 border-t border-surface-border pt-3">
-        {hasFilters && (
+      {/* Quick filter pills */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-surface-border pt-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={handleReset}
-            className="btn-secondary text-xs px-4 py-2"
+            onClick={() => setUtilitiesIncluded(!utilitiesIncluded)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+              utilitiesIncluded
+                ? 'border-brand bg-brand/10 text-brand font-semibold'
+                : 'border-surface-border bg-surface text-text-secondary hover:bg-surface-muted'
+            }`}
           >
-            Đặt lại
+            <span>⚡💧</span>
+            <span>Bao điện nước</span>
           </button>
-        )}
-        <button
-          type="submit"
-          disabled={isPending}
-          className="btn-primary text-xs px-5 py-2 disabled:opacity-75"
-        >
-          {isPending ? (
-            <>
-              <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-              <span>Đang lọc...</span>
-            </>
-          ) : (
-            <>
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
-              <span>Lọc kết quả</span>
-            </>
+
+          <span className="text-xs text-text-muted hidden sm:inline">Gợi ý tìm nhanh:</span>
+          {['dhqg-tphcm', 'dh-bach-khoa-tphcm', 'dhqg-ha-noi'].map((uSlug) => {
+            const u = universities.find((x) => x.slug === uSlug);
+            if (!u) return null;
+            const active = universitySlug === uSlug;
+            return (
+              <button
+                key={uSlug}
+                type="button"
+                onClick={() => setUniversitySlug(active ? '' : uSlug)}
+                className={`rounded-full px-2.5 py-0.5 text-xs transition-colors border ${
+                  active
+                    ? 'border-brand bg-brand text-white font-medium'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-brand/40'
+                }`}
+              >
+                Gần {u.abbreviation || u.name}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="btn-secondary text-xs px-4 py-2"
+            >
+              Đặt lại
+            </button>
           )}
-        </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="btn-primary text-xs px-5 py-2 disabled:opacity-75"
+          >
+            {isPending ? (
+              <>
+                <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                <span>Đang lọc...</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <span>Lọc kết quả</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </form>
   );

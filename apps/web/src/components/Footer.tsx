@@ -1,21 +1,24 @@
 import Link from 'next/link';
 
 const FOOTER_LINKS = {
-  'Bán BĐS': [
-    { href: '/mua-ban?propertyType=nha_rieng', label: 'Nhà riêng / Nhà phố' },
-    { href: '/mua-ban?propertyType=dat_nen', label: 'Đất nền / Thổ cư' },
-    { href: '/mua-ban?propertyType=can_ho', label: 'Căn hộ chung cư' },
-    { href: '/mua-ban', label: 'Tất cả BĐS bán' },
+  'Phòng trọ Sinh viên': [
+    { href: '/cho-thue-tro', label: 'Phòng trọ khép kín' },
+    { href: '/cho-thue-tro?propertyType=ky_tuc_xa', label: 'Ký túc xá / Sleepbox' },
+    { href: '/thue?categoryGroup=thue_studio', label: 'Studio & Căn hộ mini' },
+    { href: '/thue?utilitiesIncluded=true', label: 'Phòng bao điện nước' },
   ],
   'Cho thuê BĐS': [
-    { href: '/thue?propertyType=can_ho', label: 'Cho thuê căn hộ' },
-    { href: '/thue?propertyType=nha_rieng', label: 'Cho thuê nhà riêng' },
-    { href: '/thue', label: 'Tất cả BĐS cho thuê' },
+    { href: '/thue?propertyType=can_ho', label: 'Cho thuê căn hộ chung cư' },
+    { href: '/thue?propertyType=nha_rieng', label: 'Cho thuê nhà nguyên căn' },
+    { href: '/cho-thue-mat-bang', label: 'Mặt bằng kinh doanh' },
+    { href: '/thue', label: 'Tất cả tin cho thuê' },
   ],
-  'Phòng trọ & Mặt bằng': [
-    { href: '/thue?propertyType=phong_tro', label: 'Cho thuê phòng trọ' },
-    { href: '/thue?propertyType=mat_bang', label: 'Cho thuê mặt bằng kinh doanh' },
+  'Hỗ trợ & Tiện ích': [
+    { href: '/dang-tin', label: 'Đăng tin cho thuê miễn phí' },
     { href: '/dang-nhap', label: 'Đăng nhập tài khoản' },
+    { href: '/tai-khoan/quan-ly-tin', label: 'Quản lý tin đăng' },
+    { href: '/thue?universitySlug=dhqg-tphcm', label: 'Gần ĐHQG TP.HCM' },
+    { href: '/thue?universitySlug=dh-bach-khoa-ha-noi', label: 'Gần ĐH Bách Khoa HN' },
   ],
 };
 
@@ -36,8 +39,8 @@ export function Footer() {
               </span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-white/60">
-              Bất động sản <strong>Nguyễn Đức Quân</strong> — Cung cấp dịch vụ Bán BĐS, Cho thuê BĐS,
-              Cho thuê phòng trọ và Cho thuê mặt bằng kinh doanh uy tín, chính chủ.
+              Nền tảng trung gian tìm kiếm <strong>Phòng trọ, Nhà ở & Mặt bằng cho thuê</strong> hàng đầu.
+              Minh bạch chi phí điện nước, kết nối trực tiếp chủ trọ và người thuê.
             </p>
             <p className="mt-4 text-sm text-white/60">
               📞 Hotline / Zalo:{' '}

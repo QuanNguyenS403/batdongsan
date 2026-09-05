@@ -89,68 +89,206 @@ async function main() {
   console.log('✅ Seed địa danh + tài khoản demo xong.');
   console.log('   Đăng nhập quản trị: SĐT 0981753082 / mật khẩu: Demo@123');
 
-  // ---------- 3. Tin đăng MẪU (chỉ để kiểm tra giao diện — xoá khi có dữ liệu thật) ----------
-  const existingDemo = await prisma.listing.count({ where: { title: { startsWith: '[MẪU]' } } });
-  if (existingDemo === 0) {
-    await prisma.listing.create({
-      data: {
-        ownerId: broker.id,
-        locationId: phuongTanPhong.id,
-        transactionType: TransactionType.sale,
-        propertyType: 'can-ho',
-        title: '[MẪU] Căn hộ 2PN view sông - dữ liệu demo kiểm tra giao diện',
-        slug: 'mau-can-ho-2pn-view-song-id1',
-        description:
-          'Đây là tin đăng MẪU dùng để kiểm tra giao diện. Sẽ được thay thế bằng dữ liệu thật khi khách hàng cung cấp.',
-        price: 3_500_000_000,
-        areaM2: 72.5,
-        bedrooms: 2,
-        bathrooms: 2,
-        legalStatus: 'so_hong',
-        addressDetail: 'Đường Nguyễn Lương Bằng, Phường Tân Phong',
-        status: ListingStatus.active,
-        publishedAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        images: {
-          create: [
-            { imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80', sortOrder: 0 },
-            { imageUrl: 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=800&q=80', sortOrder: 1 },
-          ],
-        },
+  // ---------- 3. Danh mục các Trường Đại học trọng điểm ----------
+  const uniDhqgHcm = await prisma.university.upsert({
+    where: { slug: 'dhqg-tphcm' },
+    update: {},
+    create: {
+      name: 'Đại học Quốc gia TP. Hồ Chí Minh (Khu Đô thị ĐHQG)',
+      abbreviation: 'ĐHQG TP.HCM',
+      slug: 'dhqg-tphcm',
+      address: 'Khu phố 6, P. Linh Trung, TP. Thủ Đức, TP.HCM',
+      locationId: quan1.id,
+    },
+  });
+
+  const uniBachKhoaHcm = await prisma.university.upsert({
+    where: { slug: 'dh-bach-khoa-tphcm' },
+    update: {},
+    create: {
+      name: 'Trường Đại học Bách Khoa - ĐHQG TP.HCM',
+      abbreviation: 'Bách Khoa HCM',
+      slug: 'dh-bach-khoa-tphcm',
+      address: '268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM',
+      locationId: quan1.id,
+    },
+  });
+
+  const uniUeh = await prisma.university.upsert({
+    where: { slug: 'dh-kinh-te-tphcm' },
+    update: {},
+    create: {
+      name: 'Đại học Kinh tế TP. Hồ Chí Minh',
+      abbreviation: 'UEH',
+      slug: 'dh-kinh-te-tphcm',
+      address: '59C Nguyễn Đình Chiểu, Phường 6, Quận 3, TP.HCM',
+      locationId: quan1.id,
+    },
+  });
+
+  const uniTonDucThang = await prisma.university.upsert({
+    where: { slug: 'dh-ton-duc-thang' },
+    update: {},
+    create: {
+      name: 'Trường Đại học Tôn Đức Thắng',
+      abbreviation: 'TDTU',
+      slug: 'dh-ton-duc-thang',
+      address: '19 Nguyễn Hữu Thọ, P. Tân Phong, Quận 7, TP.HCM',
+      locationId: quan7.id,
+    },
+  });
+
+  const uniBachKhoaHn = await prisma.university.upsert({
+    where: { slug: 'dh-bach-khoa-ha-noi' },
+    update: {},
+    create: {
+      name: 'Đại học Bách Khoa Hà Nội',
+      abbreviation: 'HUST',
+      slug: 'dh-bach-khoa-ha-noi',
+      address: 'Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội',
+      locationId: hanoi.id,
+    },
+  });
+
+  const uniNeu = await prisma.university.upsert({
+    where: { slug: 'dh-kinh-te-quoc-dan' },
+    update: {},
+    create: {
+      name: 'Trường Đại học Kinh tế Quốc dân',
+      abbreviation: 'NEU',
+      slug: 'dh-kinh-te-quoc-dan',
+      address: '207 Giải Phóng, Đồng Tâm, Hai Bà Trưng, Hà Nội',
+      locationId: hanoi.id,
+    },
+  });
+
+  const uniDhqgHn = await prisma.university.upsert({
+    where: { slug: 'dhqg-ha-noi' },
+    update: {},
+    create: {
+      name: 'Đại học Quốc gia Hà Nội',
+      abbreviation: 'VNU HN',
+      slug: 'dhqg-ha-noi',
+      address: '144 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
+      locationId: hanoi.id,
+    },
+  });
+
+  console.log('✅ Seed danh sách trường Đại học xong.');
+
+  // ---------- 4. Tin đăng MẪU Cho Thuê (chỉ để kiểm tra giao diện) ----------
+  // Xoá tin demo cũ nếu có
+  await prisma.listing.deleteMany({ where: { title: { startsWith: '[MẪU]' } } });
+
+  await prisma.listing.create({
+    data: {
+      ownerId: broker.id,
+      locationId: phuongTanPhong.id,
+      transactionType: TransactionType.rent,
+      propertyType: 'phong-tro-sinh-vien',
+      title: '[MẪU] Phòng trọ khép kín có gác lửng, máy lạnh gần ĐH Tôn Đức Thắng & RMIT',
+      slug: 'mau-phong-tro-gac-lung-gan-tdtu-id1',
+      description:
+        'Phòng trọ sinh viên mới xây sạch sẽ, giờ giấc tự do không chung chủ. Đầy đủ tiện nghi: máy lạnh, gác lửng đúc kiên cố, kệ bếp nấu ăn, wifi cáp quang tốc độ cao. Ra ĐH Tôn Đức Thắng chỉ 5 phút đi bộ.',
+      price: 3_500_000,
+      depositAmount: 3_500_000,
+      minLeaseMonths: 6,
+      utilitiesIncluded: false,
+      electricityPricePerKwh: 3500,
+      waterPricePerM3: 18000,
+      waterPriceFlat: 100000,
+      amenities: {
+        wifi: true,
+        airConditioner: true,
+        mezzanine: true,
+        freeTime: true,
+        securityCamera: true,
+        parkingSpace: true,
+        privateBathroom: true,
       },
-    });
-
-    await prisma.listing.create({
-      data: {
-        ownerId: broker.id,
-        locationId: quan1.id,
-        transactionType: TransactionType.rent,
-        propertyType: 'nha-nguyen-can',
-        title: '[MẪU] Nhà nguyên căn mặt tiền - dữ liệu demo kiểm tra giao diện',
-        slug: 'mau-nha-nguyen-can-mat-tien-id2',
-        description: 'Tin MẪU. Xoá bằng script reset khi đã có dữ liệu thật.',
-        price: 25_000_000,
-        areaM2: 100,
-        bedrooms: 4,
-        bathrooms: 3,
-        legalStatus: 'so_do',
-        addressDetail: 'Đường Nguyễn Trãi, Quận 1',
-        status: ListingStatus.active,
-        publishedAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        images: {
-          create: [
-            { imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80', sortOrder: 0 },
-            { imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80', sortOrder: 1 },
-          ],
-        },
+      areaM2: 24,
+      bedrooms: 1,
+      bathrooms: 1,
+      legalStatus: 'hop_dong_6_thang',
+      addressDetail: 'Đường số 10, Phường Tân Phong, Quận 7, TP.HCM',
+      status: ListingStatus.active,
+      publishedAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      images: {
+        create: [
+          { imageUrl: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1200&q=80', sortOrder: 0 },
+          { imageUrl: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80', sortOrder: 1 },
+        ],
       },
-    });
+      nearbyUniversities: {
+        create: [
+          {
+            universityId: uniTonDucThang.id,
+            distanceMeters: 450,
+            travelTimeMinutes: 5,
+          },
+        ],
+      },
+    },
+  });
 
-    console.log('✅ Đã tạo 2 tin đăng MẪU để kiểm tra giao diện (title bắt đầu bằng "[MẪU]").');
-  }
+  await prisma.listing.create({
+    data: {
+      ownerId: broker.id,
+      locationId: quan1.id,
+      transactionType: TransactionType.rent,
+      propertyType: 'studio',
+      title: '[MẪU] Căn hộ Studio cao cấp full nội thất trung tâm Quận 1 cho người đi làm',
+      slug: 'mau-can-ho-studio-quan-1-id2',
+      description:
+        'Studio ban công thoáng đãng, thiết kế hiện đại trang bị smart TV, tủ lạnh 2 cánh, máy giặt riêng, giường nệm cao su. An ninh khoá vân tay thẻ từ 24/7.',
+      price: 8_500_000,
+      depositAmount: 8_500_000,
+      minLeaseMonths: 12,
+      utilitiesIncluded: false,
+      electricityPricePerKwh: 4000,
+      waterPricePerM3: 25000,
+      amenities: {
+        wifi: true,
+        airConditioner: true,
+        washingMachine: true,
+        refrigerator: true,
+        smartLock: true,
+        elevator: true,
+        balcony: true,
+      },
+      areaM2: 35,
+      bedrooms: 1,
+      bathrooms: 1,
+      legalStatus: 'hop_dong_1_nam',
+      addressDetail: 'Đường Nguyễn Trãi, Quận 1, TP.HCM',
+      status: ListingStatus.active,
+      publishedAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      images: {
+        create: [
+          { imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80', sortOrder: 0 },
+          { imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80', sortOrder: 1 },
+        ],
+      },
+      nearbyUniversities: {
+        create: [
+          {
+            universityId: uniUeh.id,
+            distanceMeters: 1200,
+            travelTimeMinutes: 8,
+          },
+          {
+            universityId: uniBachKhoaHcm.id,
+            distanceMeters: 3000,
+            travelTimeMinutes: 15,
+          },
+        ],
+      },
+    },
+  });
 
-  void admin;
+  console.log('✅ Đã tạo 2 tin đăng MẪU Cho Thuê (phòng trọ SV + studio) kèm liên kết trường ĐH.');
 }
 
 main()

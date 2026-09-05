@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { ListingStatus, Prisma } from '@batdongsan/database';
+import { ListingStatus, Prisma, TransactionType } from '@batdongsan/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueryAdminListingsDto } from './dto/query-admin-listings.dto';
 import { QueryAdminReportsDto } from './dto/query-admin-reports.dto';
 import { QueryAdminUsersDto } from './dto/query-admin-users.dto';
+import { EmailService } from '../email/email.service';
 
 function serialize<T extends Record<string, any>>(obj: T): any {
   return JSON.parse(
@@ -13,7 +14,10 @@ function serialize<T extends Record<string, any>>(obj: T): any {
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
 
   /** Thống kê số liệu trang Dashboard quản trị */
   async getDashboard() {
@@ -85,6 +89,81 @@ export class AdminService {
       status: query.status ?? ListingStatus.pending,
     };
 
+    if (query.transactionType) {
+      where.transactionType = TransactionType.rent;
+    }
+
+    if (query.categoryGroup) {
+      if (query.categoryGroup === 'thue_bds') {
+        where.transactionType = TransactionType.rent;
+        if (!query.propertyType) {
+          where.propertyType = {
+            notIn: [
+              'phong_tro',
+              'phong-tro',
+              'phong-tro-sinh-vien',
+              'phong_tro_sinh_vien',
+              'mat_bang',
+              'mat-bang',
+              'mat-bang-kinh-doanh',
+              'mat_bang_kinh_doanh',
+              'cua_hang',
+              'cua-hang',
+              'kho_xuong',
+              'kho-xuong',
+            ],
+          };
+        }
+      } else if (query.categoryGroup === 'thue_tro') {
+        where.transactionType = TransactionType.rent;
+        if (!query.propertyType) {
+          where.propertyType = {
+            in: [
+              'phong-tro-sinh-vien',
+              'phong_tro_sinh_vien',
+              'phong_tro',
+              'phong-tro',
+              'ky_tuc_xa',
+              'ky-tuc-xa',
+              'ky-tuc-xa-tu-nhan',
+              'can_ho_mini',
+              'can-ho-mini',
+              'nha_tro',
+              'nha-tro',
+            ],
+          };
+        }
+      } else if (query.categoryGroup === 'thue_mat_bang') {
+        where.transactionType = TransactionType.rent;
+        if (!query.propertyType) {
+          where.propertyType = {
+            in: [
+              'mat-bang-kinh-doanh',
+              'mat_bang_kinh_doanh',
+              'mat_bang',
+              'mat-bang',
+              'cua_hang',
+              'cua-hang',
+              'shophouse',
+              'kho_xuong',
+              'kho-xuong',
+            ],
+          };
+        }
+      }
+    }
+
+    if (query.propertyType) {
+      const variants = Array.from(
+        new Set([
+          query.propertyType,
+          query.propertyType.replace(/-/g, '_'),
+          query.propertyType.replace(/_/g, '-'),
+        ]),
+      );
+      where.propertyType = { in: variants };
+    }
+
     if (query.keyword) {
       where.OR = [
         { title: { contains: query.keyword, mode: 'insensitive' } },
@@ -105,6 +184,13 @@ export class AdminService {
           location: { select: { id: true, name: true, slug: true, level: true } },
           project: { select: { id: true, name: true } },
           owner: { select: { id: true, fullName: true, phone: true, avatarUrl: true, createdAt: true } },
+          nearbyUniversities: {
+            select: {
+              distanceMeters: true,
+              travelTimeMinutes: true,
+              university: { select: { id: true, name: true, abbreviation: true, slug: true } },
+            },
+          },
         },
       }),
       this.prisma.listing.count({ where }),
@@ -123,7 +209,12 @@ export class AdminService {
 
   /** Phê duyệt tin đăng */
   async approveListing(id: bigint) {
-    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    const listing = await this.prisma.listing.findUnique({
+      where: { id },
+      include: {
+        owner: { select: { phone: true, fullName: true } },
+      },
+    });
     if (!listing) {
       throw new NotFoundException('Không tìm thấy tin đăng.');
     }
@@ -141,6 +232,13 @@ export class AdminService {
       },
     });
 
+    // Thông báo email cho chủ tin
+    try {
+      void this.emailService.sendListingApprovedToLandlord(listing, listing.owner.phone);
+    } catch {
+      // Safe-fail
+    }
+
     return {
       message: 'Đã duyệt tin đăng thành công.',
       listing: serialize(updated),
@@ -149,7 +247,12 @@ export class AdminService {
 
   /** Từ chối tin đăng */
   async rejectListing(id: bigint, reason: string) {
-    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    const listing = await this.prisma.listing.findUnique({
+      where: { id },
+      include: {
+        owner: { select: { phone: true, fullName: true } },
+      },
+    });
     if (!listing) {
       throw new NotFoundException('Không tìm thấy tin đăng.');
     }
@@ -161,6 +264,13 @@ export class AdminService {
         rejectionReason: reason,
       },
     });
+
+    // Thông báo email cho chủ tin kèm lý do
+    try {
+      void this.emailService.sendListingRejectedToLandlord(listing, listing.owner.phone, reason);
+    } catch {
+      // Safe-fail
+    }
 
     return {
       message: 'Đã từ chối tin đăng.',

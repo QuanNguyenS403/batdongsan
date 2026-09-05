@@ -14,7 +14,6 @@ enum UserRole {
 }
 
 enum TransactionType {
-  sale
   rent
 }
 
@@ -51,22 +50,24 @@ model User {
 /// Dữ liệu địa danh KHÔNG thuộc phạm vi "dữ liệu bất động sản" — sẽ được seed sẵn
 /// từ danh mục hành chính Việt Nam (không phải nội dung để trống chờ khách hàng cung cấp).
 model Location {
-  id         Int        @id @default(autoincrement())
-  parentId   Int?       @map("parent_id")
-  parent     Location?  @relation("LocationTree", fields: [parentId], references: [id])
-  children   Location[] @relation("LocationTree")
-  level      String     @db.VarChar(20) // province | district | ward
-  name       String     @db.VarChar(150)
-  slug       String     @unique @db.VarChar(150)
+  id           Int          @id @default(autoincrement())
+  parentId     Int?         @map("parent_id")
+  parent       Location?    @relation("LocationTree", fields: [parentId], references: [id])
+  children     Location[]   @relation("LocationTree")
+  level        String       @db.VarChar(20) // province | district | ward
+  name         String       @db.VarChar(150)
+  slug         String       @unique @db.VarChar(150)
 
-  listings   Listing[]
-  projects   Project[]
-  priceIndex PriceIndex[]
+  listings     Listing[]
+  projects     Project[]
+  priceIndex   PriceIndex[]
+  universities University[]
 
   @@map("locations")
 }
 
-/// Dự án bất động sản (chủ đầu tư). Để TRỐNG dữ liệu — chờ khách hàng cung cấp.
+/// Khu trọ / Chung cư mini / Tổ hợp cho thuê (RentalCompound — trước đây là Project).
+/// Một khu trọ thực tế có NHIỀU phòng cho thuê cùng lúc, thuộc cùng 1 địa chỉ/chủ sở hữu.
 model Project {
   id            BigInt   @id @default(autoincrement())
   name          String   @db.VarChar(200)
@@ -87,45 +88,84 @@ model Project {
   @@map("projects")
 }
 
-/// Tin đăng bất động sản — bảng lõi. Để TRỐNG dữ liệu thật — chờ khách hàng cung cấp hàng loạt.
+/// Tin đăng cho thuê — bảng lõi chuyên biệt 100% cho thuê phòng trọ / căn hộ / nhà ở / studio / mặt bằng.
 model Listing {
-  id               BigInt          @id @default(autoincrement())
-  ownerId          BigInt          @map("owner_id")
-  owner            User            @relation(fields: [ownerId], references: [id])
-  projectId        BigInt?         @map("project_id")
-  project          Project?        @relation(fields: [projectId], references: [id])
-  locationId       Int             @map("location_id")
-  location         Location        @relation(fields: [locationId], references: [id])
-  transactionType  TransactionType @map("transaction_type")
-  propertyType     String          @map("property_type") @db.VarChar(30)
-  title            String          @db.VarChar(250)
-  slug             String          @unique @db.VarChar(280)
-  description      String?
-  price            BigInt
-  areaM2           Decimal         @map("area_m2") @db.Decimal(10, 2)
-  bedrooms         Int?            @db.SmallInt
-  bathrooms        Int?            @db.SmallInt
-  legalStatus      String?         @map("legal_status") @db.VarChar(50)
-  addressDetail    String?         @map("address_detail")
-  lat              Float?
-  lng              Float?
-  status           ListingStatus   @default(pending)
-  rejectionReason  String?         @map("rejection_reason")
-  publishedAt      DateTime?       @map("published_at")
-  expiresAt        DateTime?       @map("expires_at")
-  refreshedAt      DateTime?       @map("refreshed_at")
-  viewCount        Int             @default(0) @map("view_count")
-  revealPhoneCount Int             @default(0) @map("reveal_phone_count")
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @updatedAt @map("updated_at")
+  id                     BigInt              @id @default(autoincrement())
+  ownerId                BigInt              @map("owner_id")
+  owner                  User                @relation(fields: [ownerId], references: [id])
+  projectId              BigInt?             @map("project_id")
+  project                Project?            @relation(fields: [projectId], references: [id])
+  locationId             Int                 @map("location_id")
+  location               Location            @relation(fields: [locationId], references: [id])
+  transactionType        TransactionType     @default(rent) @map("transaction_type")
+  propertyType           String              @map("property_type") @db.VarChar(30)
+  title                  String              @db.VarChar(250)
+  slug                   String              @unique @db.VarChar(280)
+  description            String?
+  price                  BigInt              // Giá thuê hàng tháng (VNĐ)
+  depositAmount          BigInt?             @map("deposit_amount") // Tiền cọc (VNĐ)
+  minLeaseMonths         Int?                @map("min_lease_months") @db.SmallInt // Thời hạn thuê tối thiểu (tháng)
+  utilitiesIncluded      Boolean             @default(false) @map("utilities_included") // Đã bao gồm điện nước chưa
+  electricityPricePerKwh Int?                @map("electricity_price_per_kwh") // Giá điện đ/kWh
+  waterPricePerM3        Int?                @map("water_price_per_m3") // Giá nước đ/m3
+  waterPriceFlat         Int?                @map("water_price_flat") // Giá nước khoán đ/người hoặc đ/tháng
+  amenities              Json?               // Tiện ích: wifi, máy lạnh, gác lửng, tủ lạnh, máy giặt, chỗ để xe, camera...
+  areaM2                 Decimal             @map("area_m2") @db.Decimal(10, 2)
+  bedrooms               Int?                @db.SmallInt
+  bathrooms              Int?                @db.SmallInt
+  legalStatus            String?             @map("legal_status") @db.VarChar(50)
+  addressDetail          String?             @map("address_detail")
+  lat                    Float?
+  lng                    Float?
+  status                 ListingStatus       @default(pending)
+  rejectionReason        String?             @map("rejection_reason")
+  publishedAt            DateTime?           @map("published_at")
+  expiresAt              DateTime?           @map("expires_at")
+  refreshedAt            DateTime?           @map("refreshed_at")
+  viewCount              Int                 @default(0) @map("view_count")
+  revealPhoneCount       Int                 @default(0) @map("reveal_phone_count")
+  createdAt              DateTime            @default(now()) @map("created_at")
+  updatedAt              DateTime            @updatedAt @map("updated_at")
 
-  images           ListingImage[]
-  savedBy          SavedListing[]
-  reports          ListingReport[]
-  phoneReveals     PhoneRevealLog[]
+  images                 ListingImage[]
+  savedBy                SavedListing[]
+  reports                ListingReport[]
+  phoneReveals           PhoneRevealLog[]
+  nearbyUniversities     ListingUniversity[]
 
   @@index([status, transactionType, propertyType, locationId])
   @@map("listings")
+}
+
+/// Danh mục các Trường Đại học / Cao đẳng — phục vụ tìm kiếm phòng trọ sinh viên gần trường.
+model University {
+  id           Int                 @id @default(autoincrement())
+  name         String              @db.VarChar(200)
+  abbreviation String?             @db.VarChar(50)
+  slug         String              @unique @db.VarChar(220)
+  address      String?             @db.VarChar(250)
+  locationId   Int?                @map("location_id")
+  location     Location?           @relation(fields: [locationId], references: [id])
+  lat          Float?
+  lng          Float?
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  listings     ListingUniversity[]
+
+  @@map("universities")
+}
+
+/// Quan hệ nhiều-nhiều giữa Tin cho thuê và Trường Đại học lân cận kèm khoảng cách/thời gian.
+model ListingUniversity {
+  listingId         BigInt     @map("listing_id")
+  listing           Listing    @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  universityId      Int        @map("university_id")
+  university        University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  distanceMeters    Int?       @map("distance_meters")
+  travelTimeMinutes Int?       @map("travel_time_minutes")
+
+  @@id([listingId, universityId])
+  @@map("listing_universities")
 }
 
 model ListingImage {

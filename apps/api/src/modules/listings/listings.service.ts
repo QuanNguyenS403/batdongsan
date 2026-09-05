@@ -1,10 +1,12 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, ListingStatus } from '@batdongsan/database';
+import { Prisma, ListingStatus, TransactionType } from '@batdongsan/database';
 import slugify from 'slugify';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
+import { EmailService } from '../email/email.service';
+import { GoogleSheetsService } from '../google-sheets/google-sheets.service';
 
 const PUBLIC_LISTING_SELECT = {
   id: true,
@@ -14,6 +16,13 @@ const PUBLIC_LISTING_SELECT = {
   transactionType: true,
   propertyType: true,
   price: true,
+  depositAmount: true,
+  minLeaseMonths: true,
+  utilitiesIncluded: true,
+  electricityPricePerKwh: true,
+  waterPricePerM3: true,
+  waterPriceFlat: true,
+  amenities: true,
   areaM2: true,
   bedrooms: true,
   bathrooms: true,
@@ -29,6 +38,16 @@ const PUBLIC_LISTING_SELECT = {
   location: { select: { id: true, name: true, slug: true, level: true } },
   project: { select: { id: true, name: true, slug: true } },
   owner: { select: { id: true, fullName: true, avatarUrl: true, createdAt: true } },
+  nearbyUniversities: {
+    select: {
+      distanceMeters: true,
+      travelTimeMinutes: true,
+      university: {
+        select: { id: true, name: true, abbreviation: true, slug: true, address: true },
+      },
+    },
+    orderBy: { distanceMeters: 'asc' as const },
+  },
   // CHÚ Ý: KHÔNG select owner.phone ở đây — số điện thoại chỉ trả qua endpoint reveal-phone.
 } satisfies Prisma.ListingSelect;
 
@@ -38,15 +57,129 @@ function serialize<T extends Record<string, any>>(obj: T): any {
 
 @Injectable()
 export class ListingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+    private readonly googleSheetsService: GoogleSheetsService,
+  ) {}
 
   async findAll(query: QueryListingsDto) {
     const where: Prisma.ListingWhereInput = {
       status: { in: [ListingStatus.active] },
     };
 
-    if (query.transactionType) where.transactionType = query.transactionType;
-    if (query.propertyType) where.propertyType = query.propertyType;
+    if (query.transactionType) where.transactionType = TransactionType.rent;
+
+    // Xử lý lọc theo nhóm chuyên mục (100% cho thuê)
+    if (query.categoryGroup) {
+      if (query.categoryGroup === 'thue_bds') {
+        where.transactionType = TransactionType.rent;
+        if (!query.propertyType) {
+          where.propertyType = {
+            notIn: [
+              'phong_tro',
+              'phong-tro',
+              'phong-tro-sinh-vien',
+              'phong_tro_sinh_vien',
+              'mat_bang',
+              'mat-bang',
+              'mat-bang-kinh-doanh',
+              'mat_bang_kinh_doanh',
+              'cua_hang',
+              'cua-hang',
+              'kho_xuong',
+              'kho-xuong',
+            ],
+          };
+        }
+      } else if (query.categoryGroup === 'thue_tro') {
+        where.transactionType = TransactionType.rent;
+        if (!query.propertyType) {
+          where.propertyType = {
+            in: [
+              'phong-tro-sinh-vien',
+              'phong_tro_sinh_vien',
+              'phong_tro',
+              'phong-tro',
+              'ky_tuc_xa',
+              'ky-tuc-xa',
+              'ky-tuc-xa-tu-nhan',
+              'can_ho_mini',
+              'can-ho-mini',
+              'nha_tro',
+              'nha-tro',
+            ],
+          };
+        }
+      } else if (query.categoryGroup === 'thue_mat_bang') {
+        where.transactionType = TransactionType.rent;
+        if (!query.propertyType) {
+          where.propertyType = {
+            in: [
+              'mat-bang-kinh-doanh',
+              'mat_bang_kinh_doanh',
+              'mat_bang',
+              'mat-bang',
+              'cua_hang',
+              'cua-hang',
+              'shophouse',
+              'kho_xuong',
+              'kho-xuong',
+            ],
+          };
+        }
+      } else if (query.categoryGroup === 'thue_studio') {
+        where.transactionType = TransactionType.rent;
+        if (!query.propertyType) {
+          where.propertyType = {
+            in: ['studio', 'can_ho_mini', 'can-ho-mini'],
+          };
+        }
+      }
+    }
+
+    // Lọc theo trường Đại học gần đó
+    if (query.universitySlug) {
+      where.nearbyUniversities = {
+        some: {
+          university: {
+            slug: query.universitySlug,
+          },
+        },
+      };
+    } else if (query.universityId) {
+      where.nearbyUniversities = {
+        some: {
+          universityId: query.universityId,
+        },
+      };
+    }
+
+    // Nếu có propertyType cụ thể, ưu tiên lấy theo cả dạng kebab-case lẫn snake_case
+    if (query.propertyType) {
+      const variants = Array.from(
+        new Set([
+          query.propertyType,
+          query.propertyType.replace(/-/g, '_'),
+          query.propertyType.replace(/_/g, '-'),
+        ]),
+      );
+      where.propertyType = { in: variants };
+    }
+
+    // Loại trừ các loại hình không mong muốn nếu được yêu cầu
+    if (query.excludePropertyTypes && !query.propertyType) {
+      const excluded = query.excludePropertyTypes.split(',').map((s) => s.trim()).filter(Boolean);
+      const excludedVariants = Array.from(
+        new Set([
+          ...excluded,
+          ...excluded.map((s) => s.replace(/-/g, '_')),
+          ...excluded.map((s) => s.replace(/_/g, '-')),
+        ]),
+      );
+      where.propertyType = { notIn: excludedVariants };
+    }
+
     if (query.bedrooms) where.bedrooms = { gte: query.bedrooms };
     if (query.priceMin || query.priceMax) {
       where.price = {
@@ -219,12 +352,19 @@ export class ListingsService {
         locationId: dto.locationId,
         // Ép kiểu BigInt cho projectId nếu có giá trị — tránh lỗi runtime của Prisma khi nhận number từ DTO
         projectId: dto.projectId ? BigInt(dto.projectId) : undefined,
-        transactionType: dto.transactionType,
+        transactionType: dto.transactionType ?? TransactionType.rent,
         propertyType: dto.propertyType,
         title: dto.title,
         slug: `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-idtemp`,
         description: dto.description,
         price: BigInt(dto.price),
+        depositAmount: dto.depositAmount !== undefined ? BigInt(dto.depositAmount) : undefined,
+        minLeaseMonths: dto.minLeaseMonths,
+        utilitiesIncluded: dto.utilitiesIncluded ?? false,
+        electricityPricePerKwh: dto.electricityPricePerKwh,
+        waterPricePerM3: dto.waterPricePerM3,
+        waterPriceFlat: dto.waterPriceFlat,
+        amenities: dto.amenities as Prisma.InputJsonValue | undefined,
         areaM2: dto.areaM2,
         bedrooms: dto.bedrooms,
         bathrooms: dto.bathrooms,
@@ -233,6 +373,29 @@ export class ListingsService {
         lat: dto.lat,
         lng: dto.lng,
         status: ListingStatus.pending, // luôn chờ duyệt, không auto-active (xem skill 11 - admin)
+        ...(dto.universityDistances?.length
+          ? {
+              nearbyUniversities: {
+                create: dto.universityDistances.map((ud) => ({
+                  universityId: ud.universityId,
+                  distanceMeters: ud.distanceMeters,
+                  travelTimeMinutes: ud.travelTimeMinutes,
+                })),
+              },
+            }
+          : dto.nearbyUniversityIds?.length
+            ? {
+                nearbyUniversities: {
+                  create: dto.nearbyUniversityIds.map((uid) => ({
+                    universityId: uid,
+                  })),
+                },
+              }
+            : {}),
+      },
+      include: {
+        owner: { select: { phone: true, fullName: true } },
+        location: { select: { name: true } },
       },
     });
 
@@ -242,6 +405,33 @@ export class ListingsService {
       data: { slug: finalSlug },
       select: PUBLIC_LISTING_SELECT,
     });
+
+    // Kích hoạt thông báo Email & đồng bộ Google Sheets bất đồng bộ
+    try {
+      void this.emailService.sendListingSubmittedToLandlord(created, created.owner.phone);
+      void this.emailService.sendNewListingToAdmin({
+        id: created.id,
+        title: created.title,
+        propertyType: created.propertyType,
+        price: created.price,
+        ownerPhone: created.owner.phone,
+      });
+      void this.googleSheetsService.appendPendingListing({
+        id: created.id,
+        title: created.title,
+        propertyType: created.propertyType,
+        price: created.price,
+        depositAmount: created.depositAmount,
+        locationName: created.location.name,
+        addressDetail: created.addressDetail,
+        ownerName: created.owner.fullName,
+        ownerPhone: created.owner.phone,
+        createdAt: created.createdAt,
+        slug: finalSlug,
+      });
+    } catch {
+      // Background notifications are safe-fail
+    }
 
     return serialize(updated);
   }
@@ -253,7 +443,11 @@ export class ListingsService {
       ...dto,
       projectId: dto.projectId !== undefined ? (dto.projectId ? BigInt(dto.projectId) : null) : undefined,
       price: dto.price !== undefined ? BigInt(dto.price) : undefined,
+      depositAmount: dto.depositAmount !== undefined ? BigInt(dto.depositAmount) : undefined,
+      amenities: dto.amenities as Prisma.InputJsonValue | undefined,
     };
+    delete (updateData as any).nearbyUniversityIds;
+    delete (updateData as any).universityDistances;
 
     // Khi người dùng đổi tiêu đề tin, tự động làm mới slug theo chuẩn "...-id{id}" để URL đồng bộ
     if (dto.title) {
@@ -316,12 +510,42 @@ export class ListingsService {
   }
 
   async report(id: bigint, reason: string, note: string | undefined, reporterId?: bigint) {
-    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    const listing = await this.prisma.listing.findUnique({
+      where: { id },
+      select: { id: true, title: true },
+    });
     if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
 
-    await this.prisma.listingReport.create({
+    const reportRecord = await this.prisma.listingReport.create({
       data: { listingId: id, reason, note, reporterId },
+      include: {
+        reporter: { select: { phone: true } },
+      },
     });
+
+    // Kích hoạt thông báo email & Google Sheets tới Admin
+    try {
+      void this.emailService.sendNewReportToAdmin({
+        id: reportRecord.id,
+        reason,
+        note,
+        listingId: id,
+        listingTitle: listing.title,
+        reporterPhone: reportRecord.reporter?.phone,
+      });
+      void this.googleSheetsService.appendViolationReport({
+        id: reportRecord.id,
+        listingId: id,
+        listingTitle: listing.title,
+        reason,
+        note,
+        reporterPhone: reportRecord.reporter?.phone,
+        createdAt: reportRecord.createdAt,
+      });
+    } catch {
+      // Safe-fail
+    }
+
     return { message: 'Cảm ơn bạn đã báo cáo. Đội ngũ kiểm duyệt sẽ xem xét sớm.' };
   }
 
