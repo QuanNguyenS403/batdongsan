@@ -62,10 +62,30 @@ export default function DangTinPage() {
   const [selectedUniversityId, setSelectedUniversityId] = useState<string>('');
   const [universityDistanceKm, setUniversityDistanceKm] = useState<string>('');
 
+  // Quản lý hình ảnh và xem trước
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    setSelectedFiles((prev) => [...prev, ...files]);
+    const newUrls = files.map((f) => URL.createObjectURL(f));
+    setPreviewUrls((prev) => [...prev, ...newUrls]);
+  }
+
+  function handleRemoveFile(index: number) {
+    if (previewUrls[index]) {
+      URL.revokeObjectURL(previewUrls[index]);
+    }
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
+  }
 
   useEffect(() => {
     // Tải danh sách địa danh
@@ -152,8 +172,7 @@ export default function DangTinPage() {
       universityDistances,
     };
 
-    const imageFiles = form.getAll('images') as File[];
-    const validImageFiles = imageFiles.filter((f) => f && f.size > 0);
+    const validImageFiles = selectedFiles.filter((f) => f && f.size > 0);
 
     setLoading(true);
     try {
@@ -194,6 +213,8 @@ export default function DangTinPage() {
       }
 
       setMessage('success');
+      setSelectedFiles([]);
+      setPreviewUrls([]);
       (e.target as HTMLFormElement).reset();
     } catch (err) {
       setError((err as Error).message);
@@ -480,11 +501,36 @@ export default function DangTinPage() {
             type="file"
             multiple
             accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileChange}
             className="w-full rounded-xl border border-dashed border-surface-border bg-slate-50/60 p-3 text-sm text-text-secondary file:mr-4 file:rounded-full file:border-0 file:bg-brand file:px-4 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-700 transition-colors"
           />
           <p className="mt-1 text-[11px] text-text-muted">
             💡 Mẹo: Phòng có hình ảnh rõ ràng, chụp từ nhiều góc và có ảnh nhà vệ sinh sẽ có tỷ lệ liên hệ cao gấp 3 lần.
           </p>
+
+          {/* Thumbnail preview */}
+          {previewUrls.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-semibold text-text-secondary mb-2">
+                Đã chọn {previewUrls.length} ảnh xem trước:
+              </p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+                {previewUrls.map((url, idx) => (
+                  <div key={idx} className="relative group rounded-xl overflow-hidden border border-surface-border aspect-square bg-slate-100 shadow-sm">
+                    <img src={url} alt={`Ảnh ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(idx)}
+                      className="absolute top-1 right-1 bg-black/70 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-colors shadow"
+                      title="Xóa ảnh này"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <button

@@ -99,4 +99,18 @@ export class OtpService {
     this.logger.error(`SMS_PROVIDER="${provider}" chưa được implement. Đang fallback về chế độ mock.`);
     this.logger.warn(`[MOCK SMS] Gửi OTP tới ${phone}: ${code}`);
   }
+
+  /** Dọn dẹp các bản ghi OTP đã hết hạn khỏi bộ nhớ */
+  cleanupExpired(): number {
+    const now = Date.now();
+    let count = 0;
+    for (const [phone, record] of this.store.entries()) {
+      if (now > record.expiresAt && now - record.windowStart >= 60 * 60 * 1000) {
+        this.store.delete(phone);
+        count++;
+      }
+    }
+    return count;
+  }
 }
+

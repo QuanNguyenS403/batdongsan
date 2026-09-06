@@ -22,6 +22,13 @@ const PROPERTY_TYPES_RENT = [
   { value: 'mat_bang', label: 'Mặt bằng kinh doanh' },
 ];
 
+const CATEGORY_NAMES: Record<string, string> = {
+  thue_tro: 'Phòng trọ sinh viên',
+  thue_studio: 'Studio & Căn hộ mini',
+  thue_bds: 'Căn hộ chung cư & Nhà riêng',
+  thue_mat_bang: 'Mặt bằng kinh doanh',
+};
+
 interface Props {
   searchParams: { [key: string]: string | undefined };
 }
@@ -45,10 +52,13 @@ export default async function ThuePage({ searchParams }: Props) {
   }));
 
   const month = new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+  const categoryLabel = searchParams.categoryGroup ? CATEGORY_NAMES[searchParams.categoryGroup] : null;
+  const pageTitle = categoryLabel ? `Cho thuê ${categoryLabel}` : 'Cho thuê BĐS';
+
   const filterSummary = searchParams.keyword
     ? ` — "${searchParams.keyword}"`
     : searchParams.universitySlug
-      ? ` — Khu vực ${searchParams.universitySlug}`
+      ? ` — Gần ${searchParams.universitySlug.replace(/-/g, ' ').toUpperCase()}`
       : '';
 
   return (
@@ -58,11 +68,19 @@ export default async function ThuePage({ searchParams }: Props) {
         <nav className="mb-4 flex items-center gap-2 text-xs text-text-muted">
           <Link href="/" className="hover:text-brand transition-colors">Trang chủ</Link>
           <span>›</span>
-          <span className="text-text-secondary font-medium">Bất động sản cho thuê</span>
+          {categoryLabel ? (
+            <>
+              <Link href="/thue" className="hover:text-brand transition-colors">BĐS cho thuê</Link>
+              <span>›</span>
+              <span className="text-text-secondary font-medium">{categoryLabel}</span>
+            </>
+          ) : (
+            <span className="text-text-secondary font-medium">Bất động sản cho thuê</span>
+          )}
         </nav>
 
         <h1 className="text-2xl font-bold text-text-primary md:text-3xl">
-          Cho thuê BĐS{filterSummary} mới nhất {month}
+          {pageTitle}{filterSummary} mới nhất {month}
         </h1>
         <p className="mt-1 text-sm text-text-muted">
           {pagination.total.toLocaleString('vi-VN')} tin cho thuê phù hợp

@@ -66,6 +66,7 @@ export class ListingsService {
   async findAll(query: QueryListingsDto) {
     const where: Prisma.ListingWhereInput = {
       status: { in: [ListingStatus.active] },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     };
 
     if (query.transactionType) where.transactionType = TransactionType.rent;

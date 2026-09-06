@@ -28,11 +28,36 @@
 6. **Tài liệu chiến lược**:
    - Cập nhật `CLAUDE.md`, `README.md`, `TRANG-THAI-TRIEN-KHAI.md`, `memory-bank/*`.
 
-**Trạng thái môi trường & Cấu hình:**
-- Driver Email: MOCK (in console chuẩn ASCII) -> Sẵn sàng cắm SMTP khi có config trong `.env`.
-- Driver Google Sheets: MOCK (in console) -> Sẵn sàng kết nối khi có `GOOGLE_SHEETS_SPREADSHEET_ID` và `GOOGLE_SHEETS_CREDENTIALS_JSON`.
+# Trạng thái phiên làm việc hiện tại
+
+**Việc vừa hoàn thành (06/09/2026 — ĐÁNH GIÁ KÉP & HOÀN THIỆN TOÀN DIỆN HỆ THỐNG):**
+1. **Đánh giá kép 2 vai trò**:
+   - Vai trò 1 (Khách hàng khó tính thuê trọ): Kiểm thử E2E giao diện, trải nghiệm form đăng tin, thông báo lỗi OTP, điều hướng chân trang, thiếu trang pháp lý/chính sách và các mapping hiển thị tiện ích/chuyên mục.
+   - Vai trò 2 (Kỹ sư phần mềm chuyên nghiệp): Audit bảo mật, kiểm tra route chết, đối chiếu API DTO với UI, rà soát cron/queue và background tasks, bổ sung structured logging.
+2. **Khắc phục triệt để các lỗi phát hiện (#51 – #60)**:
+   - **#51 (Nghiêm trọng)**: Fix lỗi 404/400 khi Admin Duyệt/Từ chối tin — hỗ trợ cả `POST` & `PATCH`, đồng bộ DTO `{ reason, rejectionReason }` giữa UI và Backend.
+   - **#52 (Nghiêm trọng)**: Fix lỗi 400 Bad Request khi người dùng gửi Báo cáo vi phạm — đồng bộ bộ enum song ngữ (`tin_gia`/`spam`, `sai_thong_tin`/`wrong_info`...).
+   - **#53 (Trung bình)**: Xây dựng `TasksService` tự động quét và đánh dấu tin hết hạn (`expiresAt < now` -> `expired`) và dọn OTP quá hạn định kỳ.
+   - **#54 (Trung bình)**: Thêm Structured HTTP Exception Logging với NestJS Logger trong `HttpExceptionFilter`.
+   - **#55 (Trung bình)**: Thêm 4 trang Pháp lý & Tín nhiệm chuẩn SEO: `/dieu-khoan`, `/chinh-sach`, `/gioi-thieu`, `/lien-he` và gắn link vào `Footer.tsx`.
+   - **#56 (Trung bình)**: Thêm Client-side Image Preview Gallery kèm nút xóa ảnh trên trang `/dang-tin`.
+   - **#57 (Nhỏ)**: Chuẩn hóa `AMENITY_MAP` trên trang chi tiết `/tin/[slug]` hiển thị đầy đủ icon + nhãn tiếng Việt cho cả camelCase và snake_case.
+   - **#58 (Nhỏ)**: Bổ sung `CATEGORY_NAMES` cho `thue_studio` trên trang `/thue`.
+   - **#59 (Nhỏ)**: Xử lý thông báo lỗi mạng thân thiện tiếng Việt khi đăng nhập OTP.
+   - **#60 (Trung bình)**: Lọc loại bỏ tin hết hạn (`expiresAt < now`) khỏi kết quả tìm kiếm danh sách tin public `findAll`.
+3. **Xác minh chất lượng & Build**:
+   - Backend Typecheck (`tsc --noEmit`): 0 lỗi.
+   - Frontend Next.js Build (`next build`): 26/26 routes biên dịch hoàn hảo (exit code 0).
+   - E2E Test qua Browser Subagent: Ghi hình video WebP và chụp ảnh màn hình xác nhận toàn bộ 4 trang mới, gallery ảnh, form báo cáo và gate admin.
+4. **Tài liệu & Lưu vết**:
+   - Tạo báo cáo chi tiết `AUDIT-GEMINI-2026-09-06.md`.
+   - Cập nhật checklist mục 16 trong `README.md`.
+   - Cập nhật `memory-bank/progress.md` và `memory-bank/activeContext.md`.
+
+**Trạng thái nhánh làm việc:**
+- Toàn bộ thay đổi đang nằm trên nhánh riêng `audit/dual-review-completion-2026-09-06`.
 
 **Việc tiếp theo đề xuất:**
-1. Cấu hình credentials thật cho SMTP email và Google Sheets service account khi có thông tin từ Quan.
-2. Thêm dữ liệu trường ĐH bổ sung cho các tỉnh thành khác (Đà Nẵng, Cần Thơ, Hải Phòng...).
-3. Phát triển gói môi giới chuyên nghiệp (đẩy tin VIP theo tuần mùa tựu trường) theo roadmap giai đoạn 2.
+1. Chủ dự án review nhánh `audit/dual-review-completion-2026-09-06` và thực hiện merge vào `main`.
+2. Khi có dữ liệu tin đăng thật từ đối tác/cào dữ liệu, nạp vào database và tiến hành thử nghiệm chịu tải tìm kiếm.
+3. Tích hợp SMS OTP provider thật (e.g. eSMS, SpeedSMS) và SMTP credentials thật khi đi vào vận hành thực tế.

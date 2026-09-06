@@ -627,9 +627,13 @@ project-root/
 - [ ] Gói thành viên trả phí + dịch vụ đẩy tin/VIP
 - [ ] Blog/tin tức bất động sản (CMS tách biệt)
 - [x] Report vi phạm tin đăng (ReportListingModal gửi báo cáo thật tới backend)
-- [x] Công cụ ước tính khoản vay mua nhà (LoanCalculatorWidget trên trang chi tiết)
-- [x] SEO: meta động, sitemap, breadcrumb, robots.ts
-- [ ] Đa kênh liên hệ (hotline, Zalo, mạng xã hội)
+- [x] Công cụ ước tính chi phí dọn vào tháng đầu (MoveInCostEstimator trên trang chi tiết)
+- [x] SEO: meta động, sitemap, breadcrumb, robots.ts trên toàn bộ 26+ routes
+- [x] Đa kênh liên hệ (Hotline/Zalo 0981 753 082, email, trang /lien-he)
+- [x] Trang Admin quản trị UI thuần 100% tiếng Việt (/admin, /admin/tin-cho-duyet, /admin/bao-cao-vi-pham, /admin/nguoi-dung)
+- [x] Trang Pháp lý & Độ tin cậy (/dieu-khoan, /chinh-sach, /gioi-thieu, /lien-he)
+- [x] Tác vụ nền định kỳ tự động chuyển tin hết hạn & dọn OTP (TasksService)
+- [x] Ghi log lỗi có cấu trúc (Structured Logging với NestJS Logger trong HttpExceptionFilter)
 
 ---
 

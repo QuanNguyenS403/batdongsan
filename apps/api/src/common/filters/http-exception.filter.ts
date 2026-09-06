@@ -1,11 +1,14 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
-import { Response } from 'express';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Request, Response } from 'express';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger('HTTP_ERROR');
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
     const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
@@ -22,10 +25,34 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     }
 
+    const timestamp = new Date().toISOString();
+
+    // GHI LOG CÓ CẤU TRÚC (STRUCTURED LOGGING):
+    // Đảm bảo không nuốt chửng lỗi 500 hay unhandled exceptions ở production
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      const errorDetails = {
+        level: 'error',
+        method: request.method,
+        url: request.url,
+        ip: request.ip,
+        statusCode: status,
+        error: exception instanceof Error ? exception.message : String(exception),
+        timestamp,
+      };
+      this.logger.error(
+        JSON.stringify(errorDetails),
+        exception instanceof Error ? exception.stack : undefined,
+      );
+    } else {
+      this.logger.warn(
+        `[${request.method}] ${request.url} -> ${status} | ${Array.isArray(message) ? message.join('; ') : message}`,
+      );
+    }
+
     response.status(status).json({
       statusCode: status,
       message,
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
   }
 }

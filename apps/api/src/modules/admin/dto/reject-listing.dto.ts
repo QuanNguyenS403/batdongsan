@@ -1,10 +1,17 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class RejectListingDto {
-  @ApiProperty({ description: 'Lý do từ chối tin đăng', example: 'Ảnh mờ hoặc không đúng thực tế' })
+  @ApiPropertyOptional({ description: 'Lý do từ chối tin đăng', example: 'Ảnh mờ hoặc không đúng thực tế' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'Lý do từ chối không được để trống' })
   @MaxLength(500, { message: 'Lý do từ chối không vượt quá 500 ký tự' })
-  reason!: string;
+  reason?: string;
+
+  @ApiPropertyOptional({ description: 'Alias lý do từ chối (tương thích frontend)', example: 'Ảnh mờ hoặc không đúng thực tế' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'Lý do từ chối không vượt quá 500 ký tự' })
+  rejectionReason?: string;
 }
+

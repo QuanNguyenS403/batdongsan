@@ -177,7 +177,7 @@ export default function AdminPendingListingsPage() {
     setSubmittingAction(true);
     try {
       const res = await authFetch(`/admin/listings/${id}/approve`, {
-        method: 'PATCH',
+        method: 'POST',
       });
       if (res.ok) {
         showToast('✓ Đã phê duyệt tin thành công');
@@ -205,9 +205,9 @@ export default function AdminPendingListingsPage() {
     setSubmittingAction(true);
     try {
       const res = await authFetch(`/admin/listings/${rejectingListing.id}/reject`, {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rejectionReason: finalReason }),
+        body: JSON.stringify({ reason: finalReason, rejectionReason: finalReason }),
       });
       if (res.ok) {
         showToast('✓ Đã từ chối tin đăng');

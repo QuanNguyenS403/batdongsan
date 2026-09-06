@@ -72,18 +72,26 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
 const AMENITY_MAP: Record<string, { label: string; icon: string }> = {
   wifi: { label: 'Wifi tốc độ cao', icon: '📶' },
   air_conditioner: { label: 'Máy lạnh / Điều hòa', icon: '❄️' },
+  airConditioner: { label: 'Máy lạnh / Điều hòa', icon: '❄️' },
   mezzanine: { label: 'Gác lửng đúc kiên cố', icon: '🪜' },
   parking: { label: 'Nhà để xe có bảo vệ/thẻ từ', icon: '🛵' },
+  parkingSpace: { label: 'Nhà để xe có bảo vệ/thẻ từ', icon: '🛵' },
   security_camera: { label: 'Camera / An ninh 24/7', icon: '📹' },
+  securityCamera: { label: 'Camera / An ninh 24/7', icon: '📹' },
   free_time: { label: 'Giờ giấc tự do 24/24', icon: '🔑' },
+  freeTime: { label: 'Giờ giấc tự do 24/24', icon: '🔑' },
   private_bathroom: { label: 'Vệ sinh khép kín', icon: '🚿' },
+  privateBathroom: { label: 'Vệ sinh khép kín', icon: '🚿' },
   water_heater: { label: 'Bình nóng lạnh', icon: '♨️' },
+  waterHeater: { label: 'Bình nóng lạnh', icon: '♨️' },
   washing_machine: { label: 'Máy giặt chung/riêng', icon: '🧺' },
+  washingMachine: { label: 'Máy giặt chung/riêng', icon: '🧺' },
   refrigerator: { label: 'Tủ lạnh sẵn phòng', icon: '🧊' },
   kitchen: { label: 'Kệ bếp nấu ăn thoải mái', icon: '🍳' },
   elevator: { label: 'Thang máy di chuyển', icon: '🛗' },
   balcony: { label: 'Ban công / Cửa sổ thoáng gió', icon: '🪟' },
   fingerprint_lock: { label: 'Cửa khóa vân tay hiện đại', icon: '🔒' },
+  fingerprintLock: { label: 'Cửa khóa vân tay hiện đại', icon: '🔒' },
 };
 
 export default async function ListingDetailPage({ params }: Props) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -34,16 +34,28 @@ export class AdminController {
     return this.adminService.getPendingListings(query);
   }
 
-  @ApiOperation({ summary: 'Duyệt tin đăng' })
+  @ApiOperation({ summary: 'Duyệt tin đăng (POST/PATCH)' })
   @Post('listings/:id/approve')
   approveListing(@Param('id', ParseBigIntPipe) id: bigint) {
     return this.adminService.approveListing(id);
   }
 
-  @ApiOperation({ summary: 'Từ chối tin đăng' })
+  @Patch('listings/:id/approve')
+  approveListingPatch(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.adminService.approveListing(id);
+  }
+
+  @ApiOperation({ summary: 'Từ chối tin đăng (POST/PATCH)' })
   @Post('listings/:id/reject')
   rejectListing(@Param('id', ParseBigIntPipe) id: bigint, @Body() dto: RejectListingDto) {
-    return this.adminService.rejectListing(id, dto.reason);
+    const finalReason = dto.reason ?? dto.rejectionReason ?? 'Vi phạm quy định kiểm duyệt';
+    return this.adminService.rejectListing(id, finalReason);
+  }
+
+  @Patch('listings/:id/reject')
+  rejectListingPatch(@Param('id', ParseBigIntPipe) id: bigint, @Body() dto: RejectListingDto) {
+    const finalReason = dto.reason ?? dto.rejectionReason ?? 'Vi phạm quy định kiểm duyệt';
+    return this.adminService.rejectListing(id, finalReason);
   }
 
   @ApiOperation({ summary: 'Danh sách báo cáo vi phạm' })

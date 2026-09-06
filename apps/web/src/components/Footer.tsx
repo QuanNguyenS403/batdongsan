@@ -13,12 +13,12 @@ const FOOTER_LINKS = {
     { href: '/cho-thue-mat-bang', label: 'Mặt bằng kinh doanh' },
     { href: '/thue', label: 'Tất cả tin cho thuê' },
   ],
-  'Hỗ trợ & Tiện ích': [
+  'Thông tin & Hỗ trợ': [
     { href: '/dang-tin', label: 'Đăng tin cho thuê miễn phí' },
-    { href: '/dang-nhap', label: 'Đăng nhập tài khoản' },
-    { href: '/tai-khoan/quan-ly-tin', label: 'Quản lý tin đăng' },
-    { href: '/thue?universitySlug=dhqg-tphcm', label: 'Gần ĐHQG TP.HCM' },
-    { href: '/thue?universitySlug=dh-bach-khoa-ha-noi', label: 'Gần ĐH Bách Khoa HN' },
+    { href: '/gioi-thieu', label: 'Giới thiệu nền tảng' },
+    { href: '/lien-he', label: 'Liên hệ & Hỗ trợ' },
+    { href: '/dieu-khoan', label: 'Điều khoản dịch vụ' },
+    { href: '/chinh-sach', label: 'Chính sách bảo mật' },
   ],
 };
 
@@ -81,12 +81,20 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="container-max flex flex-col items-center justify-between gap-2 py-5 sm:flex-row">
           <p className="text-xs text-white/40">
-            © {new Date().getFullYear()} BatDongSan.vn — Đang trong giai đoạn phát triển. Tin đăng là dữ liệu mẫu.
+            © {new Date().getFullYear()} BatDongSan.vn — Nền tảng Cho thuê Bất Động Sản hàng đầu.
           </p>
-          <div className="flex items-center gap-4 text-xs text-white/40">
-            <span>Điều khoản sử dụng</span>
+          <div className="flex items-center gap-4 text-xs text-white/60">
+            <Link href="/dieu-khoan" className="hover:text-white transition-colors">
+              Điều khoản sử dụng
+            </Link>
             <span>·</span>
-            <span>Chính sách bảo mật</span>
+            <Link href="/chinh-sach" className="hover:text-white transition-colors">
+              Chính sách bảo mật
+            </Link>
+            <span>·</span>
+            <Link href="/lien-he" className="hover:text-white transition-colors">
+              Liên hệ hỗ trợ
+            </Link>
           </div>
         </div>
       </div>

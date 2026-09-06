@@ -14,6 +14,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { EmailModule } from './modules/email/email.module';
 import { GoogleSheetsModule } from './modules/google-sheets/google-sheets.module';
 import { UniversitiesModule } from './modules/universities/universities.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { UniversitiesModule } from './modules/universities/universities.module';
     EmailModule,
     GoogleSheetsModule,
     UniversitiesModule,
+    TasksModule,
   ],
 })
 export class AppModule {}

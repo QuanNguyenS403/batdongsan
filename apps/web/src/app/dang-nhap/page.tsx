@@ -7,6 +7,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 type Step = 'phone' | 'login-password' | 'register-otp' | 'register-info' | 'forgot-password';
 
+function formatFriendlyError(err: unknown): string {
+  const msg = (err as Error)?.message || 'Đã có lỗi xảy ra, vui lòng thử lại sau.';
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('network') || msg.includes('ENOTFOUND')) {
+    return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.';
+  }
+  return msg;
+}
+
 export default function DangNhapPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('phone');
@@ -35,7 +43,7 @@ export default function DangNhapPage() {
         await handleSendOtpForRegister();
       }
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatFriendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -58,7 +66,7 @@ export default function DangNhapPage() {
       localStorage.setItem('refreshToken', data.refreshToken);
       router.push('/');
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatFriendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -77,7 +85,7 @@ export default function DangNhapPage() {
       if (!res.ok) throw new Error(data.message ?? 'Gửi OTP thất bại.');
       setStep('register-otp');
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatFriendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -99,7 +107,7 @@ export default function DangNhapPage() {
       setOtpCode('');
       setNewPassword('');
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatFriendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -122,7 +130,7 @@ export default function DangNhapPage() {
       setStep('login-password');
       setPassword('');
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatFriendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -145,7 +153,7 @@ export default function DangNhapPage() {
       localStorage.setItem('refreshToken', data.refreshToken);
       router.push('/');
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatFriendlyError(err));
     } finally {
       setLoading(false);
     }
