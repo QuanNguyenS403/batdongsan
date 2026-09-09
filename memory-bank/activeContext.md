@@ -54,10 +54,20 @@
    - Cập nhật checklist mục 16 trong `README.md`.
    - Cập nhật `memory-bank/progress.md` và `memory-bank/activeContext.md`.
 
-**Trạng thái nhánh làm việc:**
-- Toàn bộ thay đổi đang nằm trên nhánh riêng `audit/dual-review-completion-2026-09-06`.
+**Việc vừa hoàn thành (09/09/2026 — KHẮC PHỤC LỖI KHỞI ĐỘNG `pnpm dev` TRÊN TERMINAL):**
+1. **Lỗi AuthorizationManager / PSSecurityException**:
+   - Khi chạy `pnpm dev` trên PowerShell Windows, PowerShell ưu tiên gọi `pnpm.ps1` nhưng bị chính sách ExecutionPolicy chặn. Đã cấu hình `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force`.
+2. **Lỗi EADDRINUSE: address already in use :::3000 và port 4000**:
+   - Các tiến trình Node nền từ phiên chạy trước (PID 2856 và PID 16132) bị treo và giữ cổng 3000 (Next.js) & cổng 4000 (NestJS). Đã dọn dẹp triệt để các tiến trình nền treo.
+3. **Lỗi `MODULE_NOT_FOUND ./app.module` trong NestJS & Tối ưu build**:
+   - File `apps/api/tsconfig.json` thiếu cấu hình `include: ["src/**/*"]` và `exclude: ["node_modules", "dist", "test"]`, dẫn tới Nest CLI quét cả `node_modules` và thư mục `dist`, gây chậm compile và kích hoạt Node chạy `dist/main.js` khi các module khác chưa ghi xong ra đĩa. Đã bổ sung cấu hình chuẩn cho `apps/api/tsconfig.json`.
+   - Cập nhật script root `package.json`: bỏ cờ `--parallel` đã deprecated trong Turborepo 2.x (`turbo.json` đã có sẵn `"persistent": true`).
+4. **Xác minh thực tế**:
+   - `pnpm dev` khởi động song song sạch sẽ cả Next.js và NestJS.
+   - Frontend `http://localhost:3000`: Phản hồi `HTTP/1.1 200 OK`.
+   - Backend `http://localhost:4000/docs`: Phản hồi `HTTP/1.1 200 OK`.
+   - Tất cả các cổng đã được giải phóng sạch sẽ sẵn sàng cho phiên làm việc của người dùng.
 
-**Việc tiếp theo đề xuất:**
 1. Chủ dự án review nhánh `audit/dual-review-completion-2026-09-06` và thực hiện merge vào `main`.
 2. Khi có dữ liệu tin đăng thật từ đối tác/cào dữ liệu, nạp vào database và tiến hành thử nghiệm chịu tải tìm kiếm.
 3. Tích hợp SMS OTP provider thật (e.g. eSMS, SpeedSMS) và SMTP credentials thật khi đi vào vận hành thực tế.
