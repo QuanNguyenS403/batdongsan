@@ -15,8 +15,10 @@ import { EmailModule } from './modules/email/email.module';
 import { GoogleSheetsModule } from './modules/google-sheets/google-sheets.module';
 import { UniversitiesModule } from './modules/universities/universities.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { AppController } from './app.controller';
 
 @Module({
+  controllers: [AppController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,

@@ -1,21 +1,26 @@
 {
   "name": "batdongsan-monorepo",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "preinstall": "npx only-allow pnpm",
     "dev": "turbo run dev",
+    "dev:web": "npm run dev --workspace=@batdongsan/web",
+    "dev:api": "npm run dev --workspace=@batdongsan/api",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "db:generate": "pnpm --filter @batdongsan/database generate",
-    "db:migrate": "pnpm --filter @batdongsan/database migrate:dev",
-    "db:seed": "pnpm --filter @batdongsan/database seed",
-    "db:studio": "pnpm --filter @batdongsan/database studio",
-    "db:import-listings": "pnpm --filter @batdongsan/database import:listings --"
+    "db:generate": "npm run generate --workspace=@batdongsan/database",
+    "db:migrate": "npm run migrate:dev --workspace=@batdongsan/database",
+    "db:seed": "npm run seed --workspace=@batdongsan/database",
+    "db:studio": "npm run studio --workspace=@batdongsan/database",
+    "db:import-listings": "npm run import:listings --workspace=@batdongsan/database --"
   },
   "devDependencies": {
     "turbo": "^2.1.0",
     "typescript": "^5.5.4",
     "prettier": "^3.3.3"
-  },
-  "packageManager": "pnpm@9.15.9"
+  }
 }

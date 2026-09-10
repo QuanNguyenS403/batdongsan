@@ -45,11 +45,16 @@ async function bootstrap() {
   }
 
   const port = process.env.API_PORT ?? 4000;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   await app.listen(port);
-  console.log(`🚀 API đang chạy tại http://localhost:${port}`);
+
+  console.log('\n=============================================================');
+  console.log(`🌐 GIAO DIỆN WEBSITE:   ${siteUrl}`);
+  console.log(`🚀 HỆ THỐNG API:        http://localhost:${port} (Tự động chuyển hướng về Web)`);
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`📘 Swagger docs tại http://localhost:${port}/docs`);
+    console.log(`📘 TÀI LIỆU SWAGGER:    http://localhost:${port}/docs`);
   }
+  console.log('=============================================================\n');
 }
 bootstrap();
 

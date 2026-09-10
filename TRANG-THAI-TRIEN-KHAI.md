@@ -198,11 +198,11 @@ Sau khi merge nhánh đã chạy `prisma generate` thành công từ máy thật
 - `pnpm db:migrate` đã áp dụng thành công migration `init` vào Postgres.
 - `pnpm db:seed` đã nạp thành công dữ liệu nền địa danh, 2 tài khoản demo và 2 tin đăng `[MẪU]`.
 - Cả 2 ứng dụng (`apps/api` và `apps/web`) đã được verify `build` thành công 100% không còn bất kỳ lỗi nào.
-- Hệ thống đang chạy song song ở chế độ dev (`pnpm dev`):
+- Hệ thống đang chạy song song ở chế độ dev (`npm run dev`):
   - API & Swagger docs: http://localhost:4000/docs
   - Web frontend: http://localhost:3000
 
-## 🔑 Tài khoản demo (sau khi `pnpm db:seed`)
+## 🔑 Tài khoản demo (sau khi `npm run db:seed`)
 | SĐT | Mật khẩu | Vai trò |
 |---|---|---|
 | 0900000001 | Demo@123 | admin |
@@ -211,12 +211,12 @@ Sau khi merge nhánh đã chạy `prisma generate` thành công từ máy thật
 ## ▶️ Chạy thử từ đầu
 
 ```bash
-pnpm install
+npm install
 docker compose up -d          # Postgres + Redis
-pnpm db:generate
-pnpm db:migrate                # đặt tên migration khi được hỏi, vd: init
-pnpm db:seed
-pnpm dev                       # chạy song song apps/api (:4000) và apps/web (:3000)
+npm run db:generate
+npm run db:migrate            # đặt tên migration khi được hỏi, vd: init
+npm run db:seed
+npm run dev                   # chạy song song apps/api (:4000) và apps/web (:3000)
 ```
 Mở http://localhost:3000 — trang chủ sẽ hiện 2 tin `[MẪU]`. Đăng nhập bằng tài khoản demo ở trên để test đăng tin/lưu tin/hiện số điện thoại.
 
