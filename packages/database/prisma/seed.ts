@@ -177,8 +177,20 @@ async function main() {
   console.log('✅ Seed danh sách trường Đại học xong.');
 
   // ---------- 4. Tin đăng MẪU Cho Thuê (chỉ để kiểm tra giao diện) ----------
-  // Xoá tin demo cũ nếu có
-  await prisma.listing.deleteMany({ where: { title: { startsWith: '[MẪU]' } } });
+  // Xoá tin demo cũ nếu có (kèm toàn bộ bản ghi phụ thuộc)
+  const demoListings = await prisma.listing.findMany({
+    where: { title: { startsWith: '[MẪU]' } },
+    select: { id: true },
+  });
+  const demoIds = demoListings.map((l) => l.id);
+  if (demoIds.length > 0) {
+    await prisma.listingReport.deleteMany({ where: { listingId: { in: demoIds } } });
+    await prisma.phoneRevealLog.deleteMany({ where: { listingId: { in: demoIds } } });
+    await prisma.savedListing.deleteMany({ where: { listingId: { in: demoIds } } });
+    await prisma.listingImage.deleteMany({ where: { listingId: { in: demoIds } } });
+    await prisma.listingUniversity.deleteMany({ where: { listingId: { in: demoIds } } });
+    await prisma.listing.deleteMany({ where: { id: { in: demoIds } } });
+  }
 
   await prisma.listing.create({
     data: {
