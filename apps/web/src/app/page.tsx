@@ -4,20 +4,21 @@ import { fetchListings } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
 import {
   DEMO_ROOM_RENT_LISTINGS,
-  DEMO_RENT_LISTINGS,
+  DEMO_CAN_HO_RENT_LISTINGS,
+  DEMO_STUDIO_RENT_LISTINGS,
   DEMO_SPACE_RENT_LISTINGS,
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'BĐS Cho Thuê — Nền tảng tìm phòng trọ, căn hộ & nhà cho thuê số 1',
+  title: 'BĐS Cho Thuê — Nền tảng tìm căn hộ, studio & phòng trọ số 1',
   description:
-    'Tìm phòng trọ sinh viên, ký túc xá, căn hộ mini, studio và nhà cho thuê giá tốt nhất. Minh bạch chi phí điện nước, tìm kiếm theo trường Đại học, liên hệ trực tiếp chính chủ.',
+    'Tìm căn hộ, studio, phòng trọ sinh viên và nhà cho thuê giá tốt nhất. Minh bạch chi phí điện nước, tìm kiếm theo trường Đại học, liên hệ trực tiếp chính chủ.',
 };
 
 const QUICK_CATEGORIES = [
+  { href: '/thue?categoryGroup=thue_can_ho', icon: '🏢', label: 'Căn hộ' },
+  { href: '/thue?categoryGroup=thue_studio', icon: '🛋️', label: 'Studio' },
   { href: '/cho-thue-tro', icon: '🛏️', label: 'Phòng trọ sinh viên' },
-  { href: '/thue?categoryGroup=thue_studio', icon: '✨', label: 'Studio & Căn hộ mini' },
-  { href: '/thue', icon: '🏢', label: 'Căn hộ chung cư' },
   { href: '/thue?propertyType=nha_rieng', icon: '🏠', label: 'Nhà nguyên căn' },
   { href: '/cho-thue-mat-bang', icon: '🏪', label: 'Mặt bằng kinh doanh' },
 ];
@@ -66,12 +67,14 @@ const VALUE_PROPOSITIONS = [
 export default async function HomePage() {
   let roomListings: Awaited<ReturnType<typeof fetchListings>> | null = null;
   let apartmentListings: Awaited<ReturnType<typeof fetchListings>> | null = null;
+  let studioListings: Awaited<ReturnType<typeof fetchListings>> | null = null;
   let spaceListings: Awaited<ReturnType<typeof fetchListings>> | null = null;
 
   try {
-    [roomListings, apartmentListings, spaceListings] = await Promise.all([
+    [roomListings, apartmentListings, studioListings, spaceListings] = await Promise.all([
       fetchListings({ categoryGroup: 'thue_tro', pageSize: '4' }),
-      fetchListings({ categoryGroup: 'thue_bds', pageSize: '4' }),
+      fetchListings({ categoryGroup: 'thue_can_ho', pageSize: '4' }),
+      fetchListings({ categoryGroup: 'thue_studio', pageSize: '4' }),
       fetchListings({ categoryGroup: 'thue_mat_bang', pageSize: '4' }),
     ]);
   } catch {
@@ -79,7 +82,8 @@ export default async function HomePage() {
   }
 
   const roomItems = (roomListings?.items?.length ?? 0) > 0 ? roomListings!.items : DEMO_ROOM_RENT_LISTINGS;
-  const aptItems = (apartmentListings?.items?.length ?? 0) > 0 ? apartmentListings!.items : DEMO_RENT_LISTINGS;
+  const aptItems = (apartmentListings?.items?.length ?? 0) > 0 ? apartmentListings!.items : DEMO_CAN_HO_RENT_LISTINGS;
+  const studioItems = (studioListings?.items?.length ?? 0) > 0 ? studioListings!.items : DEMO_STUDIO_RENT_LISTINGS;
   const spaceItems = (spaceListings?.items?.length ?? 0) > 0 ? spaceListings!.items : DEMO_SPACE_RENT_LISTINGS;
 
   return (
@@ -109,22 +113,22 @@ export default async function HomePage() {
               <div className="mb-0 flex justify-center">
                 <div className="inline-flex rounded-t-xl overflow-hidden border-b-0 flex-wrap">
                   <Link
-                    href="/cho-thue-tro"
-                    className="bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand border-x border-t border-surface-border rounded-tl-xl"
+                    href="/thue?categoryGroup=thue_can_ho"
+                    className="bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand border-x border-t border-surface-border rounded-tl-xl hover:bg-slate-50 transition-colors"
                   >
-                    🛏️ Phòng trọ SV
+                    🏢 Căn hộ
                   </Link>
                   <Link
                     href="/thue?categoryGroup=thue_studio"
                     className="bg-slate-50 px-5 py-2.5 text-xs sm:text-sm font-medium text-text-secondary border-r border-t border-surface-border hover:bg-white hover:text-brand transition-colors"
                   >
-                    ✨ Studio & Căn hộ mini
+                    🛋️ Studio
                   </Link>
                   <Link
-                    href="/thue"
+                    href="/cho-thue-tro"
                     className="bg-slate-50 px-5 py-2.5 text-xs sm:text-sm font-medium text-text-secondary border-r border-t border-surface-border hover:bg-white hover:text-brand transition-colors"
                   >
-                    🏢 Căn hộ & Nhà riêng
+                    🛏️ Phòng trọ SV
                   </Link>
                   <Link
                     href="/cho-thue-mat-bang"
@@ -241,22 +245,22 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Section 2: Căn hộ & Studio */}
+        {/* Section 2: Căn hộ */}
         <div>
           <div className="mb-5 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-100 text-blue-800 text-xs">
-                  ✨
+                  🏢
                 </span>
-                <h2 className="text-xl font-bold text-text-primary">Studio & Căn hộ cho thuê tiện nghi</h2>
+                <h2 className="text-xl font-bold text-text-primary">Căn hộ cho thuê tiện nghi</h2>
               </div>
               <p className="mt-1 text-xs text-text-muted">
-                Đầy đủ nội thất, máy giặt, tủ lạnh, an ninh vân tay cho người đi làm & gia đình trẻ
+                Đầy đủ nội thất, view thoáng mát, an ninh cho người đi làm & gia đình
               </p>
             </div>
             <Link
-              href="/thue"
+              href="/thue?categoryGroup=thue_can_ho"
               className="flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700 transition-colors"
             >
               Xem tất cả
@@ -267,6 +271,37 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {aptItems.slice(0, 4).map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        </div>
+
+        {/* Section 3: Studio */}
+        <div>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100 text-indigo-800 text-xs">
+                  🛋️
+                </span>
+                <h2 className="text-xl font-bold text-text-primary">Studio cho thuê cao cấp</h2>
+              </div>
+              <p className="mt-1 text-xs text-text-muted">
+                Studio ban công, duplex gác lửng, full nội thất hiện đại cho người đi làm & chuyên gia
+              </p>
+            </div>
+            <Link
+              href="/thue?categoryGroup=thue_studio"
+              className="flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-700 transition-colors"
+            >
+              Xem tất cả
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {studioItems.slice(0, 4).map((listing) => (
               <ListingCard key={listing.id} listing={listing} />
             ))}
           </div>

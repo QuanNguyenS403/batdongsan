@@ -29,14 +29,11 @@ export class OtpService {
   private readonly MAX_ATTEMPTS = 5;
   private readonly MAX_SENDS_PER_HOUR = 5;
 
-  async sendOtp(phone: string): Promise<void> {
+  async sendOtp(phone: string): Promise<string> {
     const now = Date.now();
     const existing = this.store.get(phone);
 
     if (existing && now - existing.windowStart < 60 * 60 * 1000 && existing.sentCount >= this.MAX_SENDS_PER_HOUR) {
-      // BUG ĐÃ SỬA (audit 02/09/2026): ném generic Error sẽ bị HttpExceptionFilter bắt và biến
-      // thành 500 Internal Server Error với message chung chung, che giấu lý do thật. Phải ném
-      // HttpException với status TOO_MANY_REQUESTS (429) để client hiển thị đúng thông báo.
       throw new HttpException('Bạn đã yêu cầu OTP quá nhiều lần trong 1 giờ. Vui lòng thử lại sau.', HttpStatus.TOO_MANY_REQUESTS);
     }
 
@@ -53,6 +50,7 @@ export class OtpService {
     });
 
     await this.sendViaProvider(phone, code);
+    return code;
   }
 
   verifyOtp(phone: string, code: string): boolean {

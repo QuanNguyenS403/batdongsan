@@ -298,9 +298,9 @@ export default function AdminPendingListingsPage() {
         <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Chuyên mục:</span>
         {[
           { key: '', label: 'Tất cả' },
+          { key: 'thue_can_ho', label: '🏢 Căn hộ' },
+          { key: 'thue_studio', label: '🛋️ Studio' },
           { key: 'thue_tro', label: '🛏️ Phòng trọ SV / Người đi làm' },
-          { key: 'thue_studio', label: '🛋️ Studio / Căn hộ mini' },
-          { key: 'thue_bds', label: '🏢 Căn hộ / Nhà nguyên căn' },
           { key: 'thue_mat_bang', label: '🏪 Mặt bằng kinh doanh' },
         ].map((tab) => (
           <button

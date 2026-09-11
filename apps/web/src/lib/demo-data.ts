@@ -40,7 +40,7 @@ export const DEMO_ROOM_RENT_LISTINGS: Listing[] = [
     ],
     location: { id: 7, name: 'Quận 7, TP.HCM', slug: 'quan-7', level: 'district' },
     project: null,
-    owner: { id: '1', fullName: 'Nguyễn Đức Quân (0981753082)', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
     nearbyUniversities: [
       {
         distanceMeters: 450,
@@ -91,7 +91,7 @@ export const DEMO_ROOM_RENT_LISTINGS: Listing[] = [
     ],
     location: { id: 1, name: 'Cầu Giấy, Hà Nội', slug: 'cau-giay', level: 'district' },
     project: null,
-    owner: { id: '1', fullName: 'Nguyễn Đức Quân (0981753082)', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
     nearbyUniversities: [
       {
         distanceMeters: 600,
@@ -146,7 +146,7 @@ export const DEMO_STUDIO_RENT_LISTINGS: Listing[] = [
     ],
     location: { id: 2, name: 'Quận 1, TP.HCM', slug: 'quan-1', level: 'district' },
     project: null,
-    owner: { id: '1', fullName: 'Nguyễn Đức Quân (0981753082)', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
     nearbyUniversities: [
       {
         distanceMeters: 1200,
@@ -155,11 +155,56 @@ export const DEMO_STUDIO_RENT_LISTINGS: Listing[] = [
       },
     ],
   },
+  {
+    id: '13',
+    title: '[MẪU] Studio duplex gác lửng trần cao có ban công riêng Quận Cầu Giấy',
+    slug: 'mau-studio-duplex-gac-lung-cau-giay-id13',
+    description:
+      'Studio thiết kế gác lửng trần cao 3m thoáng mát, không gian tiếp khách và giường ngủ tách biệt. Ban công đón nắng sớm, đầy đủ máy giặt, điều hòa, tủ lạnh, bếp từ âm. Khóa cửa vân tay từng phòng, an ninh tuyệt đối.',
+    transactionType: 'rent',
+    propertyType: 'studio_gac_lung',
+    price: '6500000',
+    depositAmount: '6500000',
+    minLeaseMonths: 12,
+    utilitiesIncluded: false,
+    electricityPricePerKwh: 3800,
+    waterPricePerM3: 30000,
+    amenities: {
+      wifi: true,
+      airConditioner: true,
+      washingMachine: true,
+      refrigerator: true,
+      smartLock: true,
+      elevator: true,
+      balcony: true,
+      freeTime: true,
+    },
+    areaM2: '32',
+    bedrooms: 1,
+    bathrooms: 1,
+    legalStatus: 'hop_dong_1_nam',
+    addressDetail: 'Ngõ 20 Hồ Tùng Mậu, Mai Dịch, Cầu Giấy, Hà Nội',
+    status: 'active',
+    publishedAt: new Date().toISOString(),
+    viewCount: 310,
+    images: [
+      { imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=75', sortOrder: 0 },
+      { imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&auto=format&fit=crop&q=70', sortOrder: 1 },
+    ],
+    location: { id: 1, name: 'Cầu Giấy, Hà Nội', slug: 'cau-giay', level: 'district' },
+    project: null,
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+    nearbyUniversities: [
+      {
+        distanceMeters: 600,
+        travelTimeMinutes: 7,
+        university: { id: 1, name: 'Đại học Quốc gia Hà Nội', abbreviation: 'VNU HN', slug: 'dhqg-ha-noi', address: '144 Xuân Thủy, Cầu Giấy' },
+      },
+    ],
+  },
 ];
 
-export const DEMO_RENT_LISTINGS: Listing[] = [
-  ...DEMO_ROOM_RENT_LISTINGS,
-  ...DEMO_STUDIO_RENT_LISTINGS,
+export const DEMO_CAN_HO_RENT_LISTINGS: Listing[] = [
   {
     id: '10',
     title: '[MẪU] Cho thuê căn hộ chung cư 2PN Masteri Thảo Điền, view Landmark 81',
@@ -167,7 +212,7 @@ export const DEMO_RENT_LISTINGS: Listing[] = [
     description:
       'Căn hộ tầng 18 view thoáng mát nhìn sang Landmark 81. Nội thất trang bị đầy đủ không thiếu thứ gì: sofa da, TV 65 inch, tủ lạnh 2 cánh, máy giặt sấy. Phù hợp gia đình trẻ hoặc chuyên gia nước ngoài thuê dài hạn.',
     transactionType: 'rent',
-    propertyType: 'can_ho',
+    propertyType: 'can_ho_chung_cu',
     price: '18000000',
     depositAmount: '36000000',
     minLeaseMonths: 12,
@@ -198,8 +243,91 @@ export const DEMO_RENT_LISTINGS: Listing[] = [
     ],
     location: { id: 2, name: 'TP. Thủ Đức, TP.HCM', slug: 'tp-thu-duc', level: 'district' },
     project: null,
-    owner: { id: '1', fullName: 'Nguyễn Đức Quân (0981753082)', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
   },
+  {
+    id: '12',
+    title: '[MẪU] Cho thuê căn hộ dịch vụ 1PN tách bếp cao cấp Quận Bình Thạnh',
+    slug: 'cho-thue-can-ho-dich-vu-1pn-binh-thanh-id12',
+    description:
+      'Căn hộ dịch vụ cao cấp, phòng ngủ riêng biệt tách bếp, có ban công thoáng sáng. Đã bao gồm dọn phòng tuần 2 lần, nước sinh hoạt, wifi tốc độ cao. Giờ giấc tự do, bảo vệ 24/7.',
+    transactionType: 'rent',
+    propertyType: 'can_ho_dich_vu',
+    price: '11000000',
+    depositAmount: '11000000',
+    minLeaseMonths: 6,
+    utilitiesIncluded: false,
+    electricityPricePerKwh: 4000,
+    waterPriceFlat: 100000,
+    amenities: {
+      wifi: true,
+      airConditioner: true,
+      washingMachine: true,
+      refrigerator: true,
+      smartLock: true,
+      elevator: true,
+      balcony: true,
+      freeTime: true,
+    },
+    areaM2: '45',
+    bedrooms: 1,
+    bathrooms: 1,
+    legalStatus: 'hop_dong_1_nam',
+    addressDetail: 'Đường Điện Biên Phủ, Phường 25, Bình Thạnh, TP.HCM',
+    status: 'active',
+    publishedAt: new Date().toISOString(),
+    viewCount: 180,
+    images: [
+      { imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&auto=format&fit=crop&q=75', sortOrder: 0 },
+      { imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&auto=format&fit=crop&q=70', sortOrder: 1 },
+    ],
+    location: { id: 2, name: 'Bình Thạnh, TP.HCM', slug: 'binh-thanh', level: 'district' },
+    project: null,
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+  },
+  {
+    id: '14',
+    title: '[MẪU] Căn hộ mini mới xây full đồ thang máy khép kín Quận Đống Đa',
+    slug: 'can-ho-mini-moi-xay-thang-may-dong-da-id14',
+    description:
+      'Căn hộ mini tầng 4 toà nhà 7 tầng có thang máy thẻ từ, bảo vệ trực 24/24. Phòng trang bị đầy đủ: điều hòa Inverter, nóng lạnh, giường tủ, máy giặt chung sân thượng rộng rãi.',
+    transactionType: 'rent',
+    propertyType: 'can_ho_mini',
+    price: '5500000',
+    depositAmount: '5500000',
+    minLeaseMonths: 12,
+    utilitiesIncluded: false,
+    electricityPricePerKwh: 3800,
+    waterPricePerM3: 30000,
+    amenities: {
+      wifi: true,
+      airConditioner: true,
+      elevator: true,
+      smartLock: true,
+      freeTime: true,
+    },
+    areaM2: '28',
+    bedrooms: 1,
+    bathrooms: 1,
+    legalStatus: 'hop_dong_1_nam',
+    addressDetail: 'Ngõ 119 Chùa Láng, Láng Thượng, Đống Đa, Hà Nội',
+    status: 'active',
+    publishedAt: new Date().toISOString(),
+    viewCount: 240,
+    images: [
+      { imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=75', sortOrder: 0 },
+      { imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&auto=format&fit=crop&q=70', sortOrder: 1 },
+    ],
+    location: { id: 1, name: 'Đống Đa, Hà Nội', slug: 'dong-da', level: 'district' },
+    project: null,
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+  },
+];
+
+export const DEMO_RENT_LISTINGS: Listing[] = [
+  ...DEMO_CAN_HO_RENT_LISTINGS,
+  ...DEMO_STUDIO_RENT_LISTINGS,
+  ...DEMO_ROOM_RENT_LISTINGS,
   {
     id: '11',
     title: '[MẪU] Cho thuê nhà nguyên căn 3 tầng ngõ ô tô Quận Cầu Giấy',
@@ -232,7 +360,7 @@ export const DEMO_RENT_LISTINGS: Listing[] = [
     ],
     location: { id: 1, name: 'Cầu Giấy, Hà Nội', slug: 'cau-giay', level: 'district' },
     project: null,
-    owner: { id: '1', fullName: 'Nguyễn Đức Quân (0981753082)', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
   },
 ];
 
@@ -263,13 +391,13 @@ export const DEMO_SPACE_RENT_LISTINGS: Listing[] = [
     ],
     location: { id: 3, name: 'Thanh Xuân, Hà Nội', slug: 'thanh-xuan', level: 'district' },
     project: null,
-    owner: { id: '1', fullName: 'Nguyễn Đức Quân (0981753082)', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
+    owner: { id: '1', fullName: 'Nguyễn Đức Quân', avatarUrl: null, createdAt: '2026-01-01T00:00:00.000Z' },
   },
 ];
 
 export const ALL_DEMO_LISTINGS: Listing[] = [
-  ...DEMO_RENT_LISTINGS,
-  ...DEMO_ROOM_RENT_LISTINGS,
+  ...DEMO_CAN_HO_RENT_LISTINGS,
   ...DEMO_STUDIO_RENT_LISTINGS,
+  ...DEMO_ROOM_RENT_LISTINGS,
   ...DEMO_SPACE_RENT_LISTINGS,
 ];

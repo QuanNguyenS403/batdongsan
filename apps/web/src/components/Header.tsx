@@ -13,9 +13,9 @@ interface CurrentUser {
 }
 
 const NAV_LINKS = [
-  { href: '/thue', label: 'Tất cả BĐS thuê' },
+  { href: '/thue?categoryGroup=thue_can_ho', label: 'Căn hộ' },
+  { href: '/thue?categoryGroup=thue_studio', label: 'Studio' },
   { href: '/cho-thue-tro', label: 'Phòng trọ SV' },
-  { href: '/thue?categoryGroup=thue_studio', label: 'Studio & Căn hộ' },
   { href: '/cho-thue-mat-bang', label: 'Mặt bằng kinh doanh' },
 ];
 
@@ -29,8 +29,10 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
 
   function isLinkActive(href: string) {
+    if (typeof window === 'undefined') return false;
     if (href.includes('?')) {
-      return pathname === href.split('?')[0];
+      const [path, query] = href.split('?');
+      return pathname === path && window.location.search.includes(query);
     }
     return pathname === href;
   }

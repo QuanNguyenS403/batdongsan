@@ -4,11 +4,9 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { fetchListingBySlug, formatPrice } from '@/lib/api';
 import { ALL_DEMO_LISTINGS } from '@/lib/demo-data';
-import { RevealPhoneButton } from './RevealPhoneButton';
-import { SaveListingButton } from './SaveListingButton';
-import { MoveInCostEstimator } from '@/components/MoveInCostEstimator';
-import { ReportListingModal } from '@/components/ReportListingModal';
 import { PropertyGallery } from './PropertyGallery';
+import { ReportListingModal } from '@/components/ReportListingModal';
+import { OwnerContactBox } from './OwnerContactBox';
 
 interface Props {
   params: { slug: string };
@@ -41,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     return {
       title: 'Chi tiết phòng cho thuê | Thuê Trọ Nhanh',
-      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê chính chủ, minh bạch điện nước.',
+      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê chính chủ.',
     };
   }
 }
@@ -53,11 +51,25 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   'phong_tro_nguoi_di_lam': 'Phòng trọ người đi làm',
   'phong-tro': 'Phòng trọ',
   'phong_tro': 'Phòng trọ',
+  'can-ho': 'Căn hộ',
+  'can_ho': 'Căn hộ',
   'can-ho-chung-cu': 'Căn hộ chung cư',
   'can_ho_chung_cu': 'Căn hộ chung cư',
-  'can-ho': 'Căn hộ chung cư',
-  'can_ho': 'Căn hộ chung cư',
-  'studio': 'Căn hộ Studio',
+  'can-ho-mini': 'Căn hộ mini',
+  'can_ho_mini': 'Căn hộ mini',
+  'can-ho-dich-vu': 'Căn hộ dịch vụ',
+  'can_ho_dich_vu': 'Căn hộ dịch vụ',
+  'can-ho-cao-cap': 'Căn hộ cao cấp',
+  'can_ho_cao_cap': 'Căn hộ cao cấp',
+  'studio': 'Studio',
+  'can-ho-studio': 'Căn hộ Studio',
+  'can_ho_studio': 'Căn hộ Studio',
+  'studio-ban-cong': 'Studio ban công',
+  'studio_ban_cong': 'Studio ban công',
+  'studio-gac-lung': 'Studio gác lửng',
+  'studio_gac_lung': 'Studio gác lửng',
+  'studio-full-noi-that': 'Studio full nội thất',
+  'studio_full_noi_that': 'Studio full nội thất',
   'nha-nguyen-can': 'Nhà nguyên căn',
   'nha_nguyen_can': 'Nhà nguyên căn',
   'nha_rieng': 'Nhà nguyên căn',
@@ -69,303 +81,237 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   'mat_bang': 'Mặt bằng kinh doanh',
 };
 
-const AMENITY_MAP: Record<string, { label: string; icon: string }> = {
-  wifi: { label: 'Wifi tốc độ cao', icon: '📶' },
-  air_conditioner: { label: 'Máy lạnh / Điều hòa', icon: '❄️' },
-  airConditioner: { label: 'Máy lạnh / Điều hòa', icon: '❄️' },
-  mezzanine: { label: 'Gác lửng đúc kiên cố', icon: '🪜' },
-  parking: { label: 'Nhà để xe có bảo vệ/thẻ từ', icon: '🛵' },
-  parkingSpace: { label: 'Nhà để xe có bảo vệ/thẻ từ', icon: '🛵' },
-  security_camera: { label: 'Camera / An ninh 24/7', icon: '📹' },
-  securityCamera: { label: 'Camera / An ninh 24/7', icon: '📹' },
-  free_time: { label: 'Giờ giấc tự do 24/24', icon: '🔑' },
-  freeTime: { label: 'Giờ giấc tự do 24/24', icon: '🔑' },
-  private_bathroom: { label: 'Vệ sinh khép kín', icon: '🚿' },
-  privateBathroom: { label: 'Vệ sinh khép kín', icon: '🚿' },
-  water_heater: { label: 'Bình nóng lạnh', icon: '♨️' },
-  waterHeater: { label: 'Bình nóng lạnh', icon: '♨️' },
-  washing_machine: { label: 'Máy giặt chung/riêng', icon: '🧺' },
-  washingMachine: { label: 'Máy giặt chung/riêng', icon: '🧺' },
-  refrigerator: { label: 'Tủ lạnh sẵn phòng', icon: '🧊' },
-  kitchen: { label: 'Kệ bếp nấu ăn thoải mái', icon: '🍳' },
-  elevator: { label: 'Thang máy di chuyển', icon: '🛗' },
-  balcony: { label: 'Ban công / Cửa sổ thoáng gió', icon: '🪟' },
-  fingerprint_lock: { label: 'Cửa khóa vân tay hiện đại', icon: '🔒' },
-  fingerprintLock: { label: 'Cửa khóa vân tay hiện đại', icon: '🔒' },
+const LEGAL_STATUS_LABEL: Record<string, string> = {
+  hop_dong_6_thang: 'Hợp đồng 6 tháng',
+  hop_dong_1_nam: 'Hợp đồng 1 năm',
+  hop_dong_dai_han: 'Hợp đồng dài hạn',
+  so_hong: 'Sổ hồng / Sổ đỏ',
+  so_do: 'Sổ đỏ',
+  giay_to_hop_le: 'Giấy tờ hợp lệ',
 };
+
+function formatJoinedDuration(createdAt: string): string {
+  const diffDays = Math.max(1, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000));
+  if (diffDays < 30) return `${diffDays} ngày`;
+  const months = Math.floor(diffDays / 30);
+  if (months < 12) return `${months} tháng`;
+  const years = Math.floor(months / 12);
+  const remMonths = months % 12;
+  return remMonths > 0 ? `${years} năm ${remMonths} tháng` : `${years} năm`;
+}
 
 export default async function ListingDetailPage({ params }: Props) {
   const listing = await getListingOrNotFound(params.slug);
 
   const isSample = listing.title.startsWith('[MẪU]');
   const displayTitle = isSample ? listing.title.replace(/^\[MẪU\]\s*/, '') : listing.title;
+  const cleanOwnerName = (listing.owner.fullName ?? 'Chủ phòng trọ').replace(/\s*\(\d+\)\s*/g, '').trim();
 
-  // Trích xuất danh sách tiện ích
-  const amenityKeys = Array.isArray(listing.amenities)
-    ? (listing.amenities as string[])
-    : typeof listing.amenities === 'object' && listing.amenities !== null
-      ? Object.keys(listing.amenities).filter((k) => (listing.amenities as any)[k])
-      : [];
-
-  const nearbyUnis = listing.nearbyUniversities ?? [];
+  // Lấy các bất động sản tương tự
+  const similarListings = ALL_DEMO_LISTINGS
+    .filter((item) => item.id !== listing.id)
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen bg-surface-muted">
       <div className="container-max py-6">
-        {/* Breadcrumb 4 cấp */}
-        <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
-          <Link href="/" className="hover:text-brand transition-colors">Trang chủ</Link>
-          <span>›</span>
-          <Link href="/thue" className="hover:text-brand transition-colors">Cho thuê phòng</Link>
-          <span>›</span>
+        {/* Breadcrumb điều hướng + nút Về danh sách */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
+          <nav className="flex flex-wrap items-center gap-1.5">
+            <Link href="/" className="hover:text-brand transition-colors">Trang chủ</Link>
+            <span>›</span>
+            <Link href="/thue" className="hover:text-brand transition-colors">Cho thuê phòng</Link>
+            <span>›</span>
+            <Link
+              href={`/thue?locationSlug=${listing.location.slug}`}
+              className="hover:text-brand transition-colors"
+            >
+              {listing.location.name}
+            </Link>
+            <span>›</span>
+            <span className="text-text-secondary font-medium line-clamp-1 max-w-xs">{displayTitle}</span>
+          </nav>
+
           <Link
-            href={`/thue?locationSlug=${listing.location.slug}`}
-            className="hover:text-brand transition-colors"
+            href="/thue"
+            className="inline-flex items-center gap-1 font-semibold text-brand hover:underline"
           >
-            {listing.location.name}
+            ‹ Về danh sách
           </Link>
-          <span>›</span>
-          <span className="text-text-secondary font-medium line-clamp-1 max-w-xs">{displayTitle}</span>
-        </nav>
+        </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Cột trái — nội dung chính */}
+          {/* Cột trái — nội dung chính (2/3 chiều rộng) */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Gallery tương tác mượt mà */}
+            {/* Gallery ảnh */}
             <PropertyGallery images={listing.images} title={displayTitle} />
 
-            {/* Tiêu đề + giá */}
+            {/* Tiêu đề + Địa chỉ + Giá */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="property-badge bg-brand text-white">
-                      {PROPERTY_TYPE_LABEL[listing.propertyType] ?? 'Phòng cho thuê'}
-                    </span>
-                    {listing.utilitiesIncluded && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                        ⚡ Miễn phí điện nước
-                      </span>
-                    )}
-                    {isSample && (
-                      <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                        Tin mẫu tham khảo
-                      </span>
-                    )}
-                  </div>
-                  <h1 className="text-xl font-bold text-text-primary md:text-2xl">{displayTitle}</h1>
-                  <p className="mt-1.5 flex items-center gap-1.5 text-sm text-text-muted">
-                    <svg className="h-4 w-4 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                    </svg>
-                    {listing.addressDetail ?? listing.location.name}
-                  </p>
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <p className="text-3xl font-bold text-brand">
-                      {formatPrice(listing.price)}
-                      <span className="text-base font-normal text-text-muted"> / tháng</span>
-                    </p>
-                    {listing.depositAmount != null && Number(listing.depositAmount) > 0 && (
-                      <span className="text-xs text-text-muted bg-surface-muted px-2 py-1 rounded-lg border border-surface-border">
-                        Cọc: <strong className="text-text-primary">{formatPrice(listing.depositAmount)}</strong>
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <SaveListingButton listingId={listing.id} />
-              </div>
-            </div>
-
-            {/* Chi phí dịch vụ minh bạch (Cốt lõi cho sinh viên & người đi thuê) */}
-            <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/50 via-white to-white p-5 shadow-card">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white text-sm font-bold">
-                  ✓
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="property-badge bg-brand text-white">
+                  {PROPERTY_TYPE_LABEL[listing.propertyType] ?? 'Phòng cho thuê'}
                 </span>
-                <h2 className="font-bold text-text-primary">Minh bạch chi phí dịch vụ & Điện nước</h2>
+                {isSample && (
+                  <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                    Tin mẫu tham khảo
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-text-muted mb-4">
-                Không lo phát sinh chi phí ẩn khi dọn vào. Chủ phòng cam kết biểu giá niêm yết rõ ràng.
+              <h1 className="text-xl font-bold text-text-primary md:text-2xl leading-snug">{displayTitle}</h1>
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-text-muted">
+                <svg className="h-4 w-4 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+                {listing.addressDetail ?? listing.location.name}
               </p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-xl border border-surface-border bg-white p-3 text-center">
-                  <p className="text-xs text-text-muted">⚡ Giá điện</p>
-                  <p className="mt-1 text-sm font-bold text-text-primary">
-                    {listing.utilitiesIncluded
-                      ? 'Đã bao gồm'
-                      : listing.electricityPricePerKwh
-                        ? `${listing.electricityPricePerKwh.toLocaleString('vi-VN')} đ/kWh`
-                        : 'Thoả thuận'}
-                  </p>
+              <div className="mt-3 flex items-baseline gap-2">
+                <p className="text-2xl md:text-3xl font-bold text-brand">
+                  {formatPrice(listing.price)}
+                  <span className="text-sm md:text-base font-normal text-text-muted"> / tháng</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Khối Thông tin chính (Chuẩn mẫu Mogi) */}
+            <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
+              <h2 className="mb-4 font-bold text-text-primary text-base">Thông tin chính</h2>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-4">
+                <InfoRow label="Diện tích sử dụng" value={`${listing.areaM2} m²`} />
+                <InfoRow
+                  label="Ngày đăng"
+                  value={listing.publishedAt ? new Date(listing.publishedAt).toLocaleDateString('vi-VN') : 'Mới cập nhật'}
+                />
+                <InfoRow
+                  label="Pháp lý"
+                  value={listing.legalStatus ? (LEGAL_STATUS_LABEL[listing.legalStatus] ?? listing.legalStatus) : 'Không xác định'}
+                />
+                <InfoRow label="Mã BĐS" value={`#${listing.id}`} mono />
+                {listing.bedrooms != null && <InfoRow label="Phòng ngủ" value={`${listing.bedrooms} phòng`} />}
+                {listing.bathrooms != null && <InfoRow label="Phòng tắm / WC" value={`${listing.bathrooms} phòng`} />}
+              </div>
+            </div>
+
+            {/* Khối Giới thiệu (Chuẩn mẫu Mogi) */}
+            <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-4">
+              <h2 className="font-bold text-text-primary text-base">Giới thiệu</h2>
+              <div className="whitespace-pre-line text-sm leading-relaxed text-text-secondary">
+                {listing.description || 'Chưa có thông tin mô tả chi tiết cho bất động sản này.'}
+              </div>
+
+              {/* Báo vi phạm */}
+              <ReportListingModal listingId={listing.id} />
+
+              {/* Tóm tắt người đăng bên dưới mô tả */}
+              <div className="flex items-center gap-3 pt-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand">
+                  {cleanOwnerName.charAt(0).toUpperCase()}
                 </div>
-                <div className="rounded-xl border border-surface-border bg-white p-3 text-center">
-                  <p className="text-xs text-text-muted">💧 Giá nước</p>
-                  <p className="mt-1 text-sm font-bold text-text-primary">
-                    {listing.utilitiesIncluded
-                      ? 'Đã bao gồm'
-                      : listing.waterPricePerM3
-                        ? `${listing.waterPricePerM3.toLocaleString('vi-VN')} đ/m³`
-                        : listing.waterPriceFlat
-                          ? `${listing.waterPriceFlat.toLocaleString('vi-VN')} đ/người`
-                          : 'Thoả thuận'}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-surface-border bg-white p-3 text-center">
-                  <p className="text-xs text-text-muted">🛡️ Tiền đặt cọc</p>
-                  <p className="mt-1 text-sm font-bold text-brand">
-                    {listing.depositAmount ? formatPrice(listing.depositAmount) : '1 tháng tiền phòng'}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-surface-border bg-white p-3 text-center">
-                  <p className="text-xs text-text-muted">⏳ Hợp đồng tối thiểu</p>
-                  <p className="mt-1 text-sm font-bold text-text-primary">
-                    {listing.minLeaseMonths ? `${listing.minLeaseMonths} tháng` : 'Linh hoạt'}
-                  </p>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-text-primary">{cleanOwnerName}</p>
+                    <span
+                      title="Tài khoản đã xác thực"
+                      className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1877F2] text-[9px] text-white font-bold"
+                    >
+                      ✓
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-muted">Đã tham gia: {formatJoinedDuration(listing.owner.createdAt)}</p>
                 </div>
               </div>
             </div>
 
-            {/* Các trường đại học lân cận */}
-            {nearbyUnis.length > 0 && (
-              <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">🎓</span>
-                  <h2 className="font-semibold text-text-primary">Gần các trường Đại học</h2>
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {nearbyUnis.map((item, idx) => {
-                    const uni = item.university;
-                    const km = item.distanceMeters ? (item.distanceMeters / 1000).toFixed(1) : null;
-                    return (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between rounded-xl border border-surface-border bg-surface-muted/60 p-3 hover:border-brand/40 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-xs font-bold text-brand shrink-0">
-                            {uni.abbreviation ?? 'ĐH'}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-text-primary line-clamp-1">{uni.name}</p>
-                            {uni.address && <p className="text-[11px] text-text-muted line-clamp-1">{uni.address}</p>}
-                          </div>
+            {/* Khối Tiện ích xung quanh & Bản đồ (Chuẩn mẫu Mogi) */}
+            <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold text-text-primary text-base">Tiện ích xung quanh</h2>
+                <span className="text-xs text-text-muted">{listing.location.name}</span>
+              </div>
+              <div className="relative aspect-[16/9] md:aspect-[21/9] w-full overflow-hidden rounded-xl border border-surface-border bg-slate-100">
+                <iframe
+                  title={`Bản đồ vị trí ${listing.addressDetail ?? listing.location.name}`}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.addressDetail ?? listing.location.name)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                  className="h-full w-full border-0"
+                  loading="lazy"
+                  allowFullScreen
+                />
+              </div>
+              <p className="flex items-center gap-1.5 text-xs text-text-muted">
+                <svg className="h-4 w-4 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+                {listing.addressDetail ?? listing.location.name}
+              </p>
+            </div>
+
+            {/* Khối Bất động sản tương tự (Chuẩn mẫu Mogi) */}
+            {similarListings.length > 0 && (
+              <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-4">
+                <h2 className="font-bold text-text-primary text-base">Bất động sản tương tự</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {similarListings.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/tin/${item.slug}`}
+                      className="group flex flex-col justify-between overflow-hidden rounded-xl border border-surface-border bg-white hover:border-brand/40 hover:shadow-sm transition-all"
+                    >
+                      <div>
+                        <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
+                          {item.images[0]?.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.images[0].imageUrl}
+                              alt={item.title}
+                              loading="lazy"
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-slate-300">
+                              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          )}
                         </div>
-                        <div className="text-right shrink-0 ml-2">
-                          {km && <p className="text-xs font-bold text-brand">~{km} km</p>}
-                          {item.travelTimeMinutes && (
-                            <p className="text-[10px] text-text-muted">{item.travelTimeMinutes} phút xe</p>
+                        <div className="p-2.5 space-y-1">
+                          <p className="line-clamp-2 text-xs font-semibold text-text-primary group-hover:text-brand transition-colors leading-snug">
+                            {item.title.replace(/^\[MẪU\]\s*/, '')}
+                          </p>
+                          {item.areaM2 && (
+                            <p className="text-[11px] text-text-muted">{item.areaM2} m²</p>
                           )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Thông tin phòng cơ bản */}
-            <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
-              <h2 className="mb-4 font-semibold text-text-primary">Thông tin chi tiết căn phòng</h2>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-                <InfoRow label="Diện tích sử dụng" value={`${listing.areaM2} m²`} />
-                {listing.bedrooms != null && <InfoRow label="Phòng ngủ" value={`${listing.bedrooms} phòng`} />}
-                {listing.bathrooms != null && <InfoRow label="Phòng tắm / WC" value={`${listing.bathrooms} phòng`} />}
-                <InfoRow
-                  label="Loại phòng"
-                  value={PROPERTY_TYPE_LABEL[listing.propertyType] ?? listing.propertyType}
-                />
-                <InfoRow
-                  label="Ngày đăng tin"
-                  value={listing.publishedAt ? new Date(listing.publishedAt).toLocaleDateString('vi-VN') : 'Mới cập nhật'}
-                />
-                <InfoRow label="Mã tin đăng" value={`#${listing.id}`} mono />
-              </div>
-            </div>
-
-            {/* Danh sách tiện ích */}
-            {amenityKeys.length > 0 && (
-              <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
-                <h2 className="mb-3 font-semibold text-text-primary">Tiện ích & Cơ sở vật chất sẵn có</h2>
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                  {amenityKeys.map((key) => {
-                    const info = AMENITY_MAP[key] ?? { label: key, icon: '✨' };
-                    return (
-                      <div
-                        key={key}
-                        className="flex items-center gap-2 rounded-xl bg-surface-muted px-3 py-2 text-xs font-medium text-text-secondary border border-surface-border"
-                      >
-                        <span className="text-base">{info.icon}</span>
-                        <span>{info.label}</span>
+                      <div className="px-2.5 pb-2.5">
+                        <p className="text-xs md:text-sm font-bold text-brand">{formatPrice(item.price)}</p>
                       </div>
-                    );
-                  })}
+                    </Link>
+                  ))}
                 </div>
               </div>
             )}
-
-            {/* Mô tả */}
-            {listing.description && (
-              <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
-                <h2 className="mb-3 font-semibold text-text-primary">Mô tả từ chủ nhà</h2>
-                <div className="whitespace-pre-line text-sm leading-relaxed text-text-secondary">
-                  {listing.description}
-                </div>
-              </div>
-            )}
-
-            {/* Công cụ ước tính chi phí dọn vào tháng đầu */}
-            <div id="cost-estimator">
-              <MoveInCostEstimator
-                initialRentPrice={listing.price}
-                depositAmount={listing.depositAmount}
-                electricityPricePerKwh={listing.electricityPricePerKwh}
-                waterPricePerM3={listing.waterPricePerM3}
-                waterPriceFlat={listing.waterPriceFlat}
-                utilitiesIncluded={listing.utilitiesIncluded}
-              />
-            </div>
-
-            {/* Báo vi phạm */}
-            <ReportListingModal listingId={listing.id} />
           </div>
 
-          {/* Cột phải — sidebar liên hệ */}
+          {/* Cột phải — Sidebar người đăng & an toàn (1/3 chiều rộng) */}
           <aside>
             <div className="sticky top-24 space-y-4">
-              <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
-                <h3 className="mb-4 text-sm font-semibold text-text-muted uppercase tracking-wide">
-                  Thông tin chủ phòng / Môi giới
-                </h3>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand/10 text-lg font-bold text-brand">
-                    {(listing.owner.fullName ?? 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-text-primary">{listing.owner.fullName ?? 'Chủ phòng trọ'}</p>
-                    <p className="text-xs text-text-muted">
-                      Đã tham gia{' '}
-                      {Math.max(1, Math.floor((Date.now() - new Date(listing.owner.createdAt).getTime()) / 86_400_000))}{' '}
-                      ngày
-                    </p>
-                  </div>
-                </div>
+              {/* Box liên hệ người đăng */}
+              <OwnerContactBox
+                listingId={listing.id}
+                ownerName={cleanOwnerName}
+                joinedText={formatJoinedDuration(listing.owner.createdAt)}
+                listingTitle={displayTitle}
+              />
 
-                <div className="mt-4 space-y-2.5">
-                  <RevealPhoneButton listingId={listing.id} />
-                  <a
-                    href="#cost-estimator"
-                    className="btn-secondary w-full text-center flex items-center justify-center gap-1.5"
-                  >
-                    <span>🧮</span>
-                    <span>Ước tính phí dọn vào</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Lời khuyên an toàn khi thuê trọ */}
+              {/* Khối Lưu ý an toàn khi thuê trọ */}
               <div className="rounded-2xl bg-gradient-to-br from-brand/5 to-brand/10 border border-brand/20 p-4">
-                <p className="text-sm font-semibold text-brand">🛡️ Lưu ý an toàn khi thuê trọ</p>
+                <p className="text-sm font-semibold text-brand flex items-center gap-1.5">
+                  <span>🛡️</span>
+                  <span>Lưu ý an toàn khi thuê phòng</span>
+                </p>
                 <ul className="mt-2 space-y-1.5 text-xs text-text-secondary">
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
@@ -373,11 +319,11 @@ export default async function ListingDetailPage({ params }: Props) {
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
-                    <span>Kiểm tra kỹ đồng hồ điện nước, công tơ riêng từng phòng.</span>
+                    <span>Kiểm tra thực tế đồng hồ điện nước, công tơ riêng từng phòng.</span>
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
-                    <span>Yêu cầu hợp đồng thuê bằng văn bản có đủ chữ ký hai bên.</span>
+                    <span>Ký hợp đồng thuê bằng văn bản có đầy đủ chữ ký của hai bên.</span>
                   </li>
                 </ul>
               </div>

@@ -49,17 +49,18 @@ export function ReportListingModal({ listingId }: { listingId: string }) {
   }
 
   return (
-    <div className="mt-5 border-t border-surface-border pt-4">
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-red-600 transition-colors"
-      >
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l1.664 9.14a2.25 2.25 0 002.184 1.86H15M3 3h-.75m.75 0l1.5 8.25M3 3L1.5 1.5M15 15l.072.36a2.25 2.25 0 01-2.184 2.89H6.75a2.25 2.25 0 01-2.25-2.25v-.75" />
-        </svg>
-        Báo cáo tin vi phạm / thông tin sai lệch
-      </button>
+    <>
+      <div className="mt-4 pt-3 border-t border-surface-border flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border bg-surface-muted/60 px-3 py-1.5 text-xs font-medium text-text-muted hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors"
+        >
+          <span>Báo vi phạm</span>
+          <span className="text-amber-500">⚠️</span>
+        </button>
+        <span className="text-[11px] text-text-muted">Tin đăng được kiểm duyệt tự động</span>
+      </div>
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -142,6 +143,6 @@ export function ReportListingModal({ listingId }: { listingId: string }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -73,7 +73,25 @@ export class ListingsService {
 
     // Xử lý lọc theo nhóm chuyên mục (100% cho thuê)
     if (query.categoryGroup) {
-      if (query.categoryGroup === 'thue_bds') {
+      if (query.categoryGroup === 'thue_can_ho') {
+        where.transactionType = TransactionType.rent;
+        if (!query.propertyType) {
+          where.propertyType = {
+            in: [
+              'can_ho',
+              'can-ho',
+              'can_ho_chung_cu',
+              'can-ho-chung-cu',
+              'can_ho_dich_vu',
+              'can-ho-dich-vu',
+              'can_ho_mini',
+              'can-ho-mini',
+              'can_ho_cao_cap',
+              'can-ho-cao-cap',
+            ],
+          };
+        }
+      } else if (query.categoryGroup === 'thue_bds') {
         where.transactionType = TransactionType.rent;
         if (!query.propertyType) {
           where.propertyType = {
@@ -133,7 +151,17 @@ export class ListingsService {
         where.transactionType = TransactionType.rent;
         if (!query.propertyType) {
           where.propertyType = {
-            in: ['studio', 'can_ho_mini', 'can-ho-mini'],
+            in: [
+              'studio',
+              'can_ho_studio',
+              'can-ho-studio',
+              'studio_ban_cong',
+              'studio-ban-cong',
+              'studio_gac_lung',
+              'studio-gac-lung',
+              'studio_full_noi_that',
+              'studio-full-noi-that',
+            ],
           };
         }
       }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch, isLoggedIn } from '@/lib/auth-client';
+import { AuthModal } from '@/components/AuthModal';
 
 interface LocationItem {
   id: number;
@@ -12,55 +13,49 @@ interface LocationItem {
   parentId: number | null;
 }
 
-interface UniversityItem {
-  id: number;
-  name: string;
-  shortName?: string | null;
-  abbreviation?: string | null;
-  slug: string;
-}
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
-const PROPERTY_TYPES = [
-  { value: 'phong-tro-sinh-vien', label: '🛏️ Phòng trọ sinh viên' },
-  { value: 'phong-tro-nguoi-di-lam', label: '💼 Phòng trọ người đi làm' },
-  { value: 'ky-tuc-xa-tu-nhan', label: '📦 Ký túc xá tư nhân / Sleepbox' },
-  { value: 'studio', label: '🛋️ Căn hộ Studio' },
-  { value: 'can-ho-chung-cu', label: '🏢 Căn hộ chung cư' },
-  { value: 'nha-nguyen-can', label: '🏡 Nhà nguyên căn' },
-  { value: 'mat-bang-kinh-doanh', label: '🏪 Mặt bằng kinh doanh / Cửa hàng' },
-];
+interface PropertyGroup {
+  groupName: string;
+  items: { value: string; label: string }[];
+}
 
-const AMENITY_OPTIONS = [
-  { key: 'wifi', label: 'Wifi internet', icon: '📶' },
-  { key: 'air_conditioner', label: 'Máy lạnh / Điều hòa', icon: '❄️' },
-  { key: 'mezzanine', label: 'Gác lửng', icon: '🪜' },
-  { key: 'parking', label: 'Nhà để xe', icon: '🛵' },
-  { key: 'security_camera', label: 'Camera / An ninh 24/7', icon: '📹' },
-  { key: 'free_time', label: 'Giờ giấc tự do 24/24', icon: '🔑' },
-  { key: 'private_bathroom', label: 'Vệ sinh khép kín', icon: '🚿' },
-  { key: 'water_heater', label: 'Bình nóng lạnh', icon: '♨️' },
-  { key: 'washing_machine', label: 'Máy giặt', icon: '🧺' },
-  { key: 'refrigerator', label: 'Tủ lạnh', icon: '🧊' },
-  { key: 'kitchen', label: 'Kệ bếp nấu ăn', icon: '🍳' },
-  { key: 'elevator', label: 'Thang máy', icon: '🛗' },
-  { key: 'balcony', label: 'Ban công / Cửa sổ thoáng', icon: '🪟' },
-  { key: 'fingerprint_lock', label: 'Khóa vân tay', icon: '🔒' },
+const PROPERTY_TYPE_GROUPS: PropertyGroup[] = [
+  {
+    groupName: '🏢 Căn hộ',
+    items: [
+      { value: 'can-ho-chung-cu', label: 'Căn hộ chung cư' },
+      { value: 'can-ho-mini', label: 'Căn hộ mini' },
+      { value: 'can-ho-dich-vu', label: 'Căn hộ dịch vụ' },
+      { value: 'can-ho-cao-cap', label: 'Căn hộ cao cấp' },
+    ],
+  },
+  {
+    groupName: '🛋️ Studio',
+    items: [
+      { value: 'studio', label: 'Studio tiêu chuẩn' },
+      { value: 'studio-ban-cong', label: 'Studio ban công' },
+      { value: 'studio-gac-lung', label: 'Studio gác lửng' },
+      { value: 'studio-full-noi-that', label: 'Studio full nội thất' },
+    ],
+  },
+  {
+    groupName: '🛏️ Phòng trọ & Mặt bằng',
+    items: [
+      { value: 'phong-tro-sinh-vien', label: 'Phòng trọ sinh viên' },
+      { value: 'phong-tro-nguoi-di-lam', label: 'Phòng trọ người đi làm' },
+      { value: 'ky-tuc-xa-tu-nhan', label: 'Ký túc xá / Sleepbox' },
+      { value: 'nha-nguyen-can', label: 'Nhà nguyên căn' },
+      { value: 'mat-bang-kinh-doanh', label: 'Mặt bằng kinh doanh' },
+    ],
+  },
 ];
 
 export default function DangTinPage() {
   const [locations, setLocations] = useState<LocationItem[]>([]);
-  const [universities, setUniversities] = useState<UniversityItem[]>([]);
-  const [propertyType, setPropertyType] = useState('phong-tro-sinh-vien');
-  const [utilitiesIncluded, setUtilitiesIncluded] = useState(false);
-  const [waterPricingType, setWaterPricingType] = useState<'m3' | 'flat'>('m3');
-  const [selectedAmenities, setSelectedAmenities] = useState<Record<string, boolean>>({
-    wifi: true,
-    parking: true,
-  });
-  const [selectedUniversityId, setSelectedUniversityId] = useState<string>('');
-  const [universityDistanceKm, setUniversityDistanceKm] = useState<string>('');
+  const [propertyType, setPropertyType] = useState('can-ho-chung-cu');
+  const [loggedInUser, setLoggedInUser] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Quản lý hình ảnh và xem trước
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -70,6 +65,16 @@ export default function DangTinPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoggedInUser(isLoggedIn());
+
+    // Tải danh sách địa danh
+    fetch(`${API_URL}/locations`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setLocations(data))
+      .catch(() => setLocations([]));
+  }, []);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files) return;
@@ -87,27 +92,6 @@ export default function DangTinPage() {
     setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
   }
 
-  useEffect(() => {
-    // Tải danh sách địa danh
-    fetch(`${API_URL}/locations`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => setLocations(data))
-      .catch(() => setLocations([]));
-
-    // Tải danh sách các trường đại học
-    fetch(`${API_URL}/universities`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => setUniversities(data))
-      .catch(() => setUniversities([]));
-  }, []);
-
-  function toggleAmenity(key: string) {
-    setSelectedAmenities((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  }
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -115,100 +99,86 @@ export default function DangTinPage() {
     setUploadStatus(null);
 
     if (!isLoggedIn()) {
-      setError('Vui lòng đăng nhập trước khi đăng tin.');
+      setAuthModalOpen(true);
       return;
     }
 
     const form = new FormData(e.currentTarget);
     const locationIdValue = form.get('locationId');
     if (!locationIdValue) {
-      setError('Vui lòng chọn khu vực phòng cho thuê.');
+      setError('Vui lòng chọn khu vực bất động sản cho thuê.');
       return;
     }
-
-    // Tiện ích đã chọn
-    const activeAmenities: Record<string, boolean> = {};
-    Object.entries(selectedAmenities).forEach(([k, v]) => {
-      if (v) activeAmenities[k] = true;
-    });
-
-    // Thông tin trường gần đó nếu có
-    const universityDistances =
-      selectedUniversityId && Number(selectedUniversityId) > 0
-        ? [
-            {
-              universityId: Number(selectedUniversityId),
-              distanceMeters: universityDistanceKm ? Math.round(Number(universityDistanceKm) * 1000) : undefined,
-              travelTimeMinutes: universityDistanceKm ? Math.round(Number(universityDistanceKm) * 3) : undefined,
-            },
-          ]
-        : undefined;
 
     const payload = {
       transactionType: 'rent',
       propertyType,
       locationId: Number(locationIdValue),
-      title: form.get('title'),
-      description: form.get('description'),
+      addressDetail: (form.get('addressDetail') as string) || undefined,
+      title: form.get('title') as string,
+      description: (form.get('description') as string) || undefined,
       price: Number(form.get('price')),
       depositAmount: form.get('depositAmount') ? Number(form.get('depositAmount')) : undefined,
       minLeaseMonths: form.get('minLeaseMonths') ? Number(form.get('minLeaseMonths')) : undefined,
-      utilitiesIncluded,
-      electricityPricePerKwh: !utilitiesIncluded && form.get('electricityPricePerKwh') ? Number(form.get('electricityPricePerKwh')) : undefined,
-      waterPricePerM3:
-        !utilitiesIncluded && waterPricingType === 'm3' && form.get('waterPricePerM3')
-          ? Number(form.get('waterPricePerM3'))
-          : undefined,
-      waterPriceFlat:
-        !utilitiesIncluded && waterPricingType === 'flat' && form.get('waterPriceFlat')
-          ? Number(form.get('waterPriceFlat'))
-          : undefined,
-      amenities: activeAmenities,
       areaM2: Number(form.get('areaM2')),
       bedrooms: form.get('bedrooms') ? Number(form.get('bedrooms')) : undefined,
       bathrooms: form.get('bathrooms') ? Number(form.get('bathrooms')) : undefined,
-      legalStatus: form.get('legalStatus') || undefined,
-      addressDetail: form.get('addressDetail') || undefined,
-      universityDistances,
     };
-
-    const validImageFiles = selectedFiles.filter((f) => f && f.size > 0);
 
     setLoading(true);
     try {
-      // 1. Tạo tin đăng
-      const res = await authFetch('/listings', {
+      const res = await authFetch(`${API_URL}/listings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (res.status === 401) {
-        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-        return;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message ?? 'Đăng tin thất bại, vui lòng kiểm tra lại thông tin.');
       }
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message?.toString() ?? 'Đăng tin thất bại.');
+      const newListing = await res.json();
 
-      // 2. Upload ảnh đính kèm nếu có
-      if (validImageFiles.length > 0) {
-        setUploadStatus(`Đang tải lên ${validImageFiles.length} hình ảnh...`);
-        const imgFormData = new FormData();
-        validImageFiles.forEach((file) => {
-          imgFormData.append('files', file);
-        });
+      // Nếu có ảnh được chọn, upload từng ảnh một qua S3 presigned URL
+      if (selectedFiles.length > 0 && newListing?.id) {
+        setUploadStatus(`Đang tải lên ${selectedFiles.length} ảnh...`);
+        const uploadedUrls: string[] = [];
 
-        const imgRes = await authFetch(`/listings/${data.id}/images`, {
-          method: 'POST',
-          body: imgFormData,
-        });
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          setUploadStatus(`Đang tải ảnh ${i + 1}/${selectedFiles.length}...`);
 
-        if (!imgRes.ok) {
-          const imgErr = await imgRes.json();
-          setUploadStatus(`Tin đã tạo nhưng không upload được ảnh: ${imgErr.message ?? 'Lỗi không xác định'}`);
-        } else {
-          setUploadStatus(`Đã tải lên thành công ${validImageFiles.length} ảnh.`);
+          const presignRes = await authFetch(`${API_URL}/upload/presigned-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: file.name,
+              contentType: file.type || 'image/jpeg',
+            }),
+          });
+
+          if (presignRes.ok) {
+            const { uploadUrl, publicUrl } = await presignRes.json();
+            const putRes = await fetch(uploadUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': file.type || 'image/jpeg' },
+              body: file,
+            });
+
+            if (putRes.ok) {
+              uploadedUrls.push(publicUrl);
+            }
+          }
+        }
+
+        if (uploadedUrls.length > 0) {
+          setUploadStatus('Đang liên kết ảnh với tin đăng...');
+          await authFetch(`${API_URL}/listings/${newListing.id}/images`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageUrls: uploadedUrls }),
+          });
         }
       }
 
@@ -229,30 +199,58 @@ export default function DangTinPage() {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand mb-2">
           🔑 Nền tảng chuyên biệt cho thuê
         </span>
-        <h1 className="text-2xl font-bold text-text-primary">Đăng tin cho thuê phòng / Căn hộ</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Đăng tin cho thuê Căn hộ, Studio & Phòng trọ</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Tiếp cận hàng chục ngàn sinh viên & người đi thuê mỗi tháng. Tin đăng được kiểm duyệt nhanh chóng trong vòng 1-2 giờ.
+          Tiếp cận hàng ngàn khách thuê có nhu cầu thực tế. Tin đăng được kiểm duyệt nhanh chóng.
         </p>
       </div>
 
+      {/* Cảnh báo bắt buộc đăng nhập nếu chưa đăng nhập */}
+      {!loggedInUser && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">🔒</span>
+            <p className="text-xs sm:text-sm font-medium text-amber-900">
+              Bạn cần <strong>đăng nhập</strong> bằng số điện thoại để đăng tin cho thuê.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAuthModalOpen(true)}
+            className="rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-2 text-xs font-bold text-white transition-colors shrink-0 shadow-sm"
+          >
+            Đăng nhập ngay
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-surface-border bg-white p-7 shadow-elevated">
-        {/* Loại hình cho thuê */}
+        {/* Loại hình cho thuê — Phân chia rõ ràng Căn hộ và Studio riêng biệt */}
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Loại hình phòng cho thuê *</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {PROPERTY_TYPES.map((pt) => (
-              <button
-                key={pt.value}
-                type="button"
-                onClick={() => setPropertyType(pt.value)}
-                className={`flex items-center gap-2 p-3 text-left rounded-xl border text-sm font-medium transition-colors ${
-                  propertyType === pt.value
-                    ? 'border-brand bg-brand/5 text-brand font-semibold ring-1 ring-brand'
-                    : 'border-surface-border bg-white text-text-secondary hover:border-brand/40'
-                }`}
-              >
-                <span>{pt.label}</span>
-              </button>
+          <label className="mb-2 block text-xs font-semibold text-text-secondary">
+            Loại hình cho thuê * (Chọn đúng chuyên mục)
+          </label>
+          <div className="space-y-3">
+            {PROPERTY_TYPE_GROUPS.map((group) => (
+              <div key={group.groupName} className="rounded-xl border border-surface-border bg-slate-50/50 p-3">
+                <p className="mb-2 text-xs font-bold text-text-primary">{group.groupName}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {group.items.map((pt) => (
+                    <button
+                      key={pt.value}
+                      type="button"
+                      onClick={() => setPropertyType(pt.value)}
+                      className={`flex items-center justify-center p-2.5 rounded-lg border text-xs text-center transition-all ${
+                        propertyType === pt.value
+                          ? 'border-brand bg-brand text-white font-bold shadow-sm'
+                          : 'border-surface-border bg-white text-text-secondary hover:border-brand/40'
+                      }`}
+                    >
+                      <span>{pt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -274,7 +272,7 @@ export default function DangTinPage() {
             <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Địa chỉ cụ thể (Số nhà, ngõ, tên đường)</label>
             <input
               name="addressDetail"
-              placeholder="VD: Số 45/12 đường D1, KDC Him Lam"
+              placeholder="VD: Số 45/12 đường D1, Phường Tân Phong"
               className="input-field"
             />
           </div>
@@ -287,13 +285,13 @@ export default function DangTinPage() {
             name="title"
             required
             minLength={10}
-            placeholder="VD: Phòng trọ cao cấp có gác lửng đúc, ban công thoáng, gần ĐH Tôn Đức Thắng"
+            placeholder="VD: Cho thuê căn hộ 2PN view thoáng, ban công rộng, đầy đủ nội thất"
             className="input-field"
           />
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Mô tả chi tiết căn phòng</label>
+          <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Mô tả chi tiết</label>
           <textarea
             name="description"
             placeholder="Mô tả về phòng, đồ đạc có sẵn, lối đi riêng, giờ giấc, an ninh, tiện ích xung quanh (chợ, siêu thị, bến xe buýt)..."
@@ -310,20 +308,20 @@ export default function DangTinPage() {
               name="price"
               required
               type="number"
-              placeholder="VD: 3200000"
+              placeholder="VD: 3500000"
               className="input-field"
             />
-            <p className="mt-1 text-[11px] text-text-muted">Nhập VNĐ — VD: 3200000 = 3.2 triệu/tháng</p>
+            <p className="mt-1 text-[11px] text-text-muted">Nhập số nguyên VNĐ — VD: 3500000</p>
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Tiền đặt cọc (VNĐ)</label>
             <input
               name="depositAmount"
               type="number"
-              placeholder="VD: 3200000"
+              placeholder="VD: 3500000"
               className="input-field"
             />
-            <p className="mt-1 text-[11px] text-text-muted">Thường bằng 1 tháng tiền phòng</p>
+            <p className="mt-1 text-[11px] text-text-muted">Thường bằng 1 tháng tiền thuê</p>
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Hợp đồng tối thiểu (tháng)</label>
@@ -344,7 +342,7 @@ export default function DangTinPage() {
               required
               type="number"
               step="0.1"
-              placeholder="VD: 25.5"
+              placeholder="VD: 30"
               className="input-field"
             />
           </div>
@@ -370,131 +368,10 @@ export default function DangTinPage() {
           </div>
         </div>
 
-        {/* Minh bạch chi phí điện nước (CỐT LÕI) */}
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={utilitiesIncluded}
-                onChange={(e) => setUtilitiesIncluded(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-              />
-              <span className="text-sm font-bold text-text-primary">⚡ Miễn phí / Bao trọn tiền điện nước trong giá thuê</span>
-            </label>
-          </div>
-
-          {!utilitiesIncluded && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-emerald-200/60">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Giá điện (VNĐ/kWh)</label>
-                <input
-                  name="electricityPricePerKwh"
-                  type="number"
-                  placeholder="VD: 3500 hoặc 4000"
-                  className="input-field bg-white"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-text-secondary">Hình thức tính tiền nước</label>
-                  <div className="flex items-center gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setWaterPricingType('m3')}
-                      className={`px-2 py-0.5 rounded ${waterPricingType === 'm3' ? 'bg-brand text-white font-medium' : 'text-text-muted'}`}
-                    >
-                      Theo khối (m³)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWaterPricingType('flat')}
-                      className={`px-2 py-0.5 rounded ${waterPricingType === 'flat' ? 'bg-brand text-white font-medium' : 'text-text-muted'}`}
-                    >
-                      Khoán / người
-                    </button>
-                  </div>
-                </div>
-
-                {waterPricingType === 'm3' ? (
-                  <input
-                    name="waterPricePerM3"
-                    type="number"
-                    placeholder="VD: 20000 (đ/m³)"
-                    className="input-field bg-white"
-                  />
-                ) : (
-                  <input
-                    name="waterPriceFlat"
-                    type="number"
-                    placeholder="VD: 100000 (đ/người/tháng)"
-                    className="input-field bg-white"
-                  />
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Tiện ích & Cơ sở vật chất */}
-        <div>
-          <label className="mb-2 block text-xs font-semibold text-text-secondary">Tiện ích phòng có sẵn</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {AMENITY_OPTIONS.map((item) => {
-              const isChecked = !!selectedAmenities[item.key];
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => toggleAmenity(item.key)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium text-left transition-colors ${
-                    isChecked
-                      ? 'border-brand bg-brand/10 text-brand font-semibold'
-                      : 'border-surface-border bg-slate-50/50 text-text-secondary hover:border-slate-300'
-                  }`}
-                >
-                  <span className="text-sm">{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Gần trường đại học */}
-        <div className="rounded-xl border border-surface-border bg-surface-muted/50 p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-base">🎓</span>
-            <label className="text-xs font-semibold text-text-secondary">Gần trường Đại học nào? (Thu hút sinh viên tìm kiếm)</label>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <select
-              value={selectedUniversityId}
-              onChange={(e) => setSelectedUniversityId(e.target.value)}
-              className="input-field bg-white"
-            >
-              <option value="">-- Chọn trường ĐH gần nhất --</option>
-              {universities.map((uni) => (
-                <option key={uni.id} value={uni.id}>
-                  {uni.abbreviation ? `[${uni.abbreviation}] ` : ''}{uni.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              step="0.1"
-              value={universityDistanceKm}
-              onChange={(e) => setUniversityDistanceKm(e.target.value)}
-              placeholder="Khoảng cách ước tính (VD: 0.8 km)"
-              className="input-field bg-white"
-            />
-          </div>
-        </div>
-
         {/* Upload hình ảnh */}
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
-            Hình ảnh thực tế phòng trọ (Tối đa 20 ảnh, JPG/PNG/WEBP, tối đa 10MB/ảnh)
+            Hình ảnh thực tế (Tối đa 20 ảnh, JPG/PNG/WEBP)
           </label>
           <input
             name="images"
@@ -504,9 +381,6 @@ export default function DangTinPage() {
             onChange={handleFileChange}
             className="w-full rounded-xl border border-dashed border-surface-border bg-slate-50/60 p-3 text-sm text-text-secondary file:mr-4 file:rounded-full file:border-0 file:bg-brand file:px-4 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-700 transition-colors"
           />
-          <p className="mt-1 text-[11px] text-text-muted">
-            💡 Mẹo: Phòng có hình ảnh rõ ràng, chụp từ nhiều góc và có ảnh nhà vệ sinh sẽ có tỷ lệ liên hệ cao gấp 3 lần.
-          </p>
 
           {/* Thumbnail preview */}
           {previewUrls.length > 0 && (
@@ -517,14 +391,14 @@ export default function DangTinPage() {
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
                 {previewUrls.map((url, idx) => (
                   <div key={idx} className="relative group rounded-xl overflow-hidden border border-surface-border aspect-square bg-slate-100 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt={`Ảnh ${idx + 1}`} className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => handleRemoveFile(idx)}
-                      className="absolute top-1 right-1 bg-black/70 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-colors shadow"
-                      title="Xóa ảnh này"
+                      className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      ×
+                      ✕
                     </button>
                   </div>
                 ))}
@@ -533,34 +407,54 @@ export default function DangTinPage() {
           )}
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-primary w-full py-3 text-base"
-        >
-          {loading ? 'Đang gửi thông tin...' : 'Đăng tin phòng trọ ngay'}
-        </button>
-
-        {uploadStatus && <p className="text-xs text-brand font-medium">{uploadStatus}</p>}
-
-        {message === 'success' && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-            <p className="font-semibold">✓ Đăng tin thành công!</p>
-            <p className="mt-1 text-xs leading-relaxed">
-              Tin phòng của bạn đang ở trạng thái <b>chờ duyệt</b>. Đội ngũ kiểm duyệt sẽ xử lý trong vòng 1-2 giờ. Bạn có thể theo dõi trạng thái tại{' '}
-              <Link href="/tai-khoan/quan-ly-tin" className="font-bold underline text-brand-700">
-                trang Quản lý tin
-              </Link>
-              .
-            </p>
+        {uploadStatus && (
+          <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800 flex items-center gap-2">
+            <span className="animate-spin text-sm">⏳</span>
+            <span>{uploadStatus}</span>
           </div>
         )}
+
         {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+          <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 text-xs text-red-600 font-medium">
             {error}
           </div>
         )}
+
+        {message === 'success' && (
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center">
+            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-bold">
+              ✓
+            </div>
+            <p className="font-bold text-emerald-800">Đăng tin thành công!</p>
+            <p className="mt-1 text-xs text-emerald-600">
+              Tin của bạn đang được kiểm duyệt tự động và sẽ hiển thị công khai sớm.
+            </p>
+            <div className="mt-3 flex justify-center gap-3">
+              <Link href="/thue" className="btn-secondary text-xs">
+                Xem danh sách tin
+              </Link>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary w-full py-3.5 text-base justify-center font-bold"
+          >
+            {loading ? 'Đang gửi tin...' : 'Đăng tin ngay'}
+          </button>
+        </div>
       </form>
+
+      {/* Modal đăng ký / đăng nhập */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={() => setLoggedInUser(true)}
+        subtitle="Đăng nhập để đăng tin cho thuê phòng / căn hộ"
+      />
     </div>
   );
 }

@@ -3,29 +3,30 @@ import Link from 'next/link';
 import { fetchListings } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
 import { Pagination } from '@/components/Pagination';
-import { SearchFilterBar } from '@/components/SearchFilterBar';
-import { DEMO_RENT_LISTINGS } from '@/lib/demo-data';
+import {
+  SearchFilterBar,
+  PROPERTY_TYPES_CAN_HO,
+  PROPERTY_TYPES_STUDIO,
+} from '@/components/SearchFilterBar';
+import {
+  ALL_DEMO_LISTINGS,
+  DEMO_CAN_HO_RENT_LISTINGS,
+  DEMO_ROOM_RENT_LISTINGS,
+  DEMO_STUDIO_RENT_LISTINGS,
+  DEMO_SPACE_RENT_LISTINGS,
+} from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'Cho thuê BĐS — Phòng trọ, Căn hộ, Studio & Nhà nguyên căn',
+  title: 'Cho thuê Căn hộ & Studio giá tốt chính chủ',
   description:
-    'Danh sách tin cho thuê phòng trọ sinh viên, căn hộ chung cư, studio và nhà nguyên căn chính chủ mới nhất. Lọc theo trường đại học, giá thuê tháng, tiện ích bao điện nước.',
+    'Danh sách tin cho thuê căn hộ và studio chính chủ mới nhất. Phân tách rõ ràng chuyên mục Căn hộ và Studio riêng biệt.',
 };
 
-const PROPERTY_TYPES_RENT = [
-  { value: '', label: 'Tất cả loại BĐS thuê' },
-  { value: 'phong_tro', label: 'Phòng trọ sinh viên' },
-  { value: 'ky_tuc_xa', label: 'Ký túc xá / Sleepbox' },
-  { value: 'can_ho_mini', label: 'Căn hộ mini / Studio' },
-  { value: 'can_ho', label: 'Căn hộ chung cư' },
-  { value: 'nha_rieng', label: 'Nhà riêng / Nhà phố' },
-  { value: 'mat_bang', label: 'Mặt bằng kinh doanh' },
-];
-
 const CATEGORY_NAMES: Record<string, string> = {
+  thue_can_ho: 'Căn hộ',
+  thue_studio: 'Studio',
   thue_tro: 'Phòng trọ sinh viên',
-  thue_studio: 'Studio & Căn hộ mini',
-  thue_bds: 'Căn hộ chung cư & Nhà riêng',
+  thue_bds: 'Căn hộ',
   thue_mat_bang: 'Mặt bằng kinh doanh',
 };
 
@@ -34,9 +35,34 @@ interface Props {
 }
 
 export default async function ThuePage({ searchParams }: Props) {
+  const isStudio = searchParams.categoryGroup === 'thue_studio';
+  const isTro = searchParams.categoryGroup === 'thue_tro';
+  const isMatBang = searchParams.categoryGroup === 'thue_mat_bang';
+  const isCanHo = !isStudio && !isTro && !isMatBang;
+
+  // Lựa chọn bộ lọc loại phòng chuyên biệt theo từng mục
+  const propertyTypesForCategory = isStudio
+    ? PROPERTY_TYPES_STUDIO
+    : isCanHo
+      ? PROPERTY_TYPES_CAN_HO
+      : undefined;
+
+  // Dữ liệu fallback chuẩn phân tách đúng theo từng mục
+  const fallbackListings = isStudio
+    ? DEMO_STUDIO_RENT_LISTINGS
+    : isCanHo
+      ? DEMO_CAN_HO_RENT_LISTINGS
+      : isTro
+        ? DEMO_ROOM_RENT_LISTINGS
+        : isMatBang
+          ? DEMO_SPACE_RENT_LISTINGS
+          : ALL_DEMO_LISTINGS;
+
+  const currentCategoryGroup = searchParams.categoryGroup ?? (isCanHo ? 'thue_can_ho' : undefined);
+
   const { items, pagination } = await fetchListings({
     transactionType: 'rent',
-    categoryGroup: searchParams.categoryGroup,
+    categoryGroup: currentCategoryGroup,
     keyword: searchParams.keyword,
     locationSlug: searchParams.locationSlug,
     universitySlug: searchParams.universitySlug,
@@ -47,13 +73,15 @@ export default async function ThuePage({ searchParams }: Props) {
     areaMax: searchParams.areaMax,
     page: searchParams.page ?? '1',
   }).catch(() => ({
-    items: DEMO_RENT_LISTINGS,
-    pagination: { page: 1, pageSize: 20, total: DEMO_RENT_LISTINGS.length, totalPages: 1 },
+    items: fallbackListings,
+    pagination: { page: 1, pageSize: 20, total: fallbackListings.length, totalPages: 1 },
   }));
 
   const month = new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
-  const categoryLabel = searchParams.categoryGroup ? CATEGORY_NAMES[searchParams.categoryGroup] : null;
-  const pageTitle = categoryLabel ? `Cho thuê ${categoryLabel}` : 'Cho thuê BĐS';
+  const categoryLabel = searchParams.categoryGroup
+    ? (CATEGORY_NAMES[searchParams.categoryGroup] ?? 'Căn hộ')
+    : 'Căn hộ';
+  const pageTitle = `Cho thuê ${categoryLabel}`;
 
   const filterSummary = searchParams.keyword
     ? ` — "${searchParams.keyword}"`
@@ -68,29 +96,24 @@ export default async function ThuePage({ searchParams }: Props) {
         <nav className="mb-4 flex items-center gap-2 text-xs text-text-muted">
           <Link href="/" className="hover:text-brand transition-colors">Trang chủ</Link>
           <span>›</span>
-          {categoryLabel ? (
-            <>
-              <Link href="/thue" className="hover:text-brand transition-colors">BĐS cho thuê</Link>
-              <span>›</span>
-              <span className="text-text-secondary font-medium">{categoryLabel}</span>
-            </>
-          ) : (
-            <span className="text-text-secondary font-medium">Bất động sản cho thuê</span>
-          )}
+          <span className="text-text-secondary font-medium">Cho thuê {categoryLabel}</span>
         </nav>
 
         <h1 className="text-2xl font-bold text-text-primary md:text-3xl">
           {pageTitle}{filterSummary} mới nhất {month}
         </h1>
         <p className="mt-1 text-sm text-text-muted">
-          {pagination.total.toLocaleString('vi-VN')} tin cho thuê phù hợp
+          {pagination.total.toLocaleString('vi-VN')} tin cho thuê {categoryLabel.toLowerCase()} phù hợp
         </p>
 
         <div className="mt-5">
           <SearchFilterBar
             basePath="/thue"
-            propertyTypes={PROPERTY_TYPES_RENT}
-            initialParams={searchParams}
+            propertyTypes={propertyTypesForCategory}
+            initialParams={{
+              ...searchParams,
+              categoryGroup: currentCategoryGroup,
+            }}
           />
         </div>
 

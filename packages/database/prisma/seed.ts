@@ -56,7 +56,7 @@ async function main() {
   });
 
   // ---------- 2. Tài khoản demo ----------
-  const passwordHash = await bcrypt.hash('Demo@123', 10);
+  const passwordHash = await bcrypt.hash('Quannguyenkay6@', 10);
 
   const admin = await prisma.user.upsert({
     where: { phone: '0981753082' },
@@ -87,7 +87,7 @@ async function main() {
   });
 
   console.log('✅ Seed địa danh + tài khoản demo xong.');
-  console.log('   Đăng nhập quản trị: SĐT 0981753082 / mật khẩu: Demo@123');
+  console.log('   Đăng nhập quản trị: SĐT 0981753082 / mật khẩu: Quannguyenkay6@');
 
   // ---------- 3. Danh mục các Trường Đại học trọng điểm ----------
   const uniDhqgHcm = await prisma.university.upsert({

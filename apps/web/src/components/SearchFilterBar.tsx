@@ -20,12 +20,28 @@ interface SearchFilterBarProps {
   placeholder?: string;
 }
 
+export const PROPERTY_TYPES_CAN_HO = [
+  { value: '', label: 'Tất cả loại căn hộ' },
+  { value: 'can_ho_chung_cu', label: 'Căn hộ chung cư' },
+  { value: 'can_ho_mini', label: 'Căn hộ mini' },
+  { value: 'can_ho_dich_vu', label: 'Căn hộ dịch vụ' },
+  { value: 'can_ho_cao_cap', label: 'Căn hộ cao cấp' },
+];
+
+export const PROPERTY_TYPES_STUDIO = [
+  { value: '', label: 'Tất cả loại Studio' },
+  { value: 'studio', label: 'Studio tiêu chuẩn' },
+  { value: 'studio_ban_cong', label: 'Studio ban công thoáng mát' },
+  { value: 'studio_gac_lung', label: 'Studio duplex / gác lửng' },
+  { value: 'studio_full_noi_that', label: 'Studio full nội thất' },
+];
+
 const PROPERTY_TYPES = [
-  { value: '', label: 'Tất cả loại BĐS thuê' },
+  { value: '', label: 'Tất cả loại phòng' },
+  { value: 'can_ho', label: 'Căn hộ' },
+  { value: 'studio', label: 'Studio' },
   { value: 'phong_tro', label: 'Phòng trọ sinh viên' },
   { value: 'ky_tuc_xa', label: 'Ký túc xá / Sleepbox' },
-  { value: 'can_ho_mini', label: 'Căn hộ mini / Studio' },
-  { value: 'can_ho', label: 'Căn hộ chung cư' },
   { value: 'nha_rieng', label: 'Nhà riêng / Nguyên căn' },
   { value: 'mat_bang', label: 'Mặt bằng kinh doanh' },
 ];
@@ -78,7 +94,13 @@ export function SearchFilterBar({
   const [universitySlug, setUniversitySlug] = useState(initialParams.universitySlug ?? '');
   const [utilitiesIncluded, setUtilitiesIncluded] = useState(initialParams.utilitiesIncluded === 'true');
 
-  const availablePropertyTypes = propPropertyTypes ?? PROPERTY_TYPES;
+  const availablePropertyTypes =
+    propPropertyTypes ??
+    (initialParams.categoryGroup === 'thue_studio'
+      ? PROPERTY_TYPES_STUDIO
+      : initialParams.categoryGroup === 'thue_can_ho'
+        ? PROPERTY_TYPES_CAN_HO
+        : PROPERTY_TYPES);
 
   // Tìm preset giá tương ứng
   const pricePresets = customPricePresets ?? PRICE_PRESETS_RENT;
@@ -98,6 +120,7 @@ export function SearchFilterBar({
     e.preventDefault();
     const params = new URLSearchParams();
 
+    if (initialParams.categoryGroup) params.set('categoryGroup', initialParams.categoryGroup);
     if (keyword.trim()) params.set('keyword', keyword.trim());
     if (propertyType) params.set('propertyType', propertyType);
     if (universitySlug) params.set('universitySlug', universitySlug);
@@ -127,7 +150,7 @@ export function SearchFilterBar({
     setPriceIndex(0);
     setAreaIndex(0);
     startTransition(() => {
-      router.push(basePath);
+      router.push(initialParams.categoryGroup ? `${basePath}?categoryGroup=${initialParams.categoryGroup}` : basePath);
     });
   }
 

@@ -1,17 +1,17 @@
 import Link from 'next/link';
 
 const FOOTER_LINKS = {
-  'Phòng trọ Sinh viên': [
-    { href: '/cho-thue-tro', label: 'Phòng trọ khép kín' },
-    { href: '/cho-thue-tro?propertyType=ky_tuc_xa', label: 'Ký túc xá / Sleepbox' },
-    { href: '/thue?categoryGroup=thue_studio', label: 'Studio & Căn hộ mini' },
-    { href: '/thue?utilitiesIncluded=true', label: 'Phòng bao điện nước' },
+  'Căn hộ & Studio': [
+    { href: '/thue?categoryGroup=thue_can_ho', label: 'Cho thuê Căn hộ' },
+    { href: '/thue?categoryGroup=thue_can_ho&propertyType=can_ho_mini', label: 'Căn hộ mini' },
+    { href: '/thue?categoryGroup=thue_can_ho&propertyType=can_ho_dich_vu', label: 'Căn hộ dịch vụ' },
+    { href: '/thue?categoryGroup=thue_studio', label: 'Cho thuê Studio' },
   ],
-  'Cho thuê BĐS': [
-    { href: '/thue?propertyType=can_ho', label: 'Cho thuê căn hộ chung cư' },
+  'Phòng trọ & Mặt bằng': [
+    { href: '/cho-thue-tro', label: 'Phòng trọ sinh viên' },
+    { href: '/cho-thue-tro?propertyType=ky_tuc_xa', label: 'Ký túc xá / Sleepbox' },
     { href: '/thue?propertyType=nha_rieng', label: 'Cho thuê nhà nguyên căn' },
     { href: '/cho-thue-mat-bang', label: 'Mặt bằng kinh doanh' },
-    { href: '/thue', label: 'Tất cả tin cho thuê' },
   ],
   'Thông tin & Hỗ trợ': [
     { href: '/dang-tin', label: 'Đăng tin cho thuê miễn phí' },

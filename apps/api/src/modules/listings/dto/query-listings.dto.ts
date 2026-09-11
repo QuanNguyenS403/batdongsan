@@ -7,7 +7,7 @@ export class QueryListingsDto {
   @ApiPropertyOptional() @IsOptional() @IsString() transactionType?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyType?: string;
 
-  @ApiPropertyOptional({ description: 'Nhóm chuyên mục: thue_bds | thue_tro | thue_mat_bang | thue_studio' })
+  @ApiPropertyOptional({ description: 'Nhóm chuyên mục: thue_can_ho | thue_studio | thue_tro | thue_mat_bang' })
   @IsOptional()
   @IsString()
   categoryGroup?: string;

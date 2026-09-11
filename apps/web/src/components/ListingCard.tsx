@@ -2,12 +2,27 @@ import Link from 'next/link';
 import { Listing, formatPrice } from '@/lib/api';
 
 const PROPERTY_TYPE_LABEL: Record<string, string> = {
-  'can-ho': 'Căn hộ chung cư',
-  'can_ho': 'Căn hộ chung cư',
-  'can-ho-mini': 'Căn hộ mini / Studio',
-  'can_ho_mini': 'Căn hộ mini / Studio',
-  'nha-nguyen-can': 'Nhà riêng / Nhà phố',
-  'nha_rieng': 'Nhà riêng / Nhà phố',
+  'can-ho': 'Căn hộ',
+  'can_ho': 'Căn hộ',
+  'can-ho-chung-cu': 'Căn hộ chung cư',
+  'can_ho_chung_cu': 'Căn hộ chung cư',
+  'can-ho-mini': 'Căn hộ mini',
+  'can_ho_mini': 'Căn hộ mini',
+  'can-ho-dich-vu': 'Căn hộ dịch vụ',
+  'can_ho_dich_vu': 'Căn hộ dịch vụ',
+  'can-ho-cao-cap': 'Căn hộ cao cấp',
+  'can_ho_cao_cap': 'Căn hộ cao cấp',
+  'studio': 'Studio',
+  'can-ho-studio': 'Căn hộ Studio',
+  'can_ho_studio': 'Căn hộ Studio',
+  'studio-ban-cong': 'Studio ban công',
+  'studio_ban_cong': 'Studio ban công',
+  'studio-gac-lung': 'Studio gác lửng',
+  'studio_gac_lung': 'Studio gác lửng',
+  'studio-full-noi-that': 'Studio full nội thất',
+  'studio_full_noi_that': 'Studio full nội thất',
+  'nha-nguyen-can': 'Nhà nguyên căn',
+  'nha_rieng': 'Nhà nguyên căn',
   'nha-tro': 'Nhà trọ',
   'nha_tro': 'Nhà trọ',
   'phong-tro': 'Phòng trọ',
@@ -18,7 +33,6 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   'ky-tuc-xa': 'Ký túc xá',
   'ky_tuc_xa': 'Ký túc xá / Sleepbox',
   'ky-tuc-xa-tu-nhan': 'Ký túc xá tư nhân',
-  'studio': 'Studio cao cấp',
   'van-phong': 'Văn phòng cho thuê',
   'van_phong': 'Văn phòng cho thuê',
   'kho-xuong': 'Kho xưởng cho thuê',
@@ -83,19 +97,9 @@ export function ListingCard({ listing }: { listing: Listing }) {
             </span>
           </div>
 
-          {/* Badge minh bạch tiện ích/điện nước */}
+          {/* Badge giao dịch */}
           <div className="absolute right-3 top-3">
-            {listing.utilitiesIncluded ? (
-              <span className="rounded-full bg-emerald-600/90 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
-                ⚡ Bao điện nước
-              </span>
-            ) : listing.electricityPricePerKwh ? (
-              <span className="rounded-full bg-slate-900/80 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
-                ⚡ {Number(listing.electricityPricePerKwh).toLocaleString('vi-VN')}đ/kWh
-              </span>
-            ) : (
-              <span className="transaction-badge-rent">Cho thuê</span>
-            )}
+            <span className="transaction-badge-rent">Cho thuê</span>
           </div>
 
           {/* Số lượng ảnh */}
