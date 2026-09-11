@@ -34,19 +34,22 @@ export class CreateListingDto {
   @ApiProperty({ example: 3500000, description: 'Giá thuê hàng tháng (VNĐ/tháng)' })
   @IsNotEmpty()
   @IsNumber()
-  @Min(0)
+  @Min(100000, { message: 'Giá thuê phải từ 100.000 đ/tháng trở lên.' })
+  @Max(10000000000, { message: 'Giá thuê không được vượt quá 10 tỷ đ/tháng.' })
   price!: number;
 
   @ApiPropertyOptional({ example: 3500000, description: 'Tiền cọc yêu cầu (VNĐ)' })
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0, { message: 'Tiền cọc không được là số âm.' })
+  @Max(10000000000, { message: 'Tiền cọc không được vượt quá 10 tỷ đ.' })
   depositAmount?: number;
 
   @ApiPropertyOptional({ example: 6, description: 'Thời hạn hợp đồng tối thiểu (tháng)' })
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @Min(1, { message: 'Hợp đồng tối thiểu 1 tháng.' })
+  @Max(120, { message: 'Thời hạn hợp đồng tối đa 120 tháng.' })
   minLeaseMonths?: number;
 
   @ApiPropertyOptional({ example: false, description: 'Giá thuê đã bao gồm điện nước chưa' })
@@ -57,19 +60,22 @@ export class CreateListingDto {
   @ApiPropertyOptional({ example: 3500, description: 'Đơn giá điện (đ/kWh)' })
   @IsOptional()
   @IsInt()
-  @Min(0)
+  @Min(0, { message: 'Đơn giá điện không được là số âm.' })
+  @Max(100000, { message: 'Đơn giá điện tối đa 100.000 đ/kWh.' })
   electricityPricePerKwh?: number;
 
   @ApiPropertyOptional({ example: 18000, description: 'Đơn giá nước (đ/m3)' })
   @IsOptional()
   @IsInt()
-  @Min(0)
+  @Min(0, { message: 'Đơn giá nước không được là số âm.' })
+  @Max(500000, { message: 'Đơn giá nước tối đa 500.000 đ/m³.' })
   waterPricePerM3?: number;
 
   @ApiPropertyOptional({ example: 100000, description: 'Giá nước khoán theo đầu người hoặc theo tháng (đ)' })
   @IsOptional()
   @IsInt()
-  @Min(0)
+  @Min(0, { message: 'Giá nước khoán không được là số âm.' })
+  @Max(5000000, { message: 'Giá nước khoán tối đa 5.000.000 đ/tháng.' })
   waterPriceFlat?: number;
 
   @ApiPropertyOptional({ description: 'Tiện ích có sẵn dạng JSON object (wifi, airConditioner, mezzanine...)' })
@@ -99,7 +105,8 @@ export class CreateListingDto {
 
   @ApiProperty({ example: 25 })
   @IsNumber()
-  @Min(0)
+  @Min(1, { message: 'Diện tích phòng tối thiểu 1 m².' })
+  @Max(50000, { message: 'Diện tích tối đa 50.000 m².' })
   areaM2!: number;
 
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Max(50) bedrooms?: number;

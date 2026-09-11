@@ -28,6 +28,12 @@ export class AdminController {
     return this.adminService.getDashboard();
   }
 
+  @ApiOperation({ summary: 'Kích hoạt quét dọn tin quá hạn và OTP thủ công' })
+  @Post('tasks/run-sweep')
+  runSweep() {
+    return this.adminService.runSweep();
+  }
+
   @ApiOperation({ summary: 'Danh sách tin đăng chờ duyệt' })
   @Get('listings/pending')
   getPendingListings(@Query() query: QueryAdminListingsDto) {

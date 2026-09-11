@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { authFetch } from '@/lib/auth-client';
 
+interface ServiceDrivers {
+  email: { isMock: boolean; driver: string };
+  googleSheets: { isMock: boolean; driver: string };
+}
+
 interface Stats {
   pendingListingsCount: number;
   newReportsCount: number;
@@ -65,9 +70,11 @@ const REASON_LABELS: Record<string, string> = {
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [serviceDrivers, setServiceDrivers] = useState<ServiceDrivers | null>(null);
   const [recentListings, setRecentListings] = useState<RecentPendingListing[]>([]);
   const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sweeping, setSweeping] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,6 +88,7 @@ export default function AdminDashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setStats(data.stats);
+        setServiceDrivers(data.serviceDrivers ?? null);
         setRecentListings(data.recentPendingListings ?? []);
         setRecentReports(data.recentReports ?? []);
       }
@@ -105,6 +113,25 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function handleRunSweep() {
+    setSweeping(true);
+    try {
+      const res = await authFetch('/admin/tasks/run-sweep', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setActionMessage(data.message ?? 'Đã hoàn tất quét dọn hệ thống.');
+        setTimeout(() => setActionMessage(null), 6000);
+        loadDashboard();
+      } else {
+        alert('Không thể thực hiện quét dọn.');
+      }
+    } catch {
+      alert('Lỗi kết nối máy chủ khi quét dọn.');
+    } finally {
+      setSweeping(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -120,7 +147,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Tiêu đề trang */}
+      {/* Tiêu đề trang & Các nút hành động */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tổng quan Hệ thống</h1>
@@ -128,16 +155,49 @@ export default function AdminDashboardPage() {
             Theo dõi tình trạng tin đăng, báo cáo vi phạm và số lượng người dùng theo thời gian thực.
           </p>
         </div>
-        <button
-          onClick={loadDashboard}
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-slate-900 shadow-sm transition-colors self-start"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Làm mới số liệu
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={handleRunSweep}
+            disabled={sweeping}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-colors disabled:opacity-50"
+            title="Quét dọn các tin quá hạn 30 ngày và thu hồi bộ nhớ OTP"
+          >
+            <span>🧹</span>
+            <span>{sweeping ? 'Đang quét...' : 'Quét dọn tin quá hạn & OTP'}</span>
+          </button>
+          <button
+            onClick={loadDashboard}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-slate-900 shadow-sm transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Làm mới số liệu
+          </button>
+        </div>
       </div>
+
+      {/* Cảnh báo chế độ tích hợp (MOCK / LIVE) */}
+      {(serviceDrivers?.email?.isMock || serviceDrivers?.googleSheets?.isMock) && (
+        <div className="p-4 bg-amber-50/90 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <p className="font-bold text-amber-950 text-sm">
+                Thông báo Vận hành: Dịch vụ thông báo & đồng bộ đang chạy ở chế độ MOCK (Thử nghiệm)
+              </p>
+              <p className="mt-0.5 text-amber-800 leading-relaxed">
+                {serviceDrivers?.email?.isMock && '• Email SMTP đang MOCK (các thông báo duyệt tin, từ chối tin và cảnh báo hết hạn chỉ in ra console máy chủ, chưa gửi email thật). '}
+                {serviceDrivers?.googleSheets?.isMock && '• Google Sheets API đang MOCK (dữ liệu tin chờ duyệt và báo cáo chỉ log ra console, chưa đồng bộ vào Google Drive). '}
+                Để kích hoạt gửi thật, vui lòng cấu hình <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">SMTP_HOST/USER/PASS</code> và <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">GOOGLE_SHEETS_CREDENTIALS_JSON</code> trong file <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">.env</code>.
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 font-bold px-2.5 py-1 bg-amber-200/70 text-amber-900 rounded-lg text-[11px] uppercase tracking-wider">
+            Mock Mode
+          </span>
+        </div>
+      )}
 
       {actionMessage && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm font-medium flex items-center gap-2">

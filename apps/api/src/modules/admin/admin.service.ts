@@ -5,6 +5,8 @@ import { QueryAdminListingsDto } from './dto/query-admin-listings.dto';
 import { QueryAdminReportsDto } from './dto/query-admin-reports.dto';
 import { QueryAdminUsersDto } from './dto/query-admin-users.dto';
 import { EmailService } from '../email/email.service';
+import { GoogleSheetsService } from '../google-sheets/google-sheets.service';
+import { TasksService } from '../tasks/tasks.service';
 
 function serialize<T extends Record<string, any>>(obj: T): any {
   return JSON.parse(
@@ -17,6 +19,8 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly googleSheetsService: GoogleSheetsService,
+    private readonly tasksService: TasksService,
   ) {}
 
   /** Thống kê số liệu trang Dashboard quản trị */
@@ -75,8 +79,27 @@ export class AdminService {
         activeListingsCount,
         totalUsersCount,
       },
+      serviceDrivers: {
+        email: {
+          isMock: this.emailService.isMock,
+          driver: this.emailService.isMock ? 'mock' : 'live',
+        },
+        googleSheets: {
+          isMock: this.googleSheetsService.isMock,
+          driver: this.googleSheetsService.isMock ? 'mock' : 'live',
+        },
+      },
       recentPendingListings: recentPendingListings.map(serialize),
       recentReports: recentReports.map(serialize),
+    };
+  }
+
+  /** Kích hoạt quét dọn tin quá hạn và dọn OTP theo yêu cầu */
+  async runSweep() {
+    const result = await this.tasksService.runPeriodicTasks();
+    return {
+      message: `Quét dọn hoàn tất: Đã chuyển ${result.expiredCount} tin sang hết hạn và giải phóng ${result.cleanedOtpCount} mã OTP.`,
+      ...result,
     };
   }
 

@@ -2,6 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } fro
 import { ListingStatus } from '@batdongsan/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OtpService } from '../auth/otp.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class TasksService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -13,6 +14,7 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
   constructor(
     private readonly prisma: PrismaService,
     private readonly otpService: OtpService,
+    private readonly emailService: EmailService,
   ) {}
 
   onApplicationBootstrap() {
@@ -39,27 +41,50 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
   /**
    * Thực thi chuỗi tác vụ định kỳ
    */
-  async runPeriodicTasks() {
+  async runPeriodicTasks(): Promise<{ expiredCount: number; cleanedOtpCount: number }> {
     try {
-      await this.expirePastDueListings();
-      this.sweepExpiredOtps();
+      const expiredCount = await this.expirePastDueListings();
+      const cleanedOtpCount = this.sweepExpiredOtps();
+      return { expiredCount, cleanedOtpCount };
     } catch (err) {
       this.logger.error('Lỗi khi thực thi tác vụ nền định kỳ:', (err as Error).stack);
+      return { expiredCount: 0, cleanedOtpCount: 0 };
     }
   }
 
   /**
-   * Quét và tự động chuyển trạng thái tin đăng hết hạn (expiresAt < now) sang 'expired'
+   * Quét và tự động chuyển trạng thái tin đăng hết hạn (expiresAt < now) sang 'expired',
+   * đồng thời gửi email thông báo cho chủ trọ.
    */
   async expirePastDueListings(): Promise<number> {
     const now = new Date();
-    const result = await this.prisma.listing.updateMany({
+    
+    // Tìm các tin cần chuyển trạng thái kèm thông tin liên hệ chủ nhà
+    const expiredCandidates = await this.prisma.listing.findMany({
       where: {
         status: ListingStatus.active,
         expiresAt: {
           not: null,
           lt: now,
         },
+      },
+      select: {
+        id: true,
+        title: true,
+        owner: { select: { phone: true } },
+      },
+      take: 100, // giới hạn mỗi batch
+    });
+
+    if (expiredCandidates.length === 0) {
+      return 0;
+    }
+
+    const candidateIds = expiredCandidates.map((c) => c.id);
+    const result = await this.prisma.listing.updateMany({
+      where: {
+        id: { in: candidateIds },
+        status: ListingStatus.active,
       },
       data: {
         status: ListingStatus.expired,
@@ -70,6 +95,15 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
       this.logger.log(
         `[Tin hết hạn] Đã tự động chuyển ${result.count} tin đăng quá hạn sang trạng thái '${ListingStatus.expired}'.`,
       );
+
+      // Gửi thông báo an toàn cho chủ trọ
+      for (const item of expiredCandidates) {
+        try {
+          void this.emailService.sendListingExpiredToLandlord(item, item.owner.phone);
+        } catch {
+          // safe-fail
+        }
+      }
     }
     return result.count;
   }
@@ -85,3 +119,4 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
     return count;
   }
 }
+

@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { AuthModule } from '../auth/auth.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, EmailModule],
   providers: [TasksService],
   exports: [TasksService],
 })

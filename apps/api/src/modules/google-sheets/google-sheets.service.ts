@@ -7,7 +7,7 @@ export class GoogleSheetsService {
   private readonly logger = new Logger(GoogleSheetsService.name);
   private sheets: any = null;
   private spreadsheetId: string | null = null;
-  private isMock = true;
+  public isMock = true;
 
   constructor(private readonly config?: ConfigService) {
     this.initGoogleSheets();

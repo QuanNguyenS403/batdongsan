@@ -11,7 +11,7 @@ export interface EmailRecipient {
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter | null = null;
-  private isMock = true;
+  public isMock = true;
 
   constructor(private readonly config?: ConfigService) {
     this.initTransporter();
@@ -194,5 +194,26 @@ Content: ${textSummary}
     `;
 
     return this.sendEmail(adminEmail, subject, html, summary);
+  }
+
+  /**
+   * (e) Thông báo cho Chủ trọ/Môi giới: Tin đăng đã hết hạn hiển thị (30 ngày)
+   */
+  async sendListingExpiredToLandlord(listing: { id: bigint | string; title: string }, landlordPhone: string, landlordEmail?: string) {
+    const targetEmail = landlordEmail || `chutro-${landlordPhone}@batdongsan.vn`;
+    const subject = `[BĐS Cho Thuê] Tin đăng #${listing.id} đã hết hạn hiển thị`;
+    const summary = `Tin đăng "${listing.title}" (Mã BĐS: #${listing.id}) của bạn đã hết hạn 30 ngày hiển thị. Nếu phòng vẫn còn trống hoặc tiếp tục cho thuê, bạn có thể gia hạn bất kỳ lúc nào tại mục Quản lý tin.`;
+    const html = `
+      <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #475569;">⏰ Tin đăng của bạn đã hết hạn hiển thị</h2>
+        <p>Xin chào <strong>${landlordPhone}</strong>,</p>
+        <p>Tin cho thuê <strong>"${listing.title}"</strong> (Mã: #${listing.id}) của bạn đã hoàn thành chu kỳ hiển thị 30 ngày.</p>
+        <p>Nếu phòng vẫn còn trống và bạn muốn tiếp tục tìm khách thuê, vui lòng đăng nhập vào trang Quản lý tin để gia hạn lại tin đăng.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #888;">BĐS Cho Thuê — Nền tảng kết nối trực tiếp chủ nhà và người thuê.</p>
+      </div>
+    `;
+
+    return this.sendEmail(targetEmail, subject, html, summary);
   }
 }

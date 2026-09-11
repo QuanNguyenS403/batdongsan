@@ -613,27 +613,30 @@ project-root/
 
 ---
 
-## 16. Checklist đối chiếu tính năng với Mogi.vn
+## 16. Checklist Tiêu chuẩn Nền tảng Trung gian Chuyên biệt Cho thuê
 
-- [x] Tìm kiếm/lọc theo khu vực (tỉnh → quận/huyện → phường) + loại hình + giao dịch (mua/thuê) — *đã có SearchFilterBar trên /mua-ban và /thue*
-- [x] Trang chi tiết tin với gallery ảnh, thông tin chính, mô tả, thông tin người đăng
-- [x] Ẩn số điện thoại, yêu cầu đăng nhập để xem/liên hệ (content gating) — *đã có PhoneRevealLog + chống spam số liệu*
-- [x] Đăng ký/đăng nhập bằng SĐT + OTP, quên mật khẩu (Google OAuth theo lộ trình giai đoạn sau)
-- [x] Đăng tin, quản lý tin (gỡ tin/xoá, theo dõi trạng thái, upload nhiều ảnh thật)
-- [x] Lưu tin yêu thích (SavedListing, nút Lưu tin trang chi tiết, dashboard BĐS đã lưu thật)
-- [ ] Module Dự án bất động sản (liên kết tới các tin thuộc dự án) — *đang ở dạng trang chờ trung thực*
-- [ ] Module Môi giới/danh bạ (hồ sơ, xác thực, danh sách tin đang đăng) — *đang ở dạng trang chờ trung thực*
-- [ ] Trang giá nhà đất theo khu vực (bảng + biểu đồ lịch sử) — *đang ở dạng trang chờ trung thực*
-- [ ] Gói thành viên trả phí + dịch vụ đẩy tin/VIP
-- [ ] Blog/tin tức bất động sản (CMS tách biệt)
-- [x] Report vi phạm tin đăng (ReportListingModal gửi báo cáo thật tới backend)
-- [x] Công cụ ước tính chi phí dọn vào tháng đầu (MoveInCostEstimator trên trang chi tiết)
-- [x] SEO: meta động, sitemap, breadcrumb, robots.ts trên toàn bộ 26+ routes
-- [x] Đa kênh liên hệ (Hotline/Zalo 0981 753 082, email, trang /lien-he)
-- [x] Trang Admin quản trị UI thuần 100% tiếng Việt (/admin, /admin/tin-cho-duyet, /admin/bao-cao-vi-pham, /admin/nguoi-dung)
-- [x] Trang Pháp lý & Độ tin cậy (/dieu-khoan, /chinh-sach, /gioi-thieu, /lien-he)
-- [x] Tác vụ nền định kỳ tự động chuyển tin hết hạn & dọn OTP (TasksService)
-- [x] Ghi log lỗi có cấu trúc (Structured Logging với NestJS Logger trong HttpExceptionFilter)
+Checklist này cập nhật theo định vị mới sau Pivot (05/09/2026): Nền tảng trung gian chuyên biệt 100% cho thuê (Phòng trọ sinh viên, Nhà nguyên căn, Căn hộ chung cư, Studio, Mặt bằng kinh doanh).
+
+- [x] **Tìm kiếm & Lọc chuyên biệt Cho thuê**: Lọc theo 3 cấp hành chính (tỉnh/thành → quận/huyện → phường/xã), chuyên mục (Phòng trọ SV, Studio, Mặt bằng, Căn hộ), khoảng giá thuê/tháng, diện tích và tiện ích phòng (`SearchFilterBar`).
+- [x] **Tìm phòng gần trường Đại học**: Khối shortcut trường ĐH trọng điểm trên Trang chủ, lọc theo trường ĐH và hiển thị khoảng cách km / thời gian di chuyển trên trang chi tiết (`ListingUniversity`).
+- [x] **Minh bạch Chi phí Dịch vụ & Điện nước**: Hiển thị rõ ràng đơn giá điện (đ/kWh), nước (đ/m³ hoặc khoán/người), tiền cọc, thời hạn hợp đồng tối thiểu và nhãn "Bao điện nước" (`utilitiesIncluded`).
+- [x] **Công cụ Ước tính Chi phí Dọn vào (`MoveInCostEstimator`)**: Tự động tính tổng ngân sách tháng đầu (tiền thuê + cọc + điện nước dự kiến) ngay trên trang chi tiết tin, trực quan, đáng tin cậy.
+- [x] **Cổng liên hệ trực tiếp Chủ trọ ↔ Người thuê**: Ẩn số điện thoại sau nút "Hiện số điện thoại" yêu cầu đăng nhập, liên kết nhanh gọi điện và chat Zalo trực tiếp, ghi nhận lượt xem qua `PhoneRevealLog` chống spam.
+- [x] **Xác thực & Quản lý Tài khoản**: Đăng nhập/Đăng ký bằng SĐT + OTP bảo mật qua SMS, đổi mật khẩu qua OTP, quản lý danh sách tin đăng cá nhân và BĐS đã lưu.
+- [x] **Form Đăng tin chuẩn Cho thuê**: Đầy đủ các trường tiện ích (wifi, máy lạnh, gác lửng, giờ tự do...), biểu phí dịch vụ, upload nhiều ảnh với thumbnail preview và nút xoá ảnh trực tiếp.
+- [x] **Cơ chế Kiểm soát & Báo cáo Vi phạm**: Modal gửi báo cáo vi phạm với các lý do chuẩn tiếng Việt (`tin_gia`, `sai_thong_tin`, `da_ban_cho_thue`...), lưu trữ và thông báo ngay tới Admin.
+- [x] **Trung tâm Quản trị Admin chuyên dụng (`/admin`)**:
+  - Dashboard thống kê thời gian thực: tin chờ duyệt, báo cáo mới, tin đang công khai, tổng tài khoản.
+  - Cảnh báo trạng thái Driver tích hợp (MOCK / LIVE) cho Email SMTP và Google Sheets API.
+  - Quản lý & kiểm duyệt tin cho thuê: xem đầy đủ biểu phí điện nước, cọc, tiện ích, trường ĐH lân cận; duyệt hoặc từ chối tin kèm lý do.
+  - Xử lý báo cáo vi phạm: gỡ tin hoặc bỏ qua báo cáo.
+  - Quản lý người dùng: khoá hoặc mở khoá tài khoản vi phạm.
+  - Nút kích hoạt tác vụ quét dọn tin quá hạn và OTP thủ công.
+- [x] **Tác vụ Nền Định kỳ (Background Scheduler)**: `TasksService` tự động chạy quét mỗi 10 phút, chuyển tin quá 30 ngày sang trạng thái `expired`, gửi email cảnh báo cho chủ trọ và giải phóng OTP hết hạn.
+- [x] **SEO & Tối ưu Trải nghiệm (Web Performance)**: Meta tags động, sitemap.xml, robots.txt, breadcrumbs, top progress bar, thiết kế PropTech Teal đạt chuẩn tương phản WCAG AA (4.62:1).
+- [x] **Trang Thông tin, Pháp lý & Tín nhiệm**: Đầy đủ 4 trang tĩnh chuẩn mực: `/gioi-thieu`, `/lien-he` (kèm Hotline/Zalo 0981 753 082), `/dieu-khoan` dịch vụ và `/chinh-sach` bảo mật.
+- [ ] *Lộ trình Giai đoạn 2*: Tích hợp SMS OTP provider thật (eSMS/SpeedSMS), kết nối SMTP server thật và Google Sheets Service Account production.
+- [ ] *Lộ trình Giai đoạn 3*: Module Căn hộ mini/Dự án toà nhà cho thuê (`/du-an`), Bảng giá thuê theo khu vực (`/gia-nha-dat`), Danh bạ Chủ trọ xác thực (`/moi-gioi`).
 
 ---
 

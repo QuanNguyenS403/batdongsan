@@ -68,6 +68,28 @@
    - Backend `http://localhost:4000/docs`: Phản hồi `HTTP/1.1 200 OK`.
    - Tất cả các cổng đã được giải phóng sạch sẽ sẵn sàng cho phiên làm việc của người dùng.
 
-1. Chủ dự án review nhánh `audit/dual-review-completion-2026-09-06` và thực hiện merge vào `main`.
-2. Khi có dữ liệu tin đăng thật từ đối tác/cào dữ liệu, nạp vào database và tiến hành thử nghiệm chịu tải tìm kiếm.
-3. Tích hợp SMS OTP provider thật (e.g. eSMS, SpeedSMS) và SMTP credentials thật khi đi vào vận hành thực tế.
+**Việc vừa hoàn thành (11/09/2026 — ĐÁNH GIÁ KÉP & HOÀN THIỆN NỀN TẢNG CHO THUÊ HẬU PIVOT):**
+1. **Đánh giá kép 2 vai trò**:
+   - Vai trò 1 (Khách thuê): Kiểm chứng luồng cho thuê, xác nhận route `/mua-ban` đã chuyển hướng 308 sạch sẽ; tái thiết kế 3 route placeholder `/du-an`, `/gia-nha-dat`, `/moi-gioi` chuẩn 100% cho thuê.
+   - Vai trò 2 (Kỹ sư phần mềm): Audit bảo mật DTO, phát hiện thiếu migration CSDL sau pivot, phát hiện Admin thiếu chỉ báo Driver MOCK, kiểm thử build 26/26 routes sạch lỗi.
+2. **Khắc phục triệt để các lỗi phát hiện (#61 – #66)**:
+   - **#61 (Trung bình)**: Tái định vị 3 route `/du-an` (Khu trọ/căn hộ mini), `/gia-nha-dat` (Bảng giá thuê), `/moi-gioi` (Danh bạ chủ trọ) và bổ sung 4 trang tĩnh vào `sitemap.ts`.
+   - **#62 (Quan trọng)**: Bổ sung `serviceDrivers` vào API `/admin/dashboard` và hiển thị Banner cảnh báo chế độ MOCK (Email/Sheets) trên Admin Dashboard.
+   - **#63 (Nghiêm trọng)**: Ràng buộc chặt chẽ DTO backend: chặn giá thuê 0đ, diện tích 0m², đặt trần giá an toàn cho điện, nước, cọc, thời hạn hợp đồng.
+   - **#64 (Nghiêm trọng)**: Tạo file migration DDL `20260905000000_pivot_rental_specialization` cho bảng `universities`, `listing_universities` và các trường cho thuê trên `listings`.
+   - **#65 (Nhỏ)**: Cập nhật toàn diện mục 16 trong `README.md` theo bộ tiêu chuẩn nền tảng trung gian cho thuê chuyên biệt.
+   - **#66 (Trung bình)**: Thêm API `POST /admin/tasks/run-sweep` và nút bấm quét dọn tin quá hạn & OTP tức thì trên Admin Dashboard.
+3. **Xác minh chất lượng & Build**:
+   - Backend Typecheck (`tsc --noEmit`): 0 lỗi.
+   - Frontend Next.js Build (`next build`): 26/26 routes biên dịch hoàn hảo (exit code 0).
+4. **Tài liệu & Lưu vết**:
+   - Tạo báo cáo chi tiết `AUDIT-GEMINI-2026-09-11.md`.
+   - Cập nhật checklist mục 16 trong `README.md`.
+   - Cập nhật `memory-bank/progress.md` và `memory-bank/activeContext.md`.
+   - Toàn bộ thay đổi lưu trên nhánh riêng: `audit/rental-pivot-verification-2026-09-11`.
+
+## Các bước tiếp theo đề xuất:
+1. Chủ dự án review nhánh `audit/rental-pivot-verification-2026-09-11` và thực hiện merge vào `main`.
+2. Chạy `pnpm db:migrate` trên server production để áp dụng migration pivot mới.
+3. Khi triển khai thực tế, cấu hình SMTP_HOST và Google Sheets credentials trong file `.env` để chuyển từ MOCK sang LIVE.
+
