@@ -27,7 +27,6 @@ export function ContactBrokerModal({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (!isOpen) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -122,8 +121,9 @@ export function ContactBrokerModal({
     onClose();
   }
 
-  // Hỗ trợ phím Escape để đóng modal trợ năng (FE-11)
+  // Hỗ trợ phím Escape để đóng modal trợ năng (FE-11, FE-N01)
   useEffect(() => {
+    if (!isOpen) return;
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         handleCloseModal();
@@ -131,7 +131,9 @@ export function ContactBrokerModal({
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <div
