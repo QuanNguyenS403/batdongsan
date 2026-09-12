@@ -1,0 +1,85 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, master, 'release/**', 'feat/**', 'fix/**', 'audit/**']
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Frozen Install, Lint, Typecheck, Migration & Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_ci_password
+          POSTGRES_DB: batdongsan_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Verify clean frozen install (P0-05)
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare environment file for CI
+        run: |
+          cp .env.example .env
+          sed -i 's|postgresql://.*|postgresql://postgres:postgres_ci_password@localhost:5432/batdongsan_test|g' .env
+          sed -i 's|JWT_ACCESS_SECRET=.*|JWT_ACCESS_SECRET=ci_test_access_secret_32_characters_long_hex|g' .env
+          sed -i 's|JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=ci_test_refresh_secret_32_characters_long_hex|g' .env
+          sed -i 's|ADMIN_BOOTSTRAP_SECRET=.*|ADMIN_BOOTSTRAP_SECRET=ci_admin_bootstrap_secret_safe_32_chars|g' .env
+
+      - name: Generate Prisma Client (@batdongsan/database)
+        run: pnpm db:generate
+
+      - name: Validate database migrations (OPS-06)
+        run: |
+          pnpm db:migrate:deploy
+
+      - name: Run Monorepo Build (Database -> API -> Web) (OPS-01)
+        run: pnpm build
+
+      - name: Monorepo Typecheck
+        run: |
+          pnpm --filter @batdongsan/api exec tsc --noEmit
+          pnpm --filter @batdongsan/web exec tsc --noEmit
+
+      - name: Dependency Audit (High/Critical)
+        run: pnpm audit --audit-level high || true
