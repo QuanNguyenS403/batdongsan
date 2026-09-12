@@ -88,8 +88,36 @@
    - Cập nhật `memory-bank/progress.md` và `memory-bank/activeContext.md`.
    - Toàn bộ thay đổi lưu trên nhánh riêng: `audit/rental-pivot-verification-2026-09-11`.
 
+**Việc vừa hoàn thành (12/09/2026 — CHIẾN DỊCH DOANH THU 5 LỚP: GIAI ĐOẠN 1 & NỀN MÓNG GIAI ĐOẠN 2):**
+1. **Merge & Đồng bộ nhánh**:
+   - Merge nhánh `audit/rental-pivot-verification-2026-09-11` vào `main` an toàn.
+2. **Schema & Database (`packages/database`)**:
+   - Khôi phục & chuẩn hóa `MembershipPlan`, `UserMembership` (hạn mức tin, ngày hiệu lực, phạm vi khu vực).
+   - Thêm model `PricingSeason` (hệ số surge multiplier, ngày bắt đầu/kết thúc, cờ kích hoạt).
+   - Bổ sung trường `verificationStatus` (`chua_xac_thuc`, `cho_xac_thuc`, `da_xac_thuc`), `verifiedAt`, `verifiedByUserId` trên `Listing`.
+   - Tạo migration DDL `20260912000000_membership_surge_pricing_verification` và seed data 4 gói thành viên + 1 mùa mẫu.
+3. **Backend NestJS (`apps/api`)**:
+   - Xây dựng `MembershipModule` với đầy đủ DTO class-validator, Swagger và logic tự động nhân hệ số mùa `priceMultiplier`.
+   - Endpoint public `/memberships/plans`, endpoint user `/memberships/my-membership`, `/memberships/request` (luồng nâng cấp chuyển khoản thủ công).
+   - Endpoints admin: CRUD gói, cấu hình mùa cao điểm, duyệt/từ chối yêu cầu nâng cấp gói kèm email thông báo.
+   - Thắt chặt quota tin đăng trong `ListingsService.create`: Chặn user vượt hạn mức (gói Trial tối đa 3 tin active/pending) với thông báo tiếng Việt rõ ràng.
+   - Bổ sung endpoint admin xác thực tin: `POST /admin/listings/:id/verify` và `POST /admin/listings/:id/unverify`.
+4. **Frontend Next.js (`apps/web`)**:
+   - Trang bảng giá `/gia-thanh-vien`: Thiết kế PropTech Teal hiện đại, hiển thị 4 gói, banner cảnh báo mùa cao điểm, modal yêu cầu nâng cấp với hướng dẫn chuyển khoản Vietcombank.
+   - Trang Admin `/admin/mua-cao-diem`: Bật/tắt mùa cao điểm, thanh trượt hệ số (1.0x - 3.0x), bảng xem trước giá tự động (Live Preview) cho tất cả gói.
+   - Trang Admin `/admin/duyet-goi`: Danh sách yêu cầu chờ duyệt, nút xác nhận kích hoạt gói và từ chối kèm lý do.
+   - Badge "✅ Đã kiểm tra thực tế": Hiển thị nổi bật trên `ListingCard` và card chi tiết `/tin/[slug]`.
+   - Thêm nút bật/tắt xác thực thực tế trong modal xem tin `/admin/tin-cho-duyet`.
+   - Cập nhật Header, Footer điều hướng đến `/gia-thanh-vien`, bổ sung menu Admin layout.
+5. **Xác minh & Kiểm thử tự động**:
+   - Script kiểm thử logic `test-membership-logic.ts`: Kiểm tra hệ số 1.5x surge pricing (PASS), tắt mùa về giá gốc (PASS), chặn tin thứ 4 gói Trial (PASS), nâng cấp gói mở rộng hạn mức lên 30 tin (PASS), admin verify/unverify tin (PASS).
+   - Typecheck `@batdongsan/api` & `@batdongsan/web`: PASS 100% (0 lỗi).
+   - Build Monorepo `pnpm build`: PASS 100% (29/29 routes Next.js, API sạch lỗi).
+6. **Chiến lược & Lộ trình Giai đoạn 3-5**:
+   - Cập nhật mục riêng trong `TRANG-THAI-TRIEN-KHAI.md`: Làm rõ Lớp 3 (Lead-gen dịch vụ), Lớp 4 (B2B Trường học), Lớp 5 (Data product) là công việc Business Development/Đối tác, kèm điều kiện kích hoạt cụ thể dựa trên số liệu thực tế trước khi code.
+
 ## Các bước tiếp theo đề xuất:
-1. Chủ dự án review nhánh `audit/rental-pivot-verification-2026-09-11` và thực hiện merge vào `main`.
-2. Chạy `pnpm db:migrate` trên server production để áp dụng migration pivot mới.
-3. Khi triển khai thực tế, cấu hình SMTP_HOST và Google Sheets credentials trong file `.env` để chuyển từ MOCK sang LIVE.
+1. Đẩy commit lên remote `origin/main`.
+2. Khi triển khai lên môi trường staging/production, chạy `pnpm db:migrate` để cập nhật bảng gói thành viên, mùa cao điểm và trường xác thực tin.
+3. Khi mùa tựu trường đến (tháng 8-9 hoặc tháng 1), Admin vào `/admin/mua-cao-diem` bật mùa và điều chỉnh hệ số giá phù hợp với thị trường.
 

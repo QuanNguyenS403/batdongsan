@@ -32,6 +32,8 @@ export interface Listing {
   legalStatus: string | null;
   addressDetail: string | null;
   status: string;
+  verificationStatus?: 'chua_xac_thuc' | 'cho_xac_thuc' | 'da_xac_thuc';
+  verifiedAt?: string | null;
   publishedAt: string | null;
   viewCount: number;
   images: { imageUrl: string; sortOrder: number }[];
@@ -104,3 +106,56 @@ export function formatPrice(price: string | number): string {
   if (value >= 1_000_000) return `${Math.round(value / 1_000_000)} triệu`;
   return `${value.toLocaleString('vi-VN')} đ`;
 }
+
+export interface MembershipPlanItem {
+  id: number;
+  name: string;
+  code: string;
+  description: string | null;
+  originalPrice: number;
+  currentPrice: number;
+  priceMultiplier: number;
+  durationDays: number;
+  maxActiveListings: number;
+  regionScope: string;
+  isFeatured: boolean;
+  isSurgeActive: boolean;
+}
+
+export interface PricingSeasonItem {
+  id: number;
+  name: string;
+  priceMultiplier: number;
+  startDate: string;
+  endDate: string;
+  description: string | null;
+  isActive?: boolean;
+}
+
+export interface PublicPlansResponse {
+  plans: MembershipPlanItem[];
+  activeSeason: PricingSeasonItem | null;
+}
+
+export interface UserMembershipInfo {
+  hasActivePlan: boolean;
+  plan: {
+    id?: number;
+    name: string;
+    code: string;
+    maxActiveListings: number;
+    durationDays: number;
+    regionScope?: string;
+  };
+  activeListingsCount: number;
+  maxActiveListings: number;
+  remainingSlots: number;
+  canPostMore: boolean;
+  startDate?: string | null;
+  expiresAt?: string | null;
+}
+
+export function fetchPublicPlans() {
+  return apiFetch<PublicPlansResponse>('/memberships/plans', { next: { revalidate: 30 } });
+}
+

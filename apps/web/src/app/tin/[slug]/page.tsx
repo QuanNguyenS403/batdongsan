@@ -174,6 +174,35 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             </div>
 
+            {/* Khối Chứng chỉ kiểm định thực tế (Trust-as-a-Service) */}
+            {listing.verificationStatus === 'da_xac_thuc' && (
+              <div className="rounded-2xl border-2 border-emerald-300/90 bg-gradient-to-r from-emerald-50 via-teal-50/40 to-white p-5 shadow-sm">
+                <div className="flex items-start gap-3.5">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm text-xl">
+                    🛡️
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 font-bold text-emerald-800 text-base">
+                        ✅ ĐÃ KIỂM TRA THỰC TẾ (Trust-as-a-Service)
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-emerald-100/90 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                        Tin cậy 100%
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                      Đội ngũ cộng tác viên địa phương đã đến trực tiếp địa chỉ này, chụp ảnh/quay video xác thực tình trạng phòng trọ, đồng hồ điện nước và trang thiết bị thực tế trước khi niêm yết trên sàn.
+                    </p>
+                    {listing.verifiedAt && (
+                      <p className="mt-2 text-[11px] text-emerald-700 font-medium">
+                        Thời điểm kiểm tra: {new Date(listing.verifiedAt).toLocaleDateString('vi-VN')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Khối Thông tin chính (Chuẩn mẫu Mogi) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
               <h2 className="mb-4 font-bold text-text-primary text-base">Thông tin chính</h2>

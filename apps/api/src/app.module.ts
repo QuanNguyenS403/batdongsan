@@ -15,6 +15,7 @@ import { EmailModule } from './modules/email/email.module';
 import { GoogleSheetsModule } from './modules/google-sheets/google-sheets.module';
 import { UniversitiesModule } from './modules/universities/universities.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { MembershipModule } from './modules/membership/membership.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -46,6 +47,7 @@ import { AppController } from './app.controller';
     GoogleSheetsModule,
     UniversitiesModule,
     TasksModule,
+    MembershipModule,
   ],
 })
 export class AppModule {}

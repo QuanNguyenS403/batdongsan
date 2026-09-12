@@ -64,6 +64,18 @@ export class AdminController {
     return this.adminService.rejectListing(id, finalReason);
   }
 
+  @ApiOperation({ summary: 'Admin đánh dấu tin đã xác thực thực tế (Giai đoạn 2 Trust-as-a-Service)' })
+  @Post('listings/:id/verify')
+  verifyListing(@CurrentUser() admin: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.adminService.verifyListing(id, admin.id);
+  }
+
+  @ApiOperation({ summary: 'Admin huỷ nhãn xác thực thực tế' })
+  @Post('listings/:id/unverify')
+  unverifyListing(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.adminService.unverifyListing(id);
+  }
+
   @ApiOperation({ summary: 'Danh sách báo cáo vi phạm' })
   @Get('reports')
   getReports(@Query() query: QueryAdminReportsDto) {

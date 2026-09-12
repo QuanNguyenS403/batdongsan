@@ -31,6 +31,8 @@ const PUBLIC_LISTING_SELECT = {
   lat: true,
   lng: true,
   status: true,
+  verificationStatus: true,
+  verifiedAt: true,
   publishedAt: true,
   viewCount: true,
   createdAt: true,
@@ -375,6 +377,34 @@ export class ListingsService {
   }
 
   async create(ownerId: bigint, dto: CreateListingDto) {
+    // 1. Kiểm tra hạn mức số tin đăng theo gói thành viên của người dùng
+    const now = new Date();
+    const activeMembership = await this.prisma.userMembership.findFirst({
+      where: {
+        userId: ownerId,
+        status: 'active',
+        endDate: { gt: now },
+      },
+      include: { plan: true },
+      orderBy: { endDate: 'desc' },
+    });
+
+    const maxAllowedListings = activeMembership?.plan.maxActiveListings ?? 3;
+    const planName = activeMembership?.plan.name ?? 'Gói Dùng Thử';
+
+    const currentActiveCount = await this.prisma.listing.count({
+      where: {
+        ownerId,
+        status: { in: [ListingStatus.active, ListingStatus.pending] },
+      },
+    });
+
+    if (currentActiveCount >= maxAllowedListings) {
+      throw new ForbiddenException(
+        `Bạn đã đạt giới hạn tối đa ${maxAllowedListings} tin đăng cho ${planName}. Vui lòng nâng cấp gói thành viên tại trang Bảng giá để tiếp tục đăng thêm tin!`,
+      );
+    }
+
     const created = await this.prisma.listing.create({
       data: {
         ownerId,

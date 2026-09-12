@@ -224,6 +224,9 @@ async function main() {
       legalStatus: 'hop_dong_6_thang',
       addressDetail: 'Đường số 10, Phường Tân Phong, Quận 7, TP.HCM',
       status: ListingStatus.active,
+      verificationStatus: 'da_xac_thuc' as any,
+      verifiedAt: new Date(),
+      verifiedByUserId: admin.id,
       publishedAt: new Date(),
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       images: {
@@ -249,32 +252,35 @@ async function main() {
       ownerId: broker.id,
       locationId: quan1.id,
       transactionType: TransactionType.rent,
-      propertyType: 'studio',
-      title: '[MẪU] Căn hộ Studio cao cấp full nội thất trung tâm Quận 1 cho người đi làm',
-      slug: 'mau-can-ho-studio-quan-1-id2',
+      propertyType: 'can_ho_mini',
+      title: '[MẪU] Căn hộ Studio Quận 1 full nội thất cao cấp gần ĐH Kinh Tế UEH',
+      slug: 'mau-can-ho-studio-quan-1-full-noi-that-id2',
       description:
-        'Studio ban công thoáng đãng, thiết kế hiện đại trang bị smart TV, tủ lạnh 2 cánh, máy giặt riêng, giường nệm cao su. An ninh khoá vân tay thẻ từ 24/7.',
-      price: 8_500_000,
-      depositAmount: 8_500_000,
+        'Căn hộ mini studio trung tâm Quận 1, ban công thoáng mát, cửa sổ lớn đón nắng. Tòa nhà có thang máy, bảo vệ 24/7, hầm để xe rộng rãi. Nội thất gỗ sồi cao cấp: giường đệm, tủ quần áo âm tường, bàn làm việc, máy giặt riêng, bếp từ âm.',
+      price: BigInt(6500000),
+      depositAmount: BigInt(6500000),
       minLeaseMonths: 12,
       utilitiesIncluded: false,
       electricityPricePerKwh: 4000,
       waterPricePerM3: 25000,
+      waterPriceFlat: null,
       amenities: {
         wifi: true,
         airConditioner: true,
-        washingMachine: true,
         refrigerator: true,
-        smartLock: true,
+        washingMachine: true,
         elevator: true,
         balcony: true,
+        securityCamera: true,
+        fingerprintLock: true,
       },
-      areaM2: 35,
+      areaM2: 32,
       bedrooms: 1,
       bathrooms: 1,
       legalStatus: 'hop_dong_1_nam',
-      addressDetail: 'Đường Nguyễn Trãi, Quận 1, TP.HCM',
+      addressDetail: 'Đường Nguyễn Thị Minh Khai, Phường Bến Nghé, Quận 1, TP.HCM',
       status: ListingStatus.active,
+      verificationStatus: 'chua_xac_thuc' as any,
       publishedAt: new Date(),
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       images: {
@@ -301,6 +307,93 @@ async function main() {
   });
 
   console.log('✅ Đã tạo 2 tin đăng MẪU Cho Thuê (phòng trọ SV + studio) kèm liên kết trường ĐH.');
+
+  // ---------- 5. Gói thành viên & Mùa cao điểm (Surge Pricing) ----------
+  const plans = [
+    {
+      name: 'Gói Dùng Thử',
+      code: 'trial',
+      description: 'Trải nghiệm miễn phí nền tảng, phù hợp với chủ phòng cá nhân có ít phòng',
+      price: BigInt(0),
+      durationDays: 30,
+      maxActiveListings: 3,
+      regionScope: 'Toàn quốc',
+      isFeatured: false,
+      isActive: true,
+      sortOrder: 1,
+    },
+    {
+      name: 'Gói Chủ Trọ Khởi Đầu',
+      code: 'basic',
+      description: 'Dành cho chủ nhà có từ 5 - 10 phòng trọ, tối ưu chi phí lấp đầy phòng nhanh chóng',
+      price: BigInt(199000),
+      durationDays: 30,
+      maxActiveListings: 10,
+      regionScope: 'Toàn quốc',
+      isFeatured: false,
+      isActive: true,
+      sortOrder: 2,
+    },
+    {
+      name: 'Gói Chủ Trọ Chuyên Nghiệp',
+      code: 'pro',
+      description: 'Dành cho chủ chuỗi nhà trọ, chung cư mini, căn hộ dịch vụ quy mô vừa',
+      price: BigInt(499000),
+      durationDays: 30,
+      maxActiveListings: 30,
+      regionScope: 'Toàn quốc',
+      isFeatured: true,
+      isActive: true,
+      sortOrder: 3,
+    },
+    {
+      name: 'Gói Môi Giới VIP',
+      code: 'vip',
+      description: 'Dành cho môi giới chuyên nghiệp và chuỗi căn hộ cho thuê quy mô lớn toàn khu vực',
+      price: BigInt(999000),
+      durationDays: 30,
+      maxActiveListings: 100,
+      regionScope: 'Toàn quốc',
+      isFeatured: false,
+      isActive: true,
+      sortOrder: 4,
+    },
+  ];
+
+  for (const plan of plans) {
+    await prisma.membershipPlan.upsert({
+      where: { code: plan.code },
+      update: {
+        name: plan.name,
+        description: plan.description,
+        price: plan.price,
+        durationDays: plan.durationDays,
+        maxActiveListings: plan.maxActiveListings,
+        isFeatured: plan.isFeatured,
+        sortOrder: plan.sortOrder,
+      },
+      create: plan,
+    });
+  }
+
+  // Mùa tựu trường mẫu (mặc định tắt để admin bật/tắt thử nghiệm)
+  const existingSeason = await prisma.pricingSeason.findFirst({
+    where: { name: 'Mùa tựu trường (Tháng 8 - Tháng 9)' },
+  });
+  if (!existingSeason) {
+    await prisma.pricingSeason.create({
+      data: {
+        name: 'Mùa tựu trường (Tháng 8 - Tháng 9)',
+        startDate: new Date('2026-08-01T00:00:00.000Z'),
+        endDate: new Date('2026-09-30T23:59:59.000Z'),
+        priceMultiplier: 1.25,
+        isActive: false,
+        description: 'Mùa sinh viên nhập học cao điểm, nhu cầu tìm phòng trọ tăng vọt gấp 3 lần',
+      },
+    });
+  }
+
+  console.log('✅ Đã seed 4 gói Membership chuẩn và cấu hình Mùa cao điểm (Surge Pricing).');
 }
 
 main()

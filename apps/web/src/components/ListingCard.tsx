@@ -102,6 +102,16 @@ export function ListingCard({ listing }: { listing: Listing }) {
             <span className="transaction-badge-rent">Cho thuê</span>
           </div>
 
+          {/* Badge Đã kiểm tra thực tế (Trust-as-a-Service) */}
+          {listing.verificationStatus === 'da_xac_thuc' && (
+            <div className="absolute bottom-2 left-3 z-10 flex items-center gap-1 rounded-full bg-emerald-600/95 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm backdrop-blur-sm border border-emerald-400/50">
+              <svg className="h-3 w-3 text-white shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              <span>Đã kiểm tra thực tế</span>
+            </div>
+          )}
+
           {/* Số lượng ảnh */}
           {listing.images.length > 1 && (
             <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white backdrop-blur-sm">
@@ -133,6 +143,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
             {isSample && (
               <span className="mr-1.5 inline-flex items-center rounded bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 align-middle">
                 Tin tham khảo
+              </span>
+            )}
+            {listing.verificationStatus === 'da_xac_thuc' && (
+              <span className="mr-1.5 inline-flex items-center gap-0.5 rounded bg-emerald-50 border border-emerald-200/90 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 align-middle">
+                <span className="text-emerald-600">✓</span> Xác thực
               </span>
             )}
             {displayTitle}

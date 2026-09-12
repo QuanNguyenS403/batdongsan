@@ -253,3 +253,76 @@ Mở http://localhost:3000 — trang chủ sẽ hiện 2 tin `[MẪU]`. Đăng n
 4. Toàn bộ tin import vào trạng thái `pending` — truy cập ngay giao diện quản trị **`http://localhost:3000/admin/tin-cho-duyet`** để kiểm tra hình ảnh, nội dung và bấm duyệt tin trực tiếp trên giao diện UI (không cần mở Prisma Studio).
 5. (Tuỳ chọn) Quản lý hoặc ẩn tin qua các nút thao tác trên màn hình Admin.
 
+---
+
+## 🚀 CHIẾN DỊCH DOANH THU 5 LỚP — KIẾN TRÚC LỢI NHUẬN NỀN TẢNG CHO THUÊ (12/09/2026)
+
+> **Nguyên tắc nền tảng:** Không chỉ sao chép mô hình cũ, nền tảng khai thác triệt để nhịp sinh học và dữ liệu đặc thù của phân khúc sinh viên / người thuê trọ (chu kỳ tựu trường, lịch học, nhu cầu chuyển trọ liên tục).
+
+### 1. Trạng thái Triển khai 5 Lớp
+
+| Lớp | Tên lớp doanh thu | Trạng thái kỹ thuật | Giai đoạn thực thi | Bản chất & Yêu cầu |
+|---|---|---|---|---|
+| **Lớp 1** | **Membership bên cung + Surge Pricing theo mùa** | ✅ **HOÀN THÀNH 100%** | Giai đoạn 1 (0-6 tháng) | Thu phí gói thành viên (Trial, Basic, Pro, VIP) kèm cơ chế tự động nhân hệ số giá mùa cao điểm (tháng 8-9, tháng 1-2). Admin có UI quản lý mùa vụ & duyệt gói thủ công. |
+| **Lớp 2** | **Sản phẩm Niềm tin (Trust-as-a-Service)** | 🏗️ **NỀN MÓNG SẴN SÀNG** | Giai đoạn 2 (6-12 tháng) | Schema + Backend + Frontend đã hỗ trợ `verificationStatus`, badge "✅ Đã kiểm tra thực tế" nổi bật trên card và trang chi tiết. Chờ Quan vận hành đội ngũ CTV sinh viên thực tế để bắt đầu bán badge. |
+| **Lớp 3** | **Lead-gen mở rộng ngữ cảnh thuê trọ** | 📋 **ĐÃ LẬP ROADMAP** | Giai đoạn 4 (18-24 tháng) | Hoa hồng giới thiệu dịch vụ thiết yếu: Lắp đặt mạng/Wifi, xe tải dọn trọ sinh viên, bảo hiểm cọc phòng trọ. **Công việc chủ yếu về kết nối đối tác kinh doanh (BD/Partnership)**. |
+| **Lớp 4** | **Kênh B2B với trường đại học** | 📋 **ĐÃ LẬP ROADMAP** | Giai đoạn 3 (12-18 tháng) | Hợp tác chính thức với Phòng Công tác sinh viên / KTX các trường ĐH để làm kênh giới thiệu phòng trọ ngoài KTX. Acquisition traffic khổng lồ, chi phí 0đ. |
+| **Lớp 5** | **Tài sản dữ liệu B2B cho Nhà đầu tư** | 📋 **ĐÃ LẬP ROADMAP** | Giai đoạn 4 (18-24 tháng) | Đóng gói báo cáo bản đồ giá thuê, tỷ lệ lấp đầy và mật độ nhu cầu quanh các trường ĐH bán cho chủ đầu tư xây nhà trọ/chung cư mini. Biên lợi nhuận tuyệt đối. |
+
+---
+
+### 2. Chi tiết Tính năng Giai đoạn 1 đã hoàn thiện
+
+1. **Schema CSDL (`packages/database`)**:
+   - `MembershipPlan`: 4 gói chuẩn (Dùng thử 0đ/3 tin, Khởi đầu 199k/10 tin, Chuyên nghiệp 499k/30 tin, VIP 999k/100 tin).
+   - `PricingSeason`: Cấu hình mùa cao điểm (tên mùa, ngày bắt đầu/kết thúc, hệ số giá `priceMultiplier`, cờ `isActive`).
+   - `UserMembership`: Quản lý yêu cầu mua gói, hạn mức, ngày bắt đầu, ngày hết hạn và duyệt thanh toán.
+   - `Migration 20260912000000_membership_surge_pricing_verification`: Đã chuẩn bị sẵn sàng, áp dụng an toàn không downtime.
+
+2. **Backend API (`apps/api`)**:
+   - `MembershipModule`: Đầy đủ API công khai (`GET /memberships/plans`), API người dùng (`GET /memberships/my-membership`, `POST /memberships/request`), API quản trị (`/admin/membership-plans`, `/admin/membership-requests`, `/admin/pricing-seasons`).
+   - **Tự động áp dụng Surge Pricing**: Giá hiển thị công khai tự động nhân hệ số mùa vụ đang kích hoạt mà KHÔNG cần sửa code hay deploy lại.
+   - **Chặn vượt hạn mức tin đăng (`ListingsService.create`)**: Người dùng gói Dùng thử chỉ được đăng tối đa 3 tin active/pending; thử tạo tin thứ 4 sẽ bị chặn ngay lập tức với thông báo hướng dẫn nâng cấp gói tự nhiên.
+   - **Email thông báo 2 chiều (`EmailService`)**: Gửi email cho Admin khi có yêu cầu nâng cấp gói mới; gửi email cho Người dùng khi Admin kích hoạt gói thành công.
+
+3. **Frontend Web (`apps/web`)**:
+   - **Trang Bảng giá công khai (`/gia-thanh-vien`)**: Thiết kế PropTech Teal đẳng cấp, hiển thị 4 gói dịch vụ bằng ngôn ngữ tự nhiên, không lộ code/ID kỹ thuật. Banner Mùa cao điểm tự động kích hoạt kèm huy hiệu Surge và giá gạch ngang. Modal thanh toán ngân hàng tự sinh cú pháp chuyển khoản rõ ràng.
+   - **Trang Quản trị Mùa vụ (`/admin/mua-cao-diem`)**: Form thiết lập mùa vụ có **Bộ xem trước tức thì (Live Price Preview)** giúp Admin xem trước giá tất cả các gói sẽ hiển thị trước khi lưu; nút Bật/Tắt nhanh không gián đoạn hệ thống.
+   - **Trang Duyệt gói (`/admin/duyet-goi`)**: Danh sách yêu cầu chuyển khoản chờ duyệt, nút "Xác nhận đã nhận tiền & Kích hoạt" và "Từ chối" kèm lý do.
+   - **Sidebar Quản trị (`AdminLayout`)**: Tích hợp 2 màn hình mới kèm huy hiệu số lượng yêu cầu đang chờ duyệt.
+
+---
+
+### 3. Nền móng Kỹ thuật Giai đoạn 2 (Trust-as-a-Service)
+
+- **Schema**: Đã bổ sung `verificationStatus` (`chua_xac_thuc`, `cho_xac_thuc`, `da_xac_thuc`), `verifiedAt`, `verifiedByUserId` vào bảng `listings`.
+- **API**: Endpoint `POST /admin/listings/:id/verify` và `POST /admin/listings/:id/unverify`.
+- **UI Card (`ListingCard.tsx`)**: Hiển thị huy hiệu `✅ Đã kiểm tra thực tế` trên ảnh card và nhãn `✓ Xác thực` cạnh tiêu đề.
+- **UI Chi tiết (`tin/[slug]/page.tsx`)**: Khối chứng chỉ kiểm định thực tế nổi bật giải thích quy trình xác thực công tơ điện nước và phòng ốc.
+- **UI Quản trị (`/admin/tin-cho-duyet`)**: Nút thao tác gắn/hủy mác xác thực thực tế trực tiếp trong modal kiểm duyệt.
+
+---
+
+### 4. Điều kiện Kích hoạt Chuyển pha (Roadmap Giai đoạn 3–5)
+
+> [!WARNING]
+> **Quy tắc an toàn cho AI Agent tương lai:** Lớp 3, Lớp 4, Lớp 5 là các công việc **CHỦ YẾU về đối tác kinh doanh**, không phải thuần code. Tuyệt đối **KHÔNG tự ý build tính năng kỹ thuật** khi chưa có quyết định đối tác cụ thể từ Quan và khi chưa đạt đủ các điều kiện dữ liệu thực tế sau:
+
+1. **Điều kiện kích hoạt Giai đoạn 2 (Vận hành Trust-as-a-Service)**:
+   - Đạt tối thiểu **100+ tin đăng hoạt động** tại 1 quận mục tiêu (ví dụ: Quận 7 hoặc Cầu Giấy).
+   - Quan tuyển dụng và phân công 2-3 CTV sinh viên part-time trực tiếp đến kiểm tra phòng.
+   - Thiết lập bảng phí dịch vụ kiểm định (ví dụ: 100.000đ - 150.000đ / lần kiểm tra cấp badge).
+
+2. **Điều kiện kích hoạt Giai đoạn 3 (B2B với Trường Đại học — Lớp 4)**:
+   - Đạt tối thiểu **50+ phòng trọ ĐÃ XÁC THỰC THỰC TẾ** nằm trong bán kính 2km quanh trường đại học mục tiêu (ví dụ: ĐH Tôn Đức Thắng hoặc Bách Khoa).
+   - Có dữ liệu phản hồi đánh giá uy tín để gửi hồ sơ hợp tác tới Phòng Công tác sinh viên của trường.
+
+3. **Điều kiện kích hoạt Giai đoạn 4 (Lead-gen Dịch vụ Sinh viên — Lớp 3)**:
+   - Đạt tối thiểu **500+ lượt bấm hiện số điện thoại (reveals) mỗi tháng**.
+   - Quan ký kết hợp đồng đại lý / hoa hồng affiliate với ít nhất 1 nhà mạng internet (FPT/Viettel) và 1 đơn vị vận chuyển đồ trọ sinh viên.
+
+4. **Điều kiện kích hoạt Giai đoạn 5 (Sản phẩm Dữ liệu B2B — Lớp 5)**:
+   - Hệ thống vận hành liên tục tối thiểu **12 - 18 tháng**.
+   - Sở hữu lịch sử giá thuê của tối thiểu **2.000+ phòng trọ** theo chuỗi thời gian thật, đủ độ tin cậy để đóng gói thành báo cáo thị trường bán cho nhà đầu tư xây nhà trọ.
+
+

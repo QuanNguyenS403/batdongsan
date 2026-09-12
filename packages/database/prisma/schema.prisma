@@ -25,6 +25,19 @@ enum ListingStatus {
   removed
 }
 
+enum MembershipStatus {
+  pending
+  active
+  expired
+  rejected
+}
+
+enum VerificationStatus {
+  chua_xac_thuc
+  cho_xac_thuc
+  da_xac_thuc
+}
+
 model User {
   id              BigInt    @id @default(autoincrement())
   phone           String    @unique @db.VarChar(15)
@@ -42,6 +55,8 @@ model User {
   savedSearches   SavedSearch[]
   reports         ListingReport[]
   phoneReveals    PhoneRevealLog[]
+  memberships     UserMembership[]
+  verifiedListings Listing[] @relation("VerifiedListings")
 
   @@map("users")
 }
@@ -124,6 +139,10 @@ model Listing {
   refreshedAt            DateTime?           @map("refreshed_at")
   viewCount              Int                 @default(0) @map("view_count")
   revealPhoneCount       Int                 @default(0) @map("reveal_phone_count")
+  verificationStatus     VerificationStatus  @default(chua_xac_thuc) @map("verification_status")
+  verifiedAt             DateTime?           @map("verified_at")
+  verifiedByUserId       BigInt?             @map("verified_by_user_id")
+  verifiedBy             User?               @relation("VerifiedListings", fields: [verifiedByUserId], references: [id])
   createdAt              DateTime            @default(now()) @map("created_at")
   updatedAt              DateTime            @updatedAt @map("updated_at")
 
@@ -239,4 +258,60 @@ model PhoneRevealLog {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("phone_reveal_logs")
+}
+
+/// Gói thành viên / Gói đăng tin (MembershipPlan) — kế thừa và phát triển từ mô hình Mogi, chuyên biệt cho cho thuê.
+model MembershipPlan {
+  id                Int              @id @default(autoincrement())
+  name              String           @db.VarChar(100)
+  code              String           @unique @db.VarChar(50)
+  description       String?
+  price             BigInt           // Giá gốc VNĐ / chu kỳ
+  durationDays      Int              @default(30) @map("duration_days")
+  maxActiveListings Int              @map("max_active_listings")
+  regionScope       String?          @default("Toàn quốc") @map("region_scope") @db.VarChar(100)
+  isFeatured        Boolean          @default(false) @map("is_featured")
+  isActive          Boolean          @default(true) @map("is_active")
+  sortOrder         Int              @default(0) @map("sort_order")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  userMemberships   UserMembership[]
+
+  @@map("membership_plans")
+}
+
+/// Mùa cao điểm & Surge Pricing — Admin cấu hình hệ số giá theo chu kỳ sinh học của thị trường cho thuê (mùa tựu trường, sau Tết).
+model PricingSeason {
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(150)
+  startDate       DateTime @map("start_date")
+  endDate         DateTime @map("end_date")
+  priceMultiplier Decimal  @default(1.00) @map("price_multiplier") @db.Decimal(4, 2)
+  isActive        Boolean  @default(true) @map("is_active")
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("pricing_seasons")
+}
+
+/// Đăng ký và lịch sử sử dụng gói của Người dùng.
+model UserMembership {
+  id               BigInt           @id @default(autoincrement())
+  userId           BigInt           @map("user_id")
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId           Int              @map("plan_id")
+  plan             MembershipPlan   @relation(fields: [planId], references: [id])
+  status           MembershipStatus @default(pending)
+  pricePaid        BigInt           @map("price_paid")
+  startDate        DateTime?        @map("start_date")
+  endDate          DateTime?        @map("end_date")
+  paymentNote      String?          @map("payment_note")
+  approvedAt       DateTime?        @map("approved_at")
+  approvedByUserId BigInt?          @map("approved_by_user_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@map("user_memberships")
 }

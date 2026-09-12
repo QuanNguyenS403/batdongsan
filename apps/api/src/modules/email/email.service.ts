@@ -216,4 +216,70 @@ Content: ${textSummary}
 
     return this.sendEmail(targetEmail, subject, html, summary);
   }
+
+  /**
+   * (f) Thông báo cho Admin: Có yêu cầu nâng cấp gói thành viên mới cần kiểm tra & duyệt
+   */
+  async sendMembershipUpgradeRequestToAdmin(request: {
+    id: bigint | string;
+    userPhone: string;
+    userName?: string | null;
+    planName: string;
+    price: bigint | number;
+    paymentNote?: string | null;
+  }) {
+    const adminEmail = this.config?.get<string>('ADMIN_NOTIFICATION_EMAIL') ?? process.env.ADMIN_NOTIFICATION_EMAIL ?? 'admin@batdongsan.vn';
+    const formattedPrice = new Intl.NumberFormat('vi-VN').format(Number(request.price)) + ' đ';
+    const subject = `[BĐS Quản trị] Yêu cầu nâng cấp gói: ${request.planName} từ ${request.userPhone}`;
+    const summary = `Người dùng ${request.userName || request.userPhone} (SĐT: ${request.userPhone}) vừa gửi yêu cầu nâng cấp gói "${request.planName}" (Trị giá: ${formattedPrice}). Ghi chú: ${request.paymentNote || 'Không có'}. Vui lòng kiểm tra sao kê ngân hàng và bấm duyệt trên Admin portal.`;
+    const html = `
+      <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #0d9488;">💳 Yêu cầu nâng cấp gói thành viên mới (#${request.id})</h2>
+        <p>Hệ thống vừa nhận được yêu cầu đăng ký/nâng cấp gói từ người dùng:</p>
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 16px 0;">
+          <p><strong>Người dùng:</strong> ${request.userName || 'Chưa cập nhật tên'} (SĐT: <strong>${request.userPhone}</strong>)</p>
+          <p><strong>Gói đăng ký:</strong> <span style="color: #0d9488; font-weight: bold;">${request.planName}</span></p>
+          <p><strong>Số tiền cần thu:</strong> <strong style="color: #e11d48; font-size: 16px;">${formattedPrice}</strong></p>
+          <p><strong>Ghi chú thanh toán:</strong> ${request.paymentNote || 'Không có'}</p>
+        </div>
+        <p>Vui lòng kiểm tra tài khoản ngân hàng và kích hoạt gói tại trang <strong>Quản trị &gt; Duyệt gói thành viên</strong>.</p>
+      </div>
+    `;
+
+    return this.sendEmail(adminEmail, subject, html, summary);
+  }
+
+  /**
+   * (g) Thông báo cho Người dùng: Gói thành viên đã được Admin xác nhận & kích hoạt
+   */
+  async sendMembershipActivatedToUser(membership: {
+    userPhone: string;
+    userName?: string | null;
+    planName: string;
+    maxActiveListings: number;
+    expiresAt?: Date | null;
+  }, userEmail?: string) {
+    const targetEmail = userEmail || `thanhvien-${membership.userPhone}@batdongsan.vn`;
+    const expiryStr = membership.expiresAt ? new Intl.DateTimeFormat('vi-VN').format(membership.expiresAt) : '30 ngày';
+    const subject = `[BĐS Cho Thuê] Gói ${membership.planName} của bạn đã được kích hoạt thành công!`;
+    const summary = `Chúc mừng bạn! Gói thành viên "${membership.planName}" đã được kích hoạt. Hạn mức đăng tin mới: tối đa ${membership.maxActiveListings} tin hiển thị đồng thời. Hạn dùng đến ngày ${expiryStr}.`;
+    const html = `
+      <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #0d9488;">🎉 Kích hoạt gói thành viên thành công!</h2>
+        <p>Xin chào <strong>${membership.userName || membership.userPhone}</strong>,</p>
+        <p>Ban quản trị đã xác nhận thanh toán và chính thức kích hoạt gói thành viên cho tài khoản của bạn:</p>
+        <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border: 1px solid #bbf7d0; margin: 16px 0;">
+          <p><strong>Gói thành viên:</strong> <span style="color: #15803d; font-weight: bold;">${membership.planName}</span></p>
+          <p><strong>Hạn mức hiển thị đồng thời:</strong> <strong>${membership.maxActiveListings} tin đăng</strong></p>
+          <p><strong>Thời hạn sử dụng:</strong> Đến hết ngày <strong>${expiryStr}</strong></p>
+        </div>
+        <p>Bây giờ bạn đã có thể tiếp tục đăng thêm tin mới và tiếp cận hàng ngàn khách thuê tiềm năng.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #888;">BĐS Cho Thuê — Nền tảng tìm phòng trọ & nhà cho thuê uy tín.</p>
+      </div>
+    `;
+
+    return this.sendEmail(targetEmail, subject, html, summary);
+  }
 }
+

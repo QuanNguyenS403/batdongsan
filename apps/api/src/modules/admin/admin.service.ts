@@ -336,6 +336,46 @@ export class AdminService {
     };
   }
 
+  /** Đánh dấu tin là "Đã xác thực thực tế" (Giai đoạn 2 Trust-as-a-Service) */
+  async verifyListing(id: bigint, adminId: bigint) {
+    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+
+    const updated = await this.prisma.listing.update({
+      where: { id },
+      data: {
+        verificationStatus: 'da_xac_thuc',
+        verifiedAt: new Date(),
+        verifiedByUserId: adminId,
+      },
+    });
+
+    return {
+      message: 'Đã gắn nhãn Xác thực thực tế thành công cho tin đăng!',
+      listing: serialize(updated),
+    };
+  }
+
+  /** Huỷ đánh dấu xác thực thực tế */
+  async unverifyListing(id: bigint) {
+    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+
+    const updated = await this.prisma.listing.update({
+      where: { id },
+      data: {
+        verificationStatus: 'chua_xac_thuc',
+        verifiedAt: null,
+        verifiedByUserId: null,
+      },
+    });
+
+    return {
+      message: 'Đã hủy nhãn Xác thực thực tế cho tin đăng.',
+      listing: serialize(updated),
+    };
+  }
+
   /** Danh sách báo cáo vi phạm */
   async getReports(query: QueryAdminReportsDto) {
     const page = query.page ?? 1;

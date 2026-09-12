@@ -15,6 +15,7 @@ interface AdminUser {
 interface BadgeCounts {
   pendingListings: number;
   newReports: number;
+  pendingMemberships: number;
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [badges, setBadges] = useState<BadgeCounts>({ pendingListings: 0, newReports: 0 });
+  const [badges, setBadges] = useState<BadgeCounts>({ pendingListings: 0, newReports: 0, pendingMemberships: 0 });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -41,11 +42,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           // Lấy số liệu badges
           try {
             const dashRes = await authFetch('/admin/dashboard');
+            let pendingMembershipsCount = 0;
+            try {
+              const memRes = await authFetch('/admin/membership-requests?status=pending');
+              if (memRes.ok) {
+                const memData = await memRes.json();
+                pendingMembershipsCount = memData.pagination?.total ?? memData.items?.length ?? 0;
+              }
+            } catch {
+              // ignore
+            }
+
             if (dashRes.ok) {
               const dashData = await dashRes.json();
               setBadges({
                 pendingListings: dashData.stats?.pendingListingsCount ?? 0,
                 newReports: dashData.stats?.newReportsCount ?? 0,
+                pendingMemberships: pendingMembershipsCount,
               });
             }
           } catch {
@@ -142,6 +155,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       ),
       badge: badges.newReports > 0 ? badges.newReports : null,
       badgeColor: 'bg-rose-500 text-white',
+    },
+    {
+      href: '/admin/duyet-goi',
+      label: 'Duyệt gói thành viên',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      ),
+      badge: badges.pendingMemberships > 0 ? badges.pendingMemberships : null,
+      badgeColor: 'bg-teal-600 text-white',
+    },
+    {
+      href: '/admin/mua-cao-diem',
+      label: 'Mùa cao điểm (Surge)',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      ),
+      badge: null,
     },
     {
       href: '/admin/nguoi-dung',

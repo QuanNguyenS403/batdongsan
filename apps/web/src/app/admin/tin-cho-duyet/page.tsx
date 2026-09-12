@@ -25,6 +25,8 @@ interface ListingItem {
   legalStatus?: string | null;
   addressDetail?: string | null;
   status: string;
+  verificationStatus?: string;
+  verifiedAt?: string | null;
   createdAt: string;
   rejectionReason?: string | null;
   images: { imageUrl: string; sortOrder: number }[];
@@ -188,6 +190,36 @@ export default function AdminPendingListingsPage() {
         showToast(data.message ?? 'Duyệt tin thất bại', 'error');
       }
     } catch (err) {
+      showToast('Lỗi kết nối máy chủ', 'error');
+    } finally {
+      setSubmittingAction(false);
+    }
+  }
+
+  async function handleToggleVerify(listingId: string, currentStatus?: string) {
+    const isCurrentlyVerified = currentStatus === 'da_xac_thuc';
+    const endpoint = isCurrentlyVerified ? `/admin/listings/${listingId}/unverify` : `/admin/listings/${listingId}/verify`;
+    setSubmittingAction(true);
+    try {
+      const res = await authFetch(endpoint, { method: 'POST' });
+      if (res.ok) {
+        showToast(isCurrentlyVerified ? 'Đã hủy nhãn Xác thực thực tế' : '✅ Đã gắn nhãn Đã kiểm tra thực tế thành công!');
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === listingId
+              ? { ...item, verificationStatus: isCurrentlyVerified ? 'chua_xac_thuc' : 'da_xac_thuc' }
+              : item,
+          ),
+        );
+        if (selectedListing && selectedListing.id === listingId) {
+          setSelectedListing((prev) =>
+            prev ? { ...prev, verificationStatus: isCurrentlyVerified ? 'chua_xac_thuc' : 'da_xac_thuc' } : null,
+          );
+        }
+      } else {
+        showToast('Thao tác xác thực thất bại', 'error');
+      }
+    } catch {
       showToast('Lỗi kết nối máy chủ', 'error');
     } finally {
       setSubmittingAction(false);
@@ -720,15 +752,41 @@ export default function AdminPendingListingsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
-              <button
-                onClick={() => setSelectedListing(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl transition-colors"
-              >
-                Đóng lại
-              </button>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+              <div>
+                <button
+                  type="button"
+                  disabled={submittingAction}
+                  onClick={() => handleToggleVerify(selectedListing.id, selectedListing.verificationStatus)}
+                  className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5 ${
+                    selectedListing.verificationStatus === 'da_xac_thuc'
+                      ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
+                      : 'bg-teal-50 text-teal-800 border border-teal-300 hover:bg-teal-100'
+                  }`}
+                >
+                  {selectedListing.verificationStatus === 'da_xac_thuc' ? (
+                    <>
+                      <span>✕</span>
+                      <span>Hủy mác Xác thực thực tế</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🛡️</span>
+                      <span>Xác thực thực tế (Trust-as-a-Service)</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
-              {selectedListing.status === 'pending' && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedListing(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl transition-colors"
+                >
+                  Đóng lại
+                </button>
+
+                {selectedListing.status === 'pending' && (
                 <>
                   <button
                     onClick={() => {
@@ -750,7 +808,8 @@ export default function AdminPendingListingsPage() {
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* MODAL 2: TỪ CHỐI DUYỆT TIN */}
       {rejectingListing && (

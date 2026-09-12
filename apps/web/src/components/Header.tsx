@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { href: '/thue?categoryGroup=thue_studio', label: 'Studio' },
   { href: '/cho-thue-tro', label: 'Phòng trọ SV' },
   { href: '/cho-thue-mat-bang', label: 'Mặt bằng kinh doanh' },
+  { href: '/gia-thanh-vien', label: 'Bảng giá gói' },
 ];
 
 export function Header() {
@@ -205,6 +206,7 @@ export function Header() {
                         )}
                         {[
                           { href: '/tai-khoan/quan-ly-tin', label: 'Quản lý tin đăng', icon: '📋' },
+                          { href: '/gia-thanh-vien', label: 'Gói thành viên', icon: '⭐' },
                           { href: '/tai-khoan/tin-da-luu', label: 'BĐS đã lưu', icon: '❤️' },
                           { href: '/tai-khoan/thong-tin', label: 'Thông tin tài khoản', icon: '⚙️' },
                         ].map((item) => (
