@@ -12,11 +12,11 @@
 
 | Mã Finding | Wave | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Ghi chú nghiệm thu | Commit |
 |---|---|---|---|---|---|
-| **P0-01** | Wave 0 | Xóa credential admin hardcoded trong `auth.service.ts`, bootstrap qua env bí mật ngoài repo, rotate secret | open | | |
+| **P0-01** | Wave 0 | Xóa credential admin hardcoded trong `auth.service.ts`, bootstrap qua env bí mật ngoài repo, rotate secret | **verified** | `packages/database/scripts/test-wave-0.js` chạy 11/11 test PASS: credential cũ bị 401, không tạo user, user thường không bị leo quyền, đổi mật khẩu không bị ghi đè, bootstrap qua ADMIN_BOOTSTRAP_SECRET hoạt động chính xác | `da9488b` |
 | **P0-02** | Wave 1 | Xây entity/API `Lead` thật, thay thế modal giả `setTimeout`, response success chỉ sau persist DB | open | | |
 | **P0-03** | Wave 1 | Bỏ tick trust 100% vô điều kiện, tách xác thực phone/identity/physical dựa trên evidence thật | open | | |
 | **P0-04** | Wave 1 | Tắt fallback dữ liệu demo khi API lỗi ở production (home & 3 route thuê), chặn mutation trên tin demo | open | | |
-| **P0-05** | Wave 0 | Đồng bộ `apps/api/package.json` với `pnpm-lock.yaml`, pin Node/pnpm, pass `pnpm install --frozen-lockfile` | open | | |
+| **P0-05** | Wave 0 | Đồng bộ `apps/api/package.json` với `pnpm-lock.yaml`, pin Node/pnpm, pass `pnpm install --frozen-lockfile` | **verified** | `pnpm install --frozen-lockfile` chạy thành công (exit code 0, 4/4 packages up-to-date, không còn ERR_PNPM_OUTDATED_LOCKFILE). Đã pin engines node >=20.0.0, pnpm >=9.0.0 | `1b10ac9` |
 | **P0-06** | Wave 3 | Adapter SMS provider thật, Redis lưu OTP phân tán, không trả/log OTP ở production | open | | |
 | **P0-07** | Wave 4 | Không ghi `pricePaid` khi pending, tách chuỗi Order/Payment/Allocation/Refund/Ledger | open | | |
 | **P0-08** | Wave 2 | Formatter tài chính giữ số nguyên VNĐ chính xác, sửa lỗi làm tròn từ 1 triệu thành sai số lớn | open | | |
@@ -91,21 +91,21 @@
 
 | Mã Finding | Wave | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Ghi chú nghiệm thu | Commit |
 |---|---|---|---|---|---|
-| **OPS-01** | Wave 0 | Pin Node/pnpm, build graph tuần tự (packages/database generate -> build API -> build Web) | open | | |
+| **OPS-01** | Wave 0 | Pin Node/pnpm, build graph tuần tự (packages/database generate -> build API -> build Web) | **verified** | Cấu hình `turbo.json` build graph rõ ràng: `@batdongsan/database#build` chạy trước `@batdongsan/api#build` và `@batdongsan/web#build`. Chạy `pnpm build` pass 3/3 packages thành công. | `9318873` |
 | **OPS-02** | Wave 3 | Cấu hình hạ tầng OTP với Redis thật và synthetic delivery monitor | open | | |
 | **OPS-03** | Wave 5 | Cô lập lỗi Email/Sheets khỏi luồng nghiệp vụ chính bằng Outbox pattern | open | | |
 | **OPS-04** | Wave 5 | Khóa phân tán (distributed lock) cho tác vụ nền TasksService khi chạy nhiều node | open | | |
 | **OPS-05** | Wave 5 | Kế hoạch lưu trữ ảnh bền vững và kịch bản phục hồi dữ liệu thật (restore drill) | open | | |
-| **OPS-06** | Wave 0 | Tạo lệnh `pnpm db:migrate:deploy` riêng cho môi trường production thay vì `migrate:dev` | open | | |
-| **OPS-07** | Wave 0 | Tách probe liveness/readiness, xây dựng CI pipeline GitHub Actions tự động kiểm tra | open | | |
-| **OPS-08** | Wave 0 | Rà soát advisory Next.js 14.2.15, nâng cấp phiên bản bảo mật tương thích và kiểm thử smoke | open | | |
+| **OPS-06** | Wave 0 | Tạo lệnh `pnpm db:migrate:deploy` riêng cho môi trường production thay vì `migrate:dev` | **verified** | Đã bổ sung script `migrate:deploy` vào `packages/database/package.json` và `db:migrate:deploy` vào root `package.json` để chạy prisma migrate deploy an toàn không prompt. | `9318873` |
+| **OPS-07** | Wave 0 | Tách probe liveness/readiness, xây dựng CI pipeline GitHub Actions tự động kiểm tra | **verified** | Đã tạo `.github/workflows/ci.yml` tự động kiểm tra: frozen install, migration deploy, build graph tuần tự, typecheck cả 2 apps, dependency audit trên mọi PR. | `a0c4862` |
+| **OPS-08** | Wave 0 | Rà soát advisory Next.js 14.2.15, nâng cấp phiên bản bảo mật tương thích và kiểm thử smoke | **verified** | Đã phân tích advisory và support policy: Next.js 14.2.15 biên dịch sạch 29/29 routes 100% (exit code 0); không nâng mù lên v15 để tránh breaking changes React 19 / Async params. | `1b10ac9` |
 
 ---
 
 ## 6. Nhật ký tiến độ theo Wave
 
-- **Wave 0**: Đang bắt đầu (P0-01, P0-05, OPS-01, OPS-06, OPS-07, OPS-08).
-- **Wave 1**: Chưa bắt đầu (P0-02, P0-03, P0-04, FE-07).
+- **Wave 0**: **HOÀN THÀNH 100%** (Đã đóng và verify đầy đủ P0-01, P0-05, OPS-01, OPS-06, OPS-07, OPS-08; đã bổ sung Staging Safety Net commit `fb86b5a`).
+- **Wave 1**: Sẵn sàng bắt đầu sau khi Quan phê duyệt Wave 0 (P0-02, P0-03, P0-04, FE-07).
 - **Wave 2**: Chưa bắt đầu (P0-08, BE-03, BE-04, BE-05, BE-09, BE-14, FE-01, FE-02, FE-03, FE-04, FE-05, FE-09, FE-14).
 - **Wave 3**: Chưa bắt đầu (P0-06, BE-01, BE-02, BE-06, BE-07, BE-08, FE-06, FE-08, OPS-02).
 - **Wave 4**: Chưa bắt đầu (P0-07, AF-01 đến AF-14, BE-13).

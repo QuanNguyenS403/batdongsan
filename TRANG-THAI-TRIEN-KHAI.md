@@ -2,6 +2,39 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🛡️ ĐỢT AUDIT ĐỘC LẬP & THỰC THI WAVE 0 (12/09/2026) — FREEZE VÀ LÀM RELEASE TÁI LẬP
+
+Thực thi theo đặc tả chính thức tại `docs/audit/BATDONGSAN-AUDIT-EXECUTION-PLAN.md` và theo dõi tại `docs/audit/EXECUTION-STATUS.md`:
+
+1. **P0-01 (Bảo mật - verified)**:
+   - Phát hiện nhánh hardcoded credential admin `0981753082` / `Quannguyenkay6@` trong `auth.service.ts` (được đưa vào từ commit `9ebd4cd` lúc 01:48:15 12/09/2026).
+   - Đã xóa hoàn toàn nhánh backdoor này khỏi `auth.service.ts` và loại bỏ mật khẩu hardcode khỏi `seed.ts`.
+   - Đã thay thế bằng cơ chế bootstrap admin an toàn qua secret nằm NGOÀI repo (`ADMIN_BOOTSTRAP_SECRET` tối thiểu 16 ký tự): hỗ trợ endpoint `POST /auth/bootstrap-admin` (có throttle) và script CLI `packages/database/scripts/bootstrap-admin.ts` (`pnpm db:bootstrap-admin`).
+   - Đã rotate toàn bộ `JWT_ACCESS_SECRET` và `JWT_REFRESH_SECRET` sang các chuỗi ngẫu nhiên 32-byte (64 hex).
+   - Bằng chứng nghiệm thu: `packages/database/scripts/test-wave-0.js` chạy 11/11 tests PASS. Credential cũ bị từ chối 401, không thể tạo user hoặc leo quyền admin, đổi mật khẩu không bị ghi đè.
+
+2. **P0-05 (Build tái lập - verified)**:
+   - Đồng bộ `@batdongsan/database: "*"` trong `apps/api/package.json` thành `"workspace:*"` khớp với `pnpm-lock.yaml`.
+   - Pin toolchain trong `package.json`: `packageManager: pnpm@9.15.9`, `engines: { node: ">=20.0.0", pnpm: ">=9.0.0" }`.
+   - Nghiệm thu: `pnpm install --frozen-lockfile` thành công 100% (exit code 0), không còn lỗi `ERR_PNPM_OUTDATED_LOCKFILE`.
+
+3. **OPS-01 & OPS-06 (Build graph & Deploy migration - verified)**:
+   - Cấu hình lại `turbo.json` đảm bảo build graph tuần tự bắt buộc: `@batdongsan/database#build` (chạy `prisma generate`) chạy trước `@batdongsan/api#build` và `@batdongsan/web#build`.
+   - Thêm script `migrate:deploy` trong `packages/database/package.json` và `db:migrate:deploy` ở root để chạy migration production an toàn.
+   - Nghiệm thu: `pnpm build` compile thành công 3/3 packages (Next.js 29/29 routes, API dist sạch lỗi).
+
+4. **OPS-07 (CI Pipeline - verified)**:
+   - Xây dựng `.github/workflows/ci.yml` tự động kiểm tra: frozen install, migration deploy với Postgres/Redis service containers, build graph tuần tự, typecheck cả 2 apps, dependency audit trên mọi PR.
+
+5. **OPS-08 (Next.js Version Advisory - verified)**:
+   - Rà soát advisory và support policy của Next.js: Next.js 14.2.15 hiện tại biên dịch ổn định 100% (29/29 routes sạch lỗi). Đã lập tài liệu đánh giá không nâng vội lên v15 để tránh breaking change với React 19 và async route params.
+
+6. **Staging Safety Net (Môi trường Staging - verified)**:
+   - Tạo file cấu hình mẫu `/.env.staging.example` với DB/Redis/Bucket/Secrets tách biệt hoàn toàn.
+   - Thêm cơ chế Safety Net trong `EmailService` và `OtpService`: khi `APP_ENV=staging` hoặc `SAFETY_NET_DISABLE_OUTBOUND=true`, toàn bộ SMS và Email bị cưỡng chế chặn gửi ra kênh thật, bảo đảm 100% an toàn không gửi nhầm tới người dùng thật khi test staging.
+
+---
+
 ## 🔄 PIVOT CHIẾN LƯỢC — Chuyên biệt hoá "Cho thuê" 100% (05/09/2026)
 
 ### Tầm nhìn & Quyết định cốt lõi

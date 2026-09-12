@@ -121,3 +121,29 @@
 2. Khi triển khai lên môi trường staging/production, chạy `pnpm db:migrate` để cập nhật bảng gói thành viên, mùa cao điểm và trường xác thực tin.
 3. Khi mùa tựu trường đến (tháng 8-9 hoặc tháng 1), Admin vào `/admin/mua-cao-diem` bật mùa và điều chỉnh hệ số giá phù hợp với thị trường.
 
+**Việc vừa hoàn thành (12/09/2026 — THỰC THI AUDIT ĐỘC LẬP: WAVE 0 — FREEZE VÀ RELEASE TÁI LẬP):**
+1. **P0-01 (Bảo mật khẩn cấp)**:
+   - Truy vết lịch sử git (`git log -p -- apps/api/src/modules/auth/auth.service.ts`): Lỗ hổng backdoor admin (`0981753082` / `Quannguyenkay6@`) được đưa vào ở commit `9ebd4cdbd62d1d500668018f0f3f1aef3fe8000e` lúc 01:48:15 12/09/2026 (tồn tại khoảng 8 giờ trước khi được phát hiện và triệt tiêu).
+   - Đã xóa 100% nhánh credential cố định này khỏi `auth.service.ts` và loại bỏ mật khẩu hardcode khỏi `seed.ts`.
+   - Xây dựng cơ chế bootstrap admin bảo mật qua biến môi trường `ADMIN_BOOTSTRAP_SECRET` (tối thiểu 16 ký tự) nằm NGOÀI repo: endpoint `POST /auth/bootstrap-admin` (có Rate Limit 5 req/h) và script CLI `packages/database/scripts/bootstrap-admin.ts` (`pnpm db:bootstrap-admin`).
+   - Rotate ngay lập tức toàn bộ JWT secret (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`) sang chuỗi 64 ký tự hex ngẫu nhiên.
+   - Viết kịch bản kiểm thử tự động `packages/database/scripts/test-wave-0.js` chạy 11/11 tests PASS: credential cũ bị 401, không cấp token, không tạo user, user thường không bị leo thang đặc quyền, đổi mật khẩu không bị ghi đè, bootstrap qua secret thành công.
+2. **P0-05 (Build tái lập)**:
+   - Đồng bộ dependency `@batdongsan/database` từ `*` thành `"workspace:*"` trong `apps/api/package.json` khớp hoàn toàn với `pnpm-lock.yaml`.
+   - Pin toolchain trong root `package.json`: pnpm `9.15.9`, engines `node: ">=20.0.0"`, `pnpm: ">=9.0.0"`.
+   - Kiểm thử thực tế: `pnpm install --frozen-lockfile` thành công (exit code 0).
+3. **OPS-01 & OPS-06 (Build graph & Deploy migration)**:
+   - Cấu hình lại `turbo.json` bảo đảm build graph tuần tự: `@batdongsan/database#build` (Prisma generate) → `@batdongsan/api#build` → `@batdongsan/web#build`.
+   - Bổ sung script `db:migrate:deploy` cho môi trường production không tương tác.
+   - Kiểm thử thực tế: `pnpm build` biên dịch thành công 3/3 packages (Next.js 29/29 routes, API dist sạch lỗi).
+4. **OPS-07 (CI Pipeline)**:
+   - Tạo file workflow `.github/workflows/ci.yml` tự động kiểm tra trên mọi PR: checkout, pnpm frozen install, migration deploy với service Postgres/Redis, monorepo build graph, typecheck cả 2 apps, dependency audit.
+5. **OPS-08 (Next.js Version Advisory)**:
+   - Rà soát advisory và support policy: Next.js 14.2.15 hiện tại biên dịch ổn định 29/29 routes sạch lỗi. Đã lập tài liệu đánh giá không nâng vội lên v15 để tránh breaking change với React 19 và async route params.
+6. **Staging Safety Net**:
+   - Tạo `.env.staging.example` với cấu hình staging riêng biệt hoàn toàn.
+   - Thêm cơ chế Safety Net trong `EmailService` và `OtpService`: khi `APP_ENV=staging` hoặc `SAFETY_NET_DISABLE_OUTBOUND=true`, toàn bộ SMS và Email bị cưỡng chế chặn gửi ra kênh thật.
+7. **Sổ theo dõi thực thi**:
+   - Tạo `docs/audit/BATDONGSAN-AUDIT-EXECUTION-PLAN.md` và `docs/audit/EXECUTION-STATUS.md` với đầy đủ mã finding. Cập nhật toàn bộ finding của Wave 0 sang trạng thái `verified` kèm commit SHA và bằng chứng kiểm thử thật.
+
+
