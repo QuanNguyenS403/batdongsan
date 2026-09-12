@@ -5,11 +5,15 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
+    "build": "dotenv -e ../../.env -- prisma generate",
     "generate": "dotenv -e ../../.env -- prisma generate",
     "migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "seed": "dotenv -e ../../.env -- ts-node --transpile-only prisma/seed.ts",
-    "import:listings": "dotenv -e ../../.env -- ts-node --transpile-only scripts/import-listings.ts"
+    "import:listings": "dotenv -e ../../.env -- ts-node --transpile-only scripts/import-listings.ts",
+    "bootstrap:admin": "dotenv -e ../../.env -- ts-node --transpile-only scripts/bootstrap-admin.ts",
+    "test:wave0": "dotenv -e ../../.env -- ts-node scripts/test-wave-0.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",

@@ -1,9 +1,31 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "dev": { "cache": false, "persistent": true },
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**"] },
-    "lint": { "outputs": [] },
-    "generate": { "outputs": ["src/generated/**"] }
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "@batdongsan/database#build": {
+      "outputs": ["../../node_modules/.prisma/**", "node_modules/.prisma/**"]
+    },
+    "@batdongsan/api#build": {
+      "dependsOn": ["@batdongsan/database#build"],
+      "outputs": ["dist/**"]
+    },
+    "@batdongsan/web#build": {
+      "dependsOn": ["@batdongsan/database#build", "@batdongsan/api#build"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    }
   }
 }
