@@ -1,11 +1,23 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (05/09/2026 — PIVOT CHIẾN LƯỢC: CHUYÊN BIỆT HÓA 100% "CHO THUÊ"):**
-1. **Chiến lược & Định vị mới**:
-   - Pivot 100% sang nền tảng trung gian (broker) chuyên biệt cho thuê: phòng trọ sinh viên, nhà nguyên căn, căn hộ chung cư, studio, mặt bằng kinh doanh.
-   - Xóa bỏ hoàn toàn mảng mua bán nhà đất trên toàn bộ hệ thống (schema, API, UI, tài liệu).
-   - Mô hình trung gian kết nối Người thuê với Chủ trọ qua SĐT/Zalo; không xử lý cọc hay thanh toán tiền thuê.
-2. **Tái cấu trúc Schema & Dữ liệu (`packages/database`)**:
+**Việc vừa hoàn thành (12/09/2026 — NÂNG CẤP THƯƠNG HIỆU QNS.VN, BỘ LỌC ĐH TOÀN QUỐC & THUẬT TOÁN TÌM PHÒNG GẦN NHẤT THEO ĐỊA CHỈ):**
+1. **Thương hiệu & Giao diện (Rebrand QNS.vn)**:
+   - Đổi toàn bộ thương hiệu từ `BĐS.vn` thành `QNS.vn` (Header logo 'Q' + 'QNS.vn', Footer, layout metadata, OpenGraph siteName, trang giới thiệu, điều khoản, liên hệ `contact@qns.vn`).
+   - Thêm mục "🏠 Trang chủ" cạnh mục "🏢 Căn hộ" trên thanh tab danh mục Hero, thanh Header Navigation và hàng Quick Categories.
+   - Loại bỏ hàng nút trường ĐH hardcode thừa thãi (`🎓 Gần trường ĐH: ...`) dưới thanh tìm kiếm Hero.
+2. **Danh mục các trường Đại học toàn quốc (`vietnam-universities.ts`)**:
+   - Xây dựng dataset chuẩn hóa hơn 80 trường Đại học lớn tại Việt Nam, phân nhóm 5 vùng miền (TP.HCM, Hà Nội, Đà Nẵng & Miền Trung, Cần Thơ & Miền Tây, Miền Bắc khác).
+   - Tích hợp vào `SearchFilterBar.tsx` với giao diện phân nhóm `<optgroup>` trực quan.
+   - Cập nhật seed database với toạ độ thực tế của toàn bộ các trường ĐH.
+3. **Thuật toán tìm phòng gần nhất theo địa chỉ (`ListingsService`)**:
+   - Geocoding & Coordinate Resolution: Nhận diện tọa độ địa chỉ từ từ khóa hoặc tọa độ gửi lên (qua database các trường, các tuyến đường/quận huyện trọng điểm và Nominatim geocode fallback).
+   - Tính toán khoảng cách (Haversine formula) và sắp xếp phòng gần nhất lên đầu (`distanceMeters ASC`).
+   - Hiển thị badge khoảng cách trực quan (`📍 Cách địa chỉ ~350m`) trên `ListingCard.tsx`.
+4. **Kiểm thử**:
+   - `tsc --noEmit` cho cả `@batdongsan/web` và `@batdongsan/api`: Đạt 100% không lỗi.
+
+---
+
    - Enum `TransactionType`: Xóa `sale`, chỉ giữ `rent`.
    - `Listing`: Bổ sung các trường chuyên sâu cho thuê trọ (`depositAmount`, `minLeaseMonths`, `utilitiesIncluded`, `electricityPricePerKwh`, `waterPricePerM3`, `waterPriceFlat`, `amenities`).
    - Thêm bảng `University` và `ListingUniversity` (lưu `distanceMeters`, `travelTimeMinutes`) phục vụ lọc "gần trường ĐH".

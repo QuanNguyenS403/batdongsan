@@ -13,6 +13,7 @@ interface CurrentUser {
 }
 
 const NAV_LINKS = [
+  { href: '/', label: 'Trang chủ' },
   { href: '/thue?categoryGroup=thue_can_ho', label: 'Căn hộ' },
   { href: '/thue?categoryGroup=thue_studio', label: 'Studio' },
   { href: '/cho-thue-tro', label: 'Phòng trọ SV' },
@@ -94,10 +95,10 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-1.5">
             <span className="flex h-6 w-6 items-center justify-center rounded bg-white/20 text-sm font-bold text-white">
-              B
+              Q
             </span>
             <span className="text-sm font-bold tracking-tight text-white">
-              BĐS<span className="font-normal opacity-80">.vn</span>
+              QNS<span className="font-normal opacity-80">.vn</span>
             </span>
           </Link>
 

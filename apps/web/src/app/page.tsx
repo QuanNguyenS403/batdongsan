@@ -10,27 +10,18 @@ import {
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'BĐS Cho Thuê — Nền tảng tìm căn hộ, studio & phòng trọ số 1',
+  title: 'QNS.vn — Nền tảng tìm căn hộ, studio & phòng trọ số 1',
   description:
-    'Tìm căn hộ, studio, phòng trọ sinh viên và nhà cho thuê giá tốt nhất. Minh bạch chi phí điện nước, tìm kiếm theo trường Đại học, liên hệ trực tiếp chính chủ.',
+    'Tìm căn hộ, studio, phòng trọ sinh viên và nhà cho thuê giá tốt nhất trên QNS.vn. Minh bạch chi phí điện nước, tìm kiếm phòng gần nhất theo địa chỉ, liên hệ trực tiếp chính chủ.',
 };
 
 const QUICK_CATEGORIES = [
+  { href: '/', icon: '🏠', label: 'Trang chủ' },
   { href: '/thue?categoryGroup=thue_can_ho', icon: '🏢', label: 'Căn hộ' },
   { href: '/thue?categoryGroup=thue_studio', icon: '🛋️', label: 'Studio' },
   { href: '/cho-thue-tro', icon: '🛏️', label: 'Phòng trọ sinh viên' },
   { href: '/thue?propertyType=nha_rieng', icon: '🏠', label: 'Nhà nguyên căn' },
   { href: '/cho-thue-mat-bang', icon: '🏪', label: 'Mặt bằng kinh doanh' },
-];
-
-const UNIVERSITY_SHORTCUTS = [
-  { href: '/thue?universitySlug=dhqg-tphcm', label: 'ĐHQG TP.HCM' },
-  { href: '/thue?universitySlug=dh-bach-khoa-tphcm', label: 'ĐH Bách Khoa HCM' },
-  { href: '/thue?universitySlug=dh-kinh-te-tphcm', label: 'ĐH Kinh tế (UEH)' },
-  { href: '/thue?universitySlug=dh-ton-duc-thang', label: 'ĐH Tôn Đức Thắng' },
-  { href: '/thue?universitySlug=dhqg-ha-noi', label: 'ĐHQG Hà Nội' },
-  { href: '/thue?universitySlug=dh-kinh-te-quoc-dan', label: 'ĐH Kinh tế Quốc dân' },
-  { href: '/thue?universitySlug=dh-bach-khoa-ha-noi', label: 'ĐH Bách Khoa HN' },
 ];
 
 const VALUE_PROPOSITIONS = [
@@ -119,7 +110,7 @@ export default async function HomePage() {
         <div className="container-max py-14 lg:py-20">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/20">
-              🔑 Sàn trung gian Cho thuê BĐS — Kết nối trực tiếp Chủ trọ & Sinh viên
+              🔑 Sàn trung gian Cho thuê BĐS QNS.vn — Kết nối trực tiếp Chủ trọ & Sinh viên
             </div>
             <h1 className="text-4xl font-bold leading-tight text-text-primary md:text-5xl lg:text-[3.25rem]">
               Tìm phòng trọ & nhà cho thuê{' '}
@@ -139,8 +130,14 @@ export default async function HomePage() {
               <div className="mb-0 flex justify-center">
                 <div className="inline-flex rounded-t-xl overflow-hidden border-b-0 flex-wrap">
                   <Link
+                    href="/"
+                    className="bg-brand text-white px-5 py-2.5 text-xs sm:text-sm font-semibold border-x border-t border-brand rounded-tl-xl hover:bg-brand-700 transition-colors"
+                  >
+                    🏠 Trang chủ
+                  </Link>
+                  <Link
                     href="/thue?categoryGroup=thue_can_ho"
-                    className="bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand border-x border-t border-surface-border rounded-tl-xl hover:bg-slate-50 transition-colors"
+                    className="bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand border-r border-t border-surface-border hover:bg-slate-50 transition-colors"
                   >
                     🏢 Căn hộ
                   </Link>
@@ -171,7 +168,7 @@ export default async function HomePage() {
               >
                 <input
                   name="keyword"
-                  placeholder="Nhập tên trường ĐH (VD: Bách Khoa, ĐHQG...), quận/huyện, hoặc từ khóa..."
+                  placeholder="Nhập địa chỉ bất kỳ, tên đường, trường ĐH (VD: Đại Cồ Việt, Cầu Giấy, Bách Khoa...)..."
                   className="flex-1 px-5 py-4 text-sm text-text-primary placeholder:text-text-muted outline-none"
                 />
                 <button
@@ -185,20 +182,6 @@ export default async function HomePage() {
                   Tìm phòng ngay
                 </button>
               </form>
-            </div>
-
-            {/* Quick university shortcuts */}
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs">
-              <span className="text-text-muted font-medium">🎓 Gần trường ĐH:</span>
-              {UNIVERSITY_SHORTCUTS.map((uni) => (
-                <Link
-                  key={uni.href}
-                  href={uni.href}
-                  className="rounded-full bg-white px-3 py-1 font-medium text-text-secondary shadow-sm ring-1 ring-surface-border hover:ring-brand hover:text-brand transition-all"
-                >
-                  {uni.label}
-                </Link>
-              ))}
             </div>
 
             {/* Quick category pills */}

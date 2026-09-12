@@ -31,6 +31,10 @@ export interface Listing {
   bathrooms: number | null;
   legalStatus: string | null;
   addressDetail: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  distanceMeters?: number | null;
+  distanceText?: string | null;
   status: string;
   rejectionReason?: string | null;
   verificationStatus?: 'chua_xac_thuc' | 'cho_xac_thuc' | 'da_xac_thuc';

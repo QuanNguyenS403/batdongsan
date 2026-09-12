@@ -271,13 +271,42 @@ export class ListingsService {
     if (query.utilitiesIncluded === 'true') {
       where.utilitiesIncluded = true;
     }
+
+    // Nhận diện tọa độ địa chỉ tìm kiếm (Proximity Geocoding & Distance Algorithm)
+    const targetCoords = await this.resolveTargetCoordinates(query.keyword, query.lat, query.lng);
+
     if (query.keyword) {
-      andConditions.push({
-        OR: [
-          { title: { contains: query.keyword, mode: 'insensitive' } },
-          { addressDetail: { contains: query.keyword, mode: 'insensitive' } },
-        ],
-      });
+      if (targetCoords) {
+        // Khi đã nhận diện được tọa độ địa chỉ, tìm các phòng khớp từ khóa HOẶC có tọa độ lân cận
+        andConditions.push({
+          OR: [
+            { title: { contains: query.keyword, mode: 'insensitive' } },
+            { addressDetail: { contains: query.keyword, mode: 'insensitive' } },
+            { location: { name: { contains: query.keyword, mode: 'insensitive' } } },
+            { lat: { not: null } },
+            {
+              nearbyUniversities: {
+                some: {
+                  university: {
+                    OR: [
+                      { name: { contains: query.keyword, mode: 'insensitive' } },
+                      { abbreviation: { contains: query.keyword, mode: 'insensitive' } },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        });
+      } else {
+        andConditions.push({
+          OR: [
+            { title: { contains: query.keyword, mode: 'insensitive' } },
+            { addressDetail: { contains: query.keyword, mode: 'insensitive' } },
+            { location: { name: { contains: query.keyword, mode: 'insensitive' } } },
+          ],
+        });
+      }
     }
 
     where.AND = andConditions;
@@ -285,6 +314,68 @@ export class ListingsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
+    // Khi có tọa độ địa chỉ mục tiêu (targetCoords): lấy tập phòng phù hợp, tính khoảng cách và sắp xếp theo phòng gần nhất lên đầu
+    if (targetCoords) {
+      const candidates = await this.prisma.listing.findMany({
+        where,
+        select: PUBLIC_LISTING_SELECT,
+        take: 100, // Lấy tập ứng viên đủ rộng để sắp xếp khoảng cách chính xác
+      });
+
+      const enriched = candidates.map((item) => {
+        let distanceMeters: number | null = null;
+
+        if (item.lat != null && item.lng != null) {
+          distanceMeters = ListingsService.calculateDistanceMeters(
+            targetCoords.lat,
+            targetCoords.lng,
+            item.lat,
+            item.lng,
+          );
+        } else if (item.nearbyUniversities?.length > 0 && item.nearbyUniversities[0].distanceMeters != null) {
+          // Dự phòng dùng khoảng cách của trường ĐH lân cận nếu phòng chưa cập nhật tọa độ riêng
+          distanceMeters = item.nearbyUniversities[0].distanceMeters;
+        }
+
+        const distanceText =
+          distanceMeters != null
+            ? distanceMeters < 1000
+              ? `Cách ${targetCoords.label ? targetCoords.label + ' ' : ''}~${distanceMeters}m`
+              : `Cách ${targetCoords.label ? targetCoords.label + ' ' : ''}~${(distanceMeters / 1000).toFixed(1)} km`
+            : null;
+
+        return {
+          ...serialize(item),
+          distanceMeters,
+          distanceText,
+        };
+      });
+
+      // Lọc theo bán kính tối đa nếu có yêu cầu
+      const filtered = query.radiusKm
+        ? enriched.filter((it) => it.distanceMeters == null || it.distanceMeters <= query.radiusKm! * 1000)
+        : enriched;
+
+      // Sắp xếp: phòng gần nhất (khoảng cách nhỏ nhất) lên đầu tiên
+      filtered.sort((a, b) => {
+        if (a.distanceMeters != null && b.distanceMeters != null) {
+          return a.distanceMeters - b.distanceMeters;
+        }
+        if (a.distanceMeters != null) return -1;
+        if (b.distanceMeters != null) return 1;
+        return new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime();
+      });
+
+      const total = filtered.length;
+      const paginatedItems = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+      return {
+        items: paginatedItems,
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      };
+    }
+
+    // Trường hợp tìm kiếm thông thường không có tọa độ địa chỉ: sắp xếp theo tin mới nhất
     const [items, total] = await this.prisma.$transaction([
       this.prisma.listing.findMany({
         where,
@@ -300,6 +391,175 @@ export class ListingsService {
       items: items.map(serialize),
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     };
+  }
+
+  /**
+   * Tính khoảng cách đường chim bay (mét) giữa 2 tọa độ theo công thức Haversine.
+   */
+  public static calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371e3; // Mét
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return Math.round(R * c);
+  }
+
+  private static removeAccents(str: string): string {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase()
+      .trim();
+  }
+
+  private static readonly KNOWN_ADDRESS_COORDINATES: Record<string, { lat: number; lng: number }> = {
+    'dai co viet': { lat: 21.0056, lng: 105.8433 },
+    'ta quang buu': { lat: 21.004, lng: 105.845 },
+    'giai phong': { lat: 20.9996, lng: 105.8427 },
+    'xuan thuy': { lat: 21.0373, lng: 105.7828 },
+    'cau giay': { lat: 21.0333, lng: 105.794 },
+    'nguyen trai': { lat: 20.9912, lng: 105.7958 },
+    'chua lang': { lat: 21.0232, lng: 105.8049 },
+    'dong da': { lat: 21.018, lng: 105.826 },
+    'thanh xuan': { lat: 20.993, lng: 105.805 },
+    'ha dong': { lat: 20.97, lng: 105.77 },
+    'hai ba trung': { lat: 21.008, lng: 105.85 },
+    'hoan kiem': { lat: 21.0285, lng: 105.8542 },
+    'tay ho': { lat: 21.07, lng: 105.82 },
+    'bac tu liem': { lat: 21.06, lng: 105.76 },
+    'nam tu liem': { lat: 21.01, lng: 105.77 },
+    'hoang mai': { lat: 20.97, lng: 105.85 },
+    'long bien': { lat: 21.04, lng: 105.89 },
+    'quan 1': { lat: 10.7769, lng: 106.7009 },
+    'quan 3': { lat: 10.7828, lng: 106.6958 },
+    'quan 4': { lat: 10.76, lng: 106.705 },
+    'quan 5': { lat: 10.7551, lng: 106.6599 },
+    'quan 7': { lat: 10.7326, lng: 106.6992 },
+    'quan 10': { lat: 10.7726, lng: 106.6578 },
+    'ly thuong kiet': { lat: 10.7726, lng: 106.6578 },
+    'nguyen van cu': { lat: 10.7628, lng: 106.6825 },
+    'nguyen huu tho': { lat: 10.7326, lng: 106.6992 },
+    'binh thanh': { lat: 10.8037, lng: 106.7144 },
+    'dien bien phu': { lat: 10.8016, lng: 106.7145 },
+    'thu duc': { lat: 10.8507, lng: 106.7719 },
+    'vo van ngan': { lat: 10.8507, lng: 106.7719 },
+    'linh trung': { lat: 10.8753, lng: 106.8007 },
+    'khu do thi dhqg': { lat: 10.8753, lng: 106.8007 },
+    'go vap': { lat: 10.8222, lng: 106.6875 },
+    'tan phu': { lat: 10.8063, lng: 106.6287 },
+    'tan binh': { lat: 10.8015, lng: 106.6528 },
+    'phu nhuan': { lat: 10.8144, lng: 106.6778 },
+    'da nang': { lat: 16.0544, lng: 108.2022 },
+    'lien chieu': { lat: 16.0738, lng: 108.1499 },
+    'ngu hanh son': { lat: 16.0506, lng: 108.2415 },
+    'hai chau': { lat: 16.0617, lng: 108.2081 },
+    'can tho': { lat: 10.0312, lng: 105.7691 },
+    'ninh kieu': { lat: 10.0312, lng: 105.7691 },
+  };
+
+  /**
+   * Phân tích và nhận diện tọa độ địa chỉ từ từ khóa hoặc tọa độ gửi lên.
+   */
+  private async resolveTargetCoordinates(
+    keyword?: string,
+    lat?: number,
+    lng?: number,
+  ): Promise<{ lat: number; lng: number; label?: string } | null> {
+    if (lat != null && lng != null) {
+      return { lat, lng };
+    }
+
+    if (!keyword || !keyword.trim()) return null;
+    const cleanKw = keyword.trim();
+    const normalized = ListingsService.removeAccents(cleanKw);
+
+    // 1. Kiểm tra khớp tên/viết tắt/slug của trường Đại học trong CSDL
+    const matchedUni = await this.prisma.university.findFirst({
+      where: {
+        OR: [
+          { name: { contains: cleanKw, mode: 'insensitive' } },
+          { abbreviation: { contains: cleanKw, mode: 'insensitive' } },
+          { slug: { contains: cleanKw, mode: 'insensitive' } },
+        ],
+      },
+    });
+    if (matchedUni && matchedUni.lat != null && matchedUni.lng != null) {
+      return {
+        lat: matchedUni.lat,
+        lng: matchedUni.lng,
+        label: matchedUni.abbreviation || matchedUni.name,
+      };
+    }
+
+    // 2. Tra cứu danh mục các tuyến đường và quận/huyện phổ biến
+    for (const [key, coords] of Object.entries(ListingsService.KNOWN_ADDRESS_COORDINATES)) {
+      if (normalized.includes(key) || key.includes(normalized)) {
+        return {
+          lat: coords.lat,
+          lng: coords.lng,
+          label: cleanKw,
+        };
+      }
+    }
+
+    // 3. Tra cứu theo địa danh (Location) nếu khớp
+    const matchedLoc = await this.prisma.location.findFirst({
+      where: {
+        OR: [
+          { name: { contains: cleanKw, mode: 'insensitive' } },
+          { slug: { contains: cleanKw, mode: 'insensitive' } },
+        ],
+      },
+    });
+    if (matchedLoc) {
+      const locNorm = ListingsService.removeAccents(matchedLoc.name);
+      for (const [key, coords] of Object.entries(ListingsService.KNOWN_ADDRESS_COORDINATES)) {
+        if (locNorm.includes(key)) {
+          return { lat: coords.lat, lng: coords.lng, label: matchedLoc.name };
+        }
+      }
+    }
+
+    // 4. Fallback Geocoder qua OpenStreetMap Nominatim nếu có kết nối mạng (timeout 1.2s)
+    if (cleanKw.length >= 4) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1200);
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&countrycodes=vn&limit=1&q=${encodeURIComponent(
+            cleanKw,
+          )}`,
+          {
+            headers: { 'User-Agent': 'QNS.vn-RealEstate-Platform/1.0' },
+            signal: controller.signal,
+          },
+        );
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const results = await res.json();
+          if (Array.isArray(results) && results.length > 0 && results[0].lat && results[0].lon) {
+            return {
+              lat: parseFloat(results[0].lat),
+              lng: parseFloat(results[0].lon),
+              label: cleanKw,
+            };
+          }
+        }
+      } catch {
+        // Bỏ qua lỗi timeout hoặc offline geocoding
+      }
+    }
+
+    return null;
   }
 
   // In-memory cache lưu cây địa danh để tránh 2-4 câu query đệ quy lặp đi lặp lại trên từng lượt tìm kiếm

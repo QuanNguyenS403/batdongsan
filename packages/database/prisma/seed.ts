@@ -91,92 +91,117 @@ async function main() {
   console.log('✅ Seed địa danh + tài khoản demo xong.');
   console.log('   Đăng nhập quản trị: SĐT 0981753082 / mật khẩu: Quannguyenkay6@');
 
-  // ---------- 3. Danh mục các Trường Đại học trọng điểm ----------
-  const uniDhqgHcm = await prisma.university.upsert({
-    where: { slug: 'dhqg-tphcm' },
-    update: {},
-    create: {
-      name: 'Đại học Quốc gia TP. Hồ Chí Minh (Khu Đô thị ĐHQG)',
-      abbreviation: 'ĐHQG TP.HCM',
-      slug: 'dhqg-tphcm',
-      address: 'Khu phố 6, P. Linh Trung, TP. Thủ Đức, TP.HCM',
-      locationId: quan1.id,
-    },
-  });
+  // ---------- 3. Danh mục các Trường Đại học trọng điểm toàn quốc ----------
+  const ALL_UNIVERSITIES_DATA = [
+    // TP. Hồ Chí Minh
+    { slug: 'dhqg-tphcm', name: 'Đại học Quốc gia TP. Hồ Chí Minh (Khu Đô thị ĐHQG)', abbreviation: 'ĐHQG TP.HCM', address: 'Khu phố 6, P. Linh Trung, TP. Thủ Đức, TP.HCM', lat: 10.8753, lng: 106.8007, locationId: quan1.id },
+    { slug: 'dh-bach-khoa-tphcm', name: 'Trường Đại học Bách Khoa - ĐHQG TP.HCM', abbreviation: 'Bách Khoa HCM', address: '268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM', lat: 10.7726, lng: 106.6578, locationId: quan1.id },
+    { slug: 'dh-khoa-hoc-tu-nhien-tphcm', name: 'Trường Đại học Khoa học Tự nhiên - ĐHQG TP.HCM', abbreviation: 'KHTN TP.HCM', address: '227 Nguyễn Văn Cừ, Phường 4, Quận 5, TP.HCM', lat: 10.7628, lng: 106.6825, locationId: quan1.id },
+    { slug: 'dh-khxh-nv-tphcm', name: 'Trường ĐH Khoa học Xã hội & Nhân văn - ĐHQG TP.HCM', abbreviation: 'KHXH&NV HCM', address: '10-12 Đinh Tiên Hoàng, Bến Nghé, Quận 1, TP.HCM', lat: 10.7865, lng: 106.7018, locationId: quan1.id },
+    { slug: 'dh-kinh-te-luat-tphcm', name: 'Trường Đại học Kinh tế - Luật - ĐHQG TP.HCM', abbreviation: 'UEL', address: '669 QL1K, Linh Xuân, TP. Thủ Đức, TP.HCM', lat: 10.8756, lng: 106.7774, locationId: quan1.id },
+    { slug: 'dh-cong-nghe-thong-tin-tphcm', name: 'Trường Đại học Công nghệ Thông tin - ĐHQG TP.HCM', abbreviation: 'UIT', address: 'Khu phố 6, Linh Trung, TP. Thủ Đức, TP.HCM', lat: 10.8702, lng: 106.8032, locationId: quan1.id },
+    { slug: 'dh-quoc-te-tphcm', name: 'Trường Đại học Quốc tế - ĐHQG TP.HCM', abbreviation: 'IU HCM', address: 'Khu phố 6, Linh Trung, TP. Thủ Đức, TP.HCM', lat: 10.8778, lng: 106.8016, locationId: quan1.id },
+    { slug: 'dh-kinh-te-tphcm', name: 'Đại học Kinh tế TP. Hồ Chí Minh', abbreviation: 'UEH', address: '59C Nguyễn Đình Chiểu, Phường 6, Quận 3, TP.HCM', lat: 10.7828, lng: 106.6958, locationId: quan1.id },
+    { slug: 'dh-ton-duc-thang', name: 'Trường Đại học Tôn Đức Thắng', abbreviation: 'TDTU', address: '19 Nguyễn Hữu Thọ, P. Tân Phong, Quận 7, TP.HCM', lat: 10.7326, lng: 106.6992, locationId: quan7.id },
+    { slug: 'dh-su-pham-ky-thuat-tphcm', name: 'Trường Đại học Sư phạm Kỹ thuật TP.HCM', abbreviation: 'HCMUTE', address: '1 Võ Văn Ngân, Linh Chiểu, TP. Thủ Đức, TP.HCM', lat: 10.8507, lng: 106.7719, locationId: quan1.id },
+    { slug: 'dh-y-duoc-tphcm', name: 'Đại học Y Dược TP. Hồ Chí Minh', abbreviation: 'UMP HCM', address: '217 Hồng Bàng, Phường 11, Quận 5, TP.HCM', lat: 10.7551, lng: 106.6599, locationId: quan1.id },
+    { slug: 'dh-y-khoa-pham-ngoc-thach', name: 'Trường Đại học Y khoa Phạm Ngọc Thạch', abbreviation: 'PNTU', address: '2 Dương Quang Trung, Phường 12, Quận 10, TP.HCM', lat: 10.7733, lng: 106.6669, locationId: quan1.id },
+    { slug: 'dh-su-pham-tphcm', name: 'Trường Đại học Sư phạm TP. Hồ Chí Minh', abbreviation: 'HCMUE', address: '280 An Dương Vương, Phường 4, Quận 5, TP.HCM', lat: 10.7601, lng: 106.6823, locationId: quan1.id },
+    { slug: 'dh-sai-gon', name: 'Trường Đại học Sài Gòn', abbreviation: 'SGU', address: '273 An Dương Vương, Phường 3, Quận 5, TP.HCM', lat: 10.7597, lng: 106.6811, locationId: quan1.id },
+    { slug: 'dh-luat-tphcm', name: 'Trường Đại học Luật TP. Hồ Chí Minh', abbreviation: 'ULAW', address: '2 Nguyễn Tất Thành, Phường 12, Quận 4, TP.HCM', lat: 10.7671, lng: 106.7077, locationId: quan1.id },
+    { slug: 'dh-ngoai-thuong-cs2', name: 'Trường Đại học Ngoại thương - Cơ sở 2', abbreviation: 'FTU2', address: '15 Đường D5, Phường 25, Bình Thạnh, TP.HCM', lat: 10.8037, lng: 106.7144, locationId: binhthanh.id },
+    { slug: 'dh-ngan-hang-tphcm', name: 'Trường Đại học Ngân hàng TP. Hồ Chí Minh', abbreviation: 'HUB', address: '56 Hoàng Diệu 2, TP. Thủ Đức, TP.HCM', lat: 10.8561, lng: 106.7645, locationId: quan1.id },
+    { slug: 'dh-tai-chinh-marketing', name: 'Trường Đại học Tài chính - Marketing', abbreviation: 'UFM', address: '778 Nguyễn Kiệm, Phường 4, Phú Nhuận, TP.HCM', lat: 10.8144, lng: 106.6778, locationId: quan1.id },
+    { slug: 'dh-mo-tphcm', name: 'Trường Đại học Mở TP. Hồ Chí Minh', abbreviation: 'OU HCM', address: '97 Võ Văn Tần, Phường 6, Quận 3, TP.HCM', lat: 10.7766, lng: 106.6912, locationId: quan1.id },
+    { slug: 'dh-nong-lam-tphcm', name: 'Trường Đại học Nông Lâm TP. Hồ Chí Minh', abbreviation: 'NLU', address: 'Khu phố 6, Linh Trung, TP. Thủ Đức, TP.HCM', lat: 10.8711, lng: 106.7915, locationId: quan1.id },
+    { slug: 'dh-cong-nghiep-tphcm', name: 'Trường Đại học Công nghiệp TP. Hồ Chí Minh', abbreviation: 'IUH', address: '12 Nguyễn Văn Bảo, Phường 4, Gò Vấp, TP.HCM', lat: 10.8222, lng: 106.6875, locationId: quan1.id },
+    { slug: 'dh-cong-thuong-tphcm', name: 'Trường Đại học Công Thương TP. Hồ Chí Minh', abbreviation: 'HUIT', address: '140 Lê Trọng Tấn, Tây Thạnh, Tân Phú, TP.HCM', lat: 10.8063, lng: 106.6287, locationId: quan1.id },
+    { slug: 'dh-kien-truc-tphcm', name: 'Trường Đại học Kiến trúc TP. Hồ Chí Minh', abbreviation: 'UAH', address: '196 Pasteur, Phường 6, Quận 3, TP.HCM', lat: 10.7825, lng: 106.6942, locationId: quan1.id },
+    { slug: 'dh-van-lang', name: 'Trường Đại học Văn Lang', abbreviation: 'VLU', address: '69/68 Đặng Thùy Trâm, Phường 13, Bình Thạnh, TP.HCM', lat: 10.8285, lng: 106.7028, locationId: binhthanh.id },
+    { slug: 'dh-hoa-sen', name: 'Trường Đại học Hoa Sen', abbreviation: 'HSU', address: '8 Nguyễn Văn Tráng, Bến Thành, Quận 1, TP.HCM', lat: 10.7712, lng: 106.6922, locationId: quan1.id },
+    { slug: 'dh-cong-nghe-tphcm-hutech', name: 'Trường Đại học Công nghệ TP.HCM', abbreviation: 'HUTECH', address: '475A Điện Biên Phủ, Phường 25, Bình Thạnh, TP.HCM', lat: 10.8016, lng: 106.7145, locationId: binhthanh.id },
+    { slug: 'dh-kinh-te-tai-chinh-tphcm', name: 'Trường Đại học Kinh tế - Tài chính TP.HCM', abbreviation: 'UEF', address: '141-145 Điện Biên Phủ, Phường 15, Bình Thạnh, TP.HCM', lat: 10.7963, lng: 106.7042, locationId: binhthanh.id },
+    { slug: 'dh-quoc-te-hong-bang', name: 'Trường Đại học Quốc tế Hồng Bàng', abbreviation: 'HIU', address: '215 Điện Biên Phủ, Phường 15, Bình Thạnh, TP.HCM', lat: 10.7981, lng: 106.7088, locationId: binhthanh.id },
+    { slug: 'dh-fpt-tphcm', name: 'Trường Đại học FPT TP. Hồ Chí Minh', abbreviation: 'FPT HCM', address: 'Đường D1, Khu CNC, Long Thạnh Mỹ, TP. Thủ Đức, TP.HCM', lat: 10.8557, lng: 106.8087, locationId: quan1.id },
 
-  const uniBachKhoaHcm = await prisma.university.upsert({
-    where: { slug: 'dh-bach-khoa-tphcm' },
-    update: {},
-    create: {
-      name: 'Trường Đại học Bách Khoa - ĐHQG TP.HCM',
-      abbreviation: 'Bách Khoa HCM',
-      slug: 'dh-bach-khoa-tphcm',
-      address: '268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM',
-      locationId: quan1.id,
-    },
-  });
+    // Hà Nội
+    { slug: 'dhqg-ha-noi', name: 'Đại học Quốc gia Hà Nội', abbreviation: 'VNU HN', address: '144 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội', lat: 21.0373, lng: 105.7828, locationId: hanoi.id },
+    { slug: 'dh-bach-khoa-ha-noi', name: 'Đại học Bách Khoa Hà Nội', abbreviation: 'HUST', address: 'Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội', lat: 21.0056, lng: 105.8433, locationId: hanoi.id },
+    { slug: 'dh-kinh-te-quoc-dan', name: 'Trường Đại học Kinh tế Quốc dân', abbreviation: 'NEU', address: '207 Giải Phóng, Đồng Tâm, Hai Bà Trưng, Hà Nội', lat: 20.9996, lng: 105.8427, locationId: hanoi.id },
+    { slug: 'dh-ngoai-thuong-hn', name: 'Trường Đại học Ngoại thương', abbreviation: 'FTU', address: '91 Chùa Láng, Láng Thượng, Đống Đa, Hà Nội', lat: 21.0232, lng: 105.8049, locationId: hanoi.id },
+    { slug: 'hoc-vien-tai-chinh', name: 'Học viện Tài chính', abbreviation: 'AOF', address: '58 Lê Văn Hiến, Đức Thắng, Bắc Từ Liêm, Hà Nội', lat: 21.0772, lng: 105.7744, locationId: hanoi.id },
+    { slug: 'hoc-vien-ngan-hang', name: 'Học viện Ngân hàng', abbreviation: 'BA', address: '12 Chùa Bộc, Quang Trung, Đống Đa, Hà Nội', lat: 21.0084, lng: 105.8285, locationId: hanoi.id },
+    { slug: 'dh-thuong-mai', name: 'Trường Đại học Thương mại', abbreviation: 'TMU', address: '79 Hồ Tùng Mậu, Mai Dịch, Cầu Giấy, Hà Nội', lat: 21.0366, lng: 105.7742, locationId: hanoi.id },
+    { slug: 'dh-xay-dung-ha-noi', name: 'Trường Đại học Xây dựng Hà Nội', abbreviation: 'HUCE', address: '55 Giải Phóng, Đồng Tâm, Hai Bà Trưng, Hà Nội', lat: 21.0039, lng: 105.8419, locationId: hanoi.id },
+    { slug: 'dh-giao-thong-van-tai', name: 'Trường Đại học Giao thông Vận tải', abbreviation: 'UTC', address: 'Số 3 Cầu Giấy, Láng Thượng, Đống Đa, Hà Nội', lat: 21.0289, lng: 105.8037, locationId: hanoi.id },
+    { slug: 'dh-y-ha-noi', name: 'Trường Đại học Y Hà Nội', abbreviation: 'HMU', address: 'Số 1 Tôn Thất Tùng, Trung Tự, Đống Đa, Hà Nội', lat: 21.0028, lng: 105.8317, locationId: hanoi.id },
+    { slug: 'dh-duoc-ha-noi', name: 'Trường Đại học Dược Hà Nội', abbreviation: 'HUP', address: '13-15 Lê Thánh Tông, Phan Chu Trinh, Hoàn Kiếm, Hà Nội', lat: 21.0219, lng: 105.8569, locationId: hanoi.id },
+    { slug: 'hoc-vien-cong-nghe-buu-chinh-vien-thong', name: 'Học viện Công nghệ Bưu chính Viễn thông', abbreviation: 'PTIT', address: 'Km10 Đường Nguyễn Trãi, Hà Đông, Hà Nội', lat: 20.9808, lng: 105.7876, locationId: hanoi.id },
+    { slug: 'dh-su-pham-ha-noi', name: 'Trường Đại học Sư phạm Hà Nội', abbreviation: 'HNUE', address: '136 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội', lat: 21.0368, lng: 105.7842, locationId: hanoi.id },
+    { slug: 'dh-ha-noi', name: 'Trường Đại học Hà Nội', abbreviation: 'HANU', address: 'Km 9 Đường Nguyễn Trãi, Trung Văn, Nam Từ Liêm, Hà Nội', lat: 20.9912, lng: 105.7958, locationId: hanoi.id },
+    { slug: 'dh-cong-nghiep-ha-noi', name: 'Trường Đại học Công nghiệp Hà Nội', abbreviation: 'HaUI', address: '298 Cầu Diễn, Minh Khai, Bắc Từ Liêm, Hà Nội', lat: 21.0537, lng: 105.7351, locationId: hanoi.id },
+    { slug: 'hoc-vien-bao-chi-tuyen-truyen', name: 'Học viện Báo chí và Tuyên truyền', abbreviation: 'AJC', address: '36 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội', lat: 21.0363, lng: 105.7892, locationId: hanoi.id },
+    { slug: 'hoc-vien-ngoai-giao', name: 'Học viện Ngoại giao', abbreviation: 'DAV', address: '69 Chùa Láng, Láng Thượng, Đống Đa, Hà Nội', lat: 21.0227, lng: 105.8071, locationId: hanoi.id },
+    { slug: 'dh-luat-ha-noi', name: 'Trường Đại học Luật Hà Nội', abbreviation: 'HLU', address: '87 Nguyễn Chí Thanh, Láng Hạ, Đống Đa, Hà Nội', lat: 21.0189, lng: 105.8119, locationId: hanoi.id },
+    { slug: 'dh-kien-truc-ha-noi', name: 'Trường Đại học Kiến trúc Hà Nội', abbreviation: 'HAU', address: 'Km 10 Đường Nguyễn Trãi, Văn Quán, Hà Đông, Hà Nội', lat: 20.9822, lng: 105.7891, locationId: hanoi.id },
+    { slug: 'dh-thuy-loi', name: 'Trường Đại học Thủy lợi', abbreviation: 'TLU', address: '175 Tây Sơn, Trung Liệt, Đống Đa, Hà Nội', lat: 21.0076, lng: 105.8242, locationId: hanoi.id },
+    { slug: 'dh-mo-dia-chat', name: 'Trường Đại học Mỏ - Địa chất', abbreviation: 'HUMG', address: 'Số 18 Phố Viên, Đức Thắng, Bắc Từ Liêm, Hà Nội', lat: 21.0725, lng: 105.7738, locationId: hanoi.id },
+    { slug: 'dh-thang-long', name: 'Trường Đại học Thăng Long', abbreviation: 'TLU HN', address: 'Đường Nghiêm Xuân Yêm, Đại Kim, Hoàng Mai, Hà Nội', lat: 20.9765, lng: 105.8157, locationId: hanoi.id },
+    { slug: 'dh-phenikaa', name: 'Trường Đại học Phenikaa', abbreviation: 'Phenikaa', address: 'Đường Tố Hữu, Yên Nghĩa, Hà Đông, Hà Nội', lat: 20.9635, lng: 105.7483, locationId: hanoi.id },
+    { slug: 'dh-fpt-ha-noi', name: 'Trường Đại học FPT Hà Nội', abbreviation: 'FPT HN', address: 'Khu CNC Hòa Lạc, Km 29 Đại lộ Thăng Long, Thạch Thất, Hà Nội', lat: 21.0131, lng: 105.5262, locationId: hanoi.id },
+    { slug: 'hoc-vien-nong-nghiep-vn', name: 'Học viện Nông nghiệp Việt Nam', abbreviation: 'VNUA', address: 'Thị trấn Trâu Quỳ, Gia Lâm, Hà Nội', lat: 21.0051, lng: 105.9328, locationId: hanoi.id },
 
-  const uniUeh = await prisma.university.upsert({
-    where: { slug: 'dh-kinh-te-tphcm' },
-    update: {},
-    create: {
-      name: 'Đại học Kinh tế TP. Hồ Chí Minh',
-      abbreviation: 'UEH',
-      slug: 'dh-kinh-te-tphcm',
-      address: '59C Nguyễn Đình Chiểu, Phường 6, Quận 3, TP.HCM',
-      locationId: quan1.id,
-    },
-  });
+    // Đà Nẵng & Miền Trung
+    { slug: 'dh-bach-khoa-da-nang', name: 'Trường Đại học Bách Khoa - ĐH Đà Nẵng', abbreviation: 'DUT Đà Nẵng', address: '54 Nguyễn Lương Bằng, Hòa Khánh Bắc, Liên Chiểu, Đà Nẵng', lat: 16.0738, lng: 108.1499, locationId: danang.id },
+    { slug: 'dh-kinh-te-da-nang', name: 'Trường Đại học Kinh tế - ĐH Đà Nẵng', abbreviation: 'DUE Đà Nẵng', address: '71 Ngũ Hành Sơn, Bắc Mỹ An, Ngũ Hành Sơn, Đà Nẵng', lat: 16.0506, lng: 108.2415, locationId: danang.id },
+    { slug: 'dh-su-pham-da-nang', name: 'Trường Đại học Sư phạm - ĐH Đà Nẵng', abbreviation: 'UED Đà Nẵng', address: '459 Tôn Đức Thắng, Hòa Khánh Nam, Liên Chiểu, Đà Nẵng', lat: 16.0612, lng: 108.1584, locationId: danang.id },
+    { slug: 'dh-ngoai-ngu-da-nang', name: 'Trường Đại học Ngoại ngữ - ĐH Đà Nẵng', abbreviation: 'UFL Đà Nẵng', address: '131 Lương Nhữ Hộc, Khuê Trung, Cẩm Lệ, Đà Nẵng', lat: 16.0354, lng: 108.2107, locationId: danang.id },
+    { slug: 'dh-duy-tan', name: 'Trường Đại học Duy Tân', abbreviation: 'DTU', address: '254 Nguyễn Văn Linh, Thạc Gián, Thanh Khê, Đà Nẵng', lat: 16.0617, lng: 108.2081, locationId: danang.id },
+    { slug: 'dh-fpt-da-nang', name: 'Trường Đại học FPT Đà Nẵng', abbreviation: 'FPT ĐN', address: 'Khu Đô thị FPT City, Hòa Hải, Ngũ Hành Sơn, Đà Nẵng', lat: 15.9863, lng: 108.2612, locationId: danang.id },
+    { slug: 'dh-y-duoc-hue', name: 'Trường Đại học Y - Dược, Đại học Huế', abbreviation: 'UMP Huế', address: '06 Ngô Quyền, Vĩnh Ninh, TP. Huế, Thừa Thiên Huế', lat: 16.4632, lng: 107.5855, locationId: danang.id },
+    { slug: 'dh-nha-trang', name: 'Trường Đại học Nha Trang', abbreviation: 'NTU', address: '02 Nguyễn Đình Chiểu, Vĩnh Thọ, TP. Nha Trang, Khánh Hòa', lat: 12.2685, lng: 109.2023, locationId: danang.id },
+    { slug: 'dh-quy-nhon', name: 'Trường Đại học Quy Nhơn', abbreviation: 'QNU', address: '170 An Dương Vương, Nguyễn Văn Cừ, TP. Quy Nhơn, Bình Định', lat: 13.7589, lng: 109.2173, locationId: danang.id },
+    { slug: 'dh-da-lat', name: 'Trường Đại học Đà Lạt', abbreviation: 'DLU', address: '01 Phù Đổng Thiên Vương, Phường 8, TP. Đà Lạt, Lâm Đồng', lat: 11.9546, lng: 108.4448, locationId: danang.id },
+    { slug: 'dh-tay-nguyen', name: 'Trường Đại học Tây Nguyên', abbreviation: 'TNU Tây Nguyên', address: '567 Lê Duẩn, Ea Tam, TP. Buôn Ma Thuột, Đắk Lắk', lat: 12.6568, lng: 108.0526, locationId: danang.id },
 
-  const uniTonDucThang = await prisma.university.upsert({
-    where: { slug: 'dh-ton-duc-thang' },
-    update: {},
-    create: {
-      name: 'Trường Đại học Tôn Đức Thắng',
-      abbreviation: 'TDTU',
-      slug: 'dh-ton-duc-thang',
-      address: '19 Nguyễn Hữu Thọ, P. Tân Phong, Quận 7, TP.HCM',
-      locationId: quan7.id,
-    },
-  });
+    // Cần Thơ & Miền Tây
+    { slug: 'dh-can-tho', name: 'Trường Đại học Cần Thơ', abbreviation: 'CTU Cần Thơ', address: 'Khu II, Đường 3/2, Xuân Khánh, Ninh Kiều, Cần Thơ', lat: 10.0312, lng: 105.7691, locationId: quan1.id },
+    { slug: 'dh-y-duoc-can-tho', name: 'Trường Đại học Y Dược Cần Thơ', abbreviation: 'CTUMP', address: '179 Nguyễn Văn Cừ, An Khánh, Ninh Kiều, Cần Thơ', lat: 10.0347, lng: 105.7538, locationId: quan1.id },
+    { slug: 'dh-nam-can-tho', name: 'Trường Đại học Nam Cần Thơ', abbreviation: 'DNC', address: '168 Nguyễn Văn Cừ nối dài, An Bình, Ninh Kiều, Cần Thơ', lat: 10.0076, lng: 105.7332, locationId: quan1.id },
+    { slug: 'dh-an-giang', name: 'Trường Đại học An Giang - ĐHQG TP.HCM', abbreviation: 'AGU', address: '18 Ung Văn Khiêm, Đông Xuyên, TP. Long Xuyên, An Giang', lat: 10.3734, lng: 105.4346, locationId: quan1.id },
+    { slug: 'dh-tra-vinh', name: 'Trường Đại học Trà Vinh', abbreviation: 'TVU', address: '126 Nguyễn Thiện Thành, Khóm 4, Phường 5, TP. Trà Vinh', lat: 9.9234, lng: 106.3456, locationId: quan1.id },
 
-  const uniBachKhoaHn = await prisma.university.upsert({
-    where: { slug: 'dh-bach-khoa-ha-noi' },
-    update: {},
-    create: {
-      name: 'Đại học Bách Khoa Hà Nội',
-      abbreviation: 'HUST',
-      slug: 'dh-bach-khoa-ha-noi',
-      address: 'Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội',
-      locationId: hanoi.id,
-    },
-  });
+    // Miền Bắc khác
+    { slug: 'dh-thai-nguyen', name: 'Đại học Thái Nguyên', abbreviation: 'TNU Thái Nguyên', address: 'Phường Tân Thịnh, TP. Thái Nguyên, Thái Nguyên', lat: 21.5849, lng: 105.8118, locationId: hanoi.id },
+    { slug: 'dh-hang-hai-viet-nam', name: 'Trường Đại học Hàng hải Việt Nam', abbreviation: 'VMU Hải Phòng', address: '484 Lạch Tray, Kênh Dương, Lê Chân, Hải Phòng', lat: 20.8351, lng: 106.6946, locationId: hanoi.id },
+    { slug: 'dh-y-duoc-hai-phong', name: 'Trường Đại học Y Dược Hải Phòng', abbreviation: 'HPMU', address: '722 Ngô Gia Tự, Đằng Lâm, Hải An, Hải Phòng', lat: 20.8389, lng: 106.7112, locationId: hanoi.id },
+    { slug: 'dh-hai-phong', name: 'Trường Đại học Hải Phòng', abbreviation: 'DHHP', address: '171 Phan Đăng Lưu, Kiến An, Hải Phòng', lat: 20.8035, lng: 106.6348, locationId: hanoi.id },
+    { slug: 'dh-ha-long', name: 'Trường Đại học Hạ Long', abbreviation: 'UHL Quảng Ninh', address: '258 Bạch Đằng, Nam Khê, TP. Uông Bí, Quảng Ninh', lat: 21.0336, lng: 106.7912, locationId: hanoi.id },
+  ];
 
-  const uniNeu = await prisma.university.upsert({
-    where: { slug: 'dh-kinh-te-quoc-dan' },
-    update: {},
-    create: {
-      name: 'Trường Đại học Kinh tế Quốc dân',
-      abbreviation: 'NEU',
-      slug: 'dh-kinh-te-quoc-dan',
-      address: '207 Giải Phóng, Đồng Tâm, Hai Bà Trưng, Hà Nội',
-      locationId: hanoi.id,
-    },
-  });
+  for (const uni of ALL_UNIVERSITIES_DATA) {
+    await prisma.university.upsert({
+      where: { slug: uni.slug },
+      update: {
+        name: uni.name,
+        abbreviation: uni.abbreviation,
+        address: uni.address,
+        lat: uni.lat,
+        lng: uni.lng,
+      },
+      create: {
+        slug: uni.slug,
+        name: uni.name,
+        abbreviation: uni.abbreviation,
+        address: uni.address,
+        lat: uni.lat,
+        lng: uni.lng,
+        locationId: uni.locationId,
+      },
+    });
+  }
 
-  const uniDhqgHn = await prisma.university.upsert({
-    where: { slug: 'dhqg-ha-noi' },
-    update: {},
-    create: {
-      name: 'Đại học Quốc gia Hà Nội',
-      abbreviation: 'VNU HN',
-      slug: 'dhqg-ha-noi',
-      address: '144 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
-      locationId: hanoi.id,
-    },
-  });
-
-  console.log('✅ Seed danh sách trường Đại học xong.');
+  console.log(`✅ Seed danh sách ${ALL_UNIVERSITIES_DATA.length} trường Đại học toàn quốc xong.`);
 
   // ---------- 4. Tin đăng MẪU Cho Thuê (chỉ để kiểm tra giao diện) ----------
   // Xoá tin demo cũ nếu có (kèm toàn bộ bản ghi phụ thuộc)

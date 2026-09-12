@@ -57,6 +57,8 @@ export default async function ChoThueTroPage({ searchParams }: Props) {
     priceMax: searchParams.priceMax,
     areaMin: searchParams.areaMin,
     areaMax: searchParams.areaMax,
+    lat: searchParams.lat,
+    lng: searchParams.lng,
     page: searchParams.page ?? '1',
   }).catch(() => {
     isApiError = true;

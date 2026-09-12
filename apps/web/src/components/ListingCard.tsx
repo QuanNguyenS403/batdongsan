@@ -153,8 +153,22 @@ export function ListingCard({ listing }: { listing: Listing }) {
             {displayTitle}
           </p>
 
-          {/* Badge trường đại học gần đó nếu có */}
-          {nearestUni && (
+          {/* Badge khoảng cách tìm kiếm theo địa chỉ nếu có */}
+          {listing.distanceText ? (
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/70">
+              <span>📍</span>
+              <span>{listing.distanceText}</span>
+            </div>
+          ) : listing.distanceMeters != null ? (
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/70">
+              <span>📍</span>
+              <span>
+                {listing.distanceMeters < 1000
+                  ? `Cách địa chỉ ~${listing.distanceMeters}m`
+                  : `Cách địa chỉ ~${(listing.distanceMeters / 1000).toFixed(1)} km`}
+              </span>
+            </div>
+          ) : nearestUni ? (
             <div className="mt-2 flex items-center gap-1.5 text-xs text-brand font-medium truncate">
               <span>🎓</span>
               <span className="truncate">
@@ -162,7 +176,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
                 {nearestUni.distanceMeters ? ` (~${nearestUni.distanceMeters}m)` : ''}
               </span>
             </div>
-          )}
+          ) : null}
 
           {/* Địa chỉ */}
           <p className="mt-1.5 flex items-center gap-1 text-xs text-text-muted">

@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Liên hệ & Hỗ trợ — BĐS Cho Thuê',
+  title: 'Liên hệ & Hỗ trợ — QNS.vn',
   description:
-    'Thông tin liên hệ hotline, hỗ trợ kỹ thuật, giải đáp thắc mắc và tiếp nhận khiếu nại của nền tảng BĐS Cho Thuê.',
+    'Thông tin liên hệ hotline, hỗ trợ kỹ thuật, giải đáp thắc mắc và tiếp nhận khiếu nại của nền tảng QNS.vn.',
 };
 
 export default function LienHePage() {
@@ -25,7 +25,7 @@ export default function LienHePage() {
             Thông tin Liên hệ & Hỗ trợ
           </h1>
           <p className="text-sm text-text-secondary leading-relaxed mb-8 border-b border-surface-border pb-4">
-            Ban Quản trị nền tảng BĐS Cho Thuê luôn sẵn sàng lắng nghe ý kiến đóng góp, giải đáp thắc mắc và hỗ trợ bạn trong quá trình tìm phòng hoặc đăng tin.
+            Ban Quản trị nền tảng QNS.vn luôn sẵn sàng lắng nghe ý kiến đóng góp, giải đáp thắc mắc và hỗ trợ bạn trong quá trình tìm phòng hoặc đăng tin.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -46,8 +46,8 @@ export default function LienHePage() {
                 </div>
                 <div>
                   <p className="text-xs text-text-muted">Email tiếp nhận thông tin:</p>
-                  <a href="mailto:contact@batdongsan.vn" className="text-brand hover:underline">
-                    contact@batdongsan.vn
+                  <a href="mailto:contact@qns.vn" className="text-brand hover:underline">
+                    contact@qns.vn
                   </a>
                 </div>
                 <div>

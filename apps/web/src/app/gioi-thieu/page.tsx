@@ -28,7 +28,7 @@ export default function GioiThieuPage() {
             Nền tảng Bất động sản Chuyên biệt Cho thuê
           </h1>
           <p className="text-sm text-text-secondary leading-relaxed mb-8 border-b border-surface-border pb-6">
-            BĐS.vn ra đời với định hướng chuyên biệt 100% vào phân khúc <strong>cho thuê nhà ở, phòng trọ, studio và mặt bằng</strong>. Chúng tôi giải quyết triệt để nỗi lo "chi phí ẩn" và giúp các bạn sinh viên, người đi làm nhanh chóng tìm được chốn an cư ưng ý.
+            QNS.vn ra đời với định hướng chuyên biệt 100% vào phân khúc <strong>cho thuê nhà ở, phòng trọ, studio và mặt bằng</strong>. Chúng tôi giải quyết triệt để nỗi lo "chi phí ẩn" và giúp các bạn sinh viên, người đi làm nhanh chóng tìm được chốn an cư ưng ý.
           </p>
 
           <div className="space-y-8">

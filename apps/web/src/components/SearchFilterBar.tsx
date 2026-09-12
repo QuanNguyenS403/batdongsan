@@ -3,10 +3,13 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { VIETNAM_UNIVERSITIES } from '@/lib/vietnam-universities';
+
 interface UniversityOption {
   slug: string;
   name: string;
   abbreviation?: string | null;
+  region?: string;
 }
 
 interface SearchFilterBarProps {
@@ -46,17 +49,7 @@ const PROPERTY_TYPES = [
   { value: 'mat_bang', label: 'Mặt bằng kinh doanh' },
 ];
 
-const DEFAULT_UNIVERSITIES: UniversityOption[] = [
-  { slug: '', name: 'Tất cả trường ĐH' },
-  { slug: 'dhqg-tphcm', name: 'ĐHQG TP.HCM (Khu Đô thị)', abbreviation: 'ĐHQG HCM' },
-  { slug: 'dh-bach-khoa-tphcm', name: 'ĐH Bách Khoa TP.HCM', abbreviation: 'Bách Khoa' },
-  { slug: 'dh-kinh-te-tphcm', name: 'ĐH Kinh tế TP.HCM', abbreviation: 'UEH' },
-  { slug: 'dh-ton-duc-thang', name: 'ĐH Tôn Đức Thắng', abbreviation: 'TDTU' },
-  { slug: 'dhqg-ha-noi', name: 'ĐHQG Hà Nội (Cầu Giấy)', abbreviation: 'VNU HN' },
-  { slug: 'dh-bach-khoa-ha-noi', name: 'ĐH Bách Khoa Hà Nội', abbreviation: 'HUST' },
-  { slug: 'dh-kinh-te-quoc-dan', name: 'ĐH Kinh tế Quốc dân', abbreviation: 'NEU' },
-  { slug: 'dh-ngoai-thuong-hn', name: 'ĐH Ngoại thương', abbreviation: 'FTU' },
-];
+const DEFAULT_UNIVERSITIES: UniversityOption[] = VIETNAM_UNIVERSITIES;
 
 const PRICE_PRESETS_RENT = [
   { label: 'Tất cả mức giá thuê', min: '', max: '' },
@@ -186,12 +179,29 @@ export function SearchFilterBar({
             onChange={(e) => setUniversitySlug(e.target.value)}
             className="filter-select"
           >
-            <option value="">🎓 Gần trường ĐH</option>
-            {universities.map((u) => (
-              <option key={u.slug} value={u.slug}>
-                {u.abbreviation ? `${u.abbreviation} — ${u.name}` : u.name}
-              </option>
-            ))}
+            <option value="">🎓 Gần trường ĐH (Toàn quốc)</option>
+            {['TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng & Miền Trung', 'Cần Thơ & Miền Tây', 'Miền Bắc khác'].map((reg) => {
+              const items = universities.filter((u) => u.region === reg);
+              if (items.length === 0) return null;
+              return (
+                <optgroup key={reg} label={`🏛️ ${reg}`}>
+                  {items.map((u) => (
+                    <option key={u.slug} value={u.slug}>
+                      {u.abbreviation ? `${u.abbreviation} — ${u.name}` : u.name}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+            {/* Fallback cho trường hợp universities không có trường region */}
+            {universities.some((u) => !u.region) &&
+              universities
+                .filter((u) => !u.region)
+                .map((u) => (
+                  <option key={u.slug} value={u.slug}>
+                    {u.abbreviation ? `${u.abbreviation} — ${u.name}` : u.name}
+                  </option>
+                ))}
           </select>
         </div>
 

@@ -61,6 +61,21 @@ export class QueryListingsDto {
   @IsString()
   keyword?: string;
 
+  @ApiPropertyOptional({ description: 'Vĩ độ để tính khoảng cách tìm phòng gần nhất' })
+  @IsOptional()
+  @Type(() => Number)
+  lat?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ để tính khoảng cách tìm phòng gần nhất' })
+  @IsOptional()
+  @Type(() => Number)
+  lng?: number;
+
+  @ApiPropertyOptional({ description: 'Bán kính tìm kiếm tối đa (km)' })
+  @IsOptional()
+  @Type(() => Number)
+  radiusKm?: number;
+
   @ApiPropertyOptional({ default: 1 }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) page: number = 1;
   @ApiPropertyOptional({ default: 20 }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize: number = 20;
 }
