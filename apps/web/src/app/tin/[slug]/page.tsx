@@ -2,11 +2,12 @@ import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { fetchListingBySlug, formatPrice } from '@/lib/api';
+import { fetchListingBySlug, fetchListings, formatPrice, formatExactPrice } from '@/lib/api';
 import { ALL_DEMO_LISTINGS } from '@/lib/demo-data';
 import { PropertyGallery } from './PropertyGallery';
 import { ReportListingModal } from '@/components/ReportListingModal';
 import { OwnerContactBox } from './OwnerContactBox';
+import { MoveInCostEstimator } from '@/components/MoveInCostEstimator';
 
 interface Props {
   params: { slug: string };
@@ -107,10 +108,20 @@ export default async function ListingDetailPage({ params }: Props) {
   const displayTitle = isSample ? listing.title.replace(/^\[MẪU\]\s*/, '') : listing.title;
   const cleanOwnerName = (listing.owner.fullName ?? 'Chủ phòng trọ').replace(/\s*\(\d+\)\s*/g, '').trim();
 
-  // Lấy các bất động sản tương tự
-  const similarListings = ALL_DEMO_LISTINGS
-    .filter((item) => item.id !== listing.id)
-    .slice(0, 4);
+  // FE-05: Lấy bất động sản tương tự từ API, chỉ fallback demo ở môi trường dev
+  const isProduction = process.env.NODE_ENV === 'production';
+  let similarListings: any[] = [];
+  try {
+    const similarRes = await fetchListings({
+      propertyType: listing.propertyType,
+      pageSize: '4',
+    });
+    similarListings = (similarRes.items || []).filter((item) => item.id !== listing.id).slice(0, 4);
+  } catch {
+    similarListings = isProduction
+      ? []
+      : ALL_DEMO_LISTINGS.filter((item) => item.id !== listing.id).slice(0, 4);
+  }
 
   return (
     <div className="min-h-screen bg-surface-muted">
@@ -203,9 +214,9 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             )}
 
-            {/* Khối Thông tin chính (Chuẩn mẫu Mogi) */}
+            {/* Khối Thông tin chính & Chi phí minh bạch (Chuẩn mẫu Mogi & USP Thuê Trọ Nhanh) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
-              <h2 className="mb-4 font-bold text-text-primary text-base">Thông tin chính</h2>
+              <h2 className="mb-4 font-bold text-text-primary text-base">Thông tin chính & Biểu phí</h2>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-4">
                 <InfoRow label="Diện tích sử dụng" value={`${listing.areaM2} m²`} />
                 <InfoRow
@@ -217,10 +228,50 @@ export default async function ListingDetailPage({ params }: Props) {
                   value={listing.legalStatus ? (LEGAL_STATUS_LABEL[listing.legalStatus] ?? listing.legalStatus) : 'Không xác định'}
                 />
                 <InfoRow label="Mã BĐS" value={`#${listing.id}`} mono />
+                <InfoRow
+                  label="Tiền đặt cọc"
+                  value={listing.depositAmount ? formatExactPrice(listing.depositAmount) : 'Thoả thuận / Không cọc'}
+                />
+                <InfoRow
+                  label="Thời hạn hợp đồng"
+                  value={listing.minLeaseMonths ? `Tối thiểu ${listing.minLeaseMonths} tháng` : 'Linh hoạt'}
+                />
+                <InfoRow
+                  label="Chi phí điện"
+                  value={
+                    listing.utilitiesIncluded
+                      ? 'Đã bao gồm'
+                      : listing.electricityPricePerKwh
+                        ? `${listing.electricityPricePerKwh.toLocaleString('vi-VN')} đ/kWh`
+                        : 'Giá nhà nước / Thoả thuận'
+                  }
+                />
+                <InfoRow
+                  label="Chi phí nước"
+                  value={
+                    listing.utilitiesIncluded
+                      ? 'Đã bao gồm'
+                      : listing.waterPriceFlat
+                        ? `${listing.waterPriceFlat.toLocaleString('vi-VN')} đ/người/tháng`
+                        : listing.waterPricePerM3
+                          ? `${listing.waterPricePerM3.toLocaleString('vi-VN')} đ/m³`
+                          : 'Giá nhà nước / Thoả thuận'
+                  }
+                />
                 {listing.bedrooms != null && <InfoRow label="Phòng ngủ" value={`${listing.bedrooms} phòng`} />}
                 {listing.bathrooms != null && <InfoRow label="Phòng tắm / WC" value={`${listing.bathrooms} phòng`} />}
               </div>
             </div>
+
+            {/* Bộ ước tính chi phí dọn vào ở (FE-05) */}
+            <MoveInCostEstimator
+              initialRentPrice={Number(listing.price)}
+              depositAmount={listing.depositAmount ? Number(listing.depositAmount) : undefined}
+              electricityPricePerKwh={listing.electricityPricePerKwh}
+              waterPricePerM3={listing.waterPricePerM3}
+              waterPriceFlat={listing.waterPriceFlat}
+              utilitiesIncluded={listing.utilitiesIncluded}
+            />
 
             {/* Khối Giới thiệu (Chuẩn mẫu Mogi) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-4">

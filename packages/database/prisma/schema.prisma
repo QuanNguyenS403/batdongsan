@@ -260,6 +260,7 @@ model PhoneRevealLog {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@unique([userId, listingId])
   @@map("phone_reveal_logs")
 }
 

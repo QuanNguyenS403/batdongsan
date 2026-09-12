@@ -31,15 +31,17 @@ const PUBLIC_LISTING_SELECT = {
   lat: true,
   lng: true,
   status: true,
+  rejectionReason: true,
   verificationStatus: true,
   verifiedAt: true,
   publishedAt: true,
+  expiresAt: true,
   viewCount: true,
   createdAt: true,
   images: { select: { imageUrl: true, sortOrder: true }, orderBy: { sortOrder: 'asc' as const } },
   location: { select: { id: true, name: true, slug: true, level: true } },
   project: { select: { id: true, name: true, slug: true } },
-  owner: { select: { id: true, fullName: true, avatarUrl: true, createdAt: true, isPhoneVerified: true, isIdVerified: true } },
+  owner: { select: { id: true, fullName: true, avatarUrl: true, createdAt: true, isPhoneVerified: true, isIdVerified: true, isBlocked: true } },
   nearbyUniversities: {
     select: {
       distanceMeters: true,
@@ -65,11 +67,36 @@ export class ListingsService {
     private readonly googleSheetsService: GoogleSheetsService,
   ) {}
 
+  /**
+   * Predicate cốt lõi cho mọi truy vấn tin công khai (public).
+   * BE-04: Thống nhất status active + chưa hết hạn (expiresAt > now hoặc null).
+   * BE-05: Ẩn ngay lập tức toàn bộ tin của chủ tài khoản bị khóa (owner.isBlocked = false).
+   */
+  public static getPublicWhereClause(): Prisma.ListingWhereInput {
+    return {
+      status: ListingStatus.active,
+      owner: { isBlocked: false },
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: new Date() } },
+      ],
+    };
+  }
+
   async findAll(query: QueryListingsDto) {
     const where: Prisma.ListingWhereInput = {
-      status: { in: [ListingStatus.active] },
-      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      status: ListingStatus.active,
+      owner: { isBlocked: false },
     };
+
+    const andConditions: Prisma.ListingWhereInput[] = [
+      {
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
+      },
+    ];
 
     if (query.transactionType) where.transactionType = TransactionType.rent;
 
@@ -120,11 +147,16 @@ export class ListingsService {
             in: [
               'phong-tro-sinh-vien',
               'phong_tro_sinh_vien',
+              'phong-tro-nguoi-di-lam',
+              'phong_tro_nguoi_di_lam',
               'phong_tro',
               'phong-tro',
               'ky_tuc_xa',
               'ky-tuc-xa',
               'ky-tuc-xa-tu-nhan',
+              'ky_tuc_xa_tu_nhan',
+              'sleepbox',
+              'sleep_box',
               'can_ho_mini',
               'can-ho-mini',
               'nha_tro',
@@ -236,12 +268,19 @@ export class ListingsService {
       }
       where.locationId = { in: ids };
     }
-    if (query.keyword) {
-      where.OR = [
-        { title: { contains: query.keyword, mode: 'insensitive' } },
-        { addressDetail: { contains: query.keyword, mode: 'insensitive' } },
-      ];
+    if (query.utilitiesIncluded === 'true') {
+      where.utilitiesIncluded = true;
     }
+    if (query.keyword) {
+      andConditions.push({
+        OR: [
+          { title: { contains: query.keyword, mode: 'insensitive' } },
+          { addressDetail: { contains: query.keyword, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    where.AND = andConditions;
 
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
@@ -322,8 +361,14 @@ export class ListingsService {
     });
     // Cố tình trả cùng 1 thông báo lỗi cho "không tồn tại" và "tồn tại nhưng chưa active" —
     // không phân biệt 2 trường hợp để không lộ thông tin rằng 1 ID nào đó có tồn tại hay không.
-    if (!listing || listing.status !== ListingStatus.active) {
-      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã bị gỡ.');
+    const now = new Date();
+    if (
+      !listing ||
+      listing.status !== ListingStatus.active ||
+      (listing.expiresAt && listing.expiresAt <= now) ||
+      (listing as any).owner?.isBlocked
+    ) {
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn.');
     }
 
     // Tăng view count (fire-and-forget, không chặn response)
@@ -508,6 +553,22 @@ export class ListingsService {
     delete (updateData as any).nearbyUniversityIds;
     delete (updateData as any).universityDistances;
 
+    // BE-03: Nếu chủ tin sửa các trường cốt lõi của tin đang active, đưa về pending và reset huy hiệu xác thực
+    const coreFields: (keyof UpdateListingDto)[] = [
+      'title', 'description', 'price', 'depositAmount', 'addressDetail',
+      'locationId', 'projectId', 'propertyType', 'transactionType',
+      'areaM2', 'bedrooms', 'bathrooms', 'legalStatus', 'electricityPricePerKwh',
+      'waterPricePerM3', 'waterPriceFlat', 'amenities', 'utilitiesIncluded',
+    ];
+    const isCoreModified = coreFields.some((f) => (dto as any)[f] !== undefined);
+
+    if (requester.role !== 'admin' && listing.status === ListingStatus.active && isCoreModified) {
+      updateData.status = ListingStatus.pending;
+      updateData.verificationStatus = 'chua_xac_thuc';
+      updateData.verifiedAt = null;
+      updateData.verifiedByUserId = null;
+    }
+
     // Khi người dùng đổi tiêu đề tin, tự động làm mới slug theo chuẩn "...-id{id}" để URL đồng bộ
     if (dto.title) {
       updateData.slug = `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-id${listing.id}`;
@@ -528,7 +589,7 @@ export class ListingsService {
   }
 
   async addImages(id: bigint, requester: { id: bigint; role: string }, imageUrls: string[]) {
-    await this.assertOwnership(id, requester);
+    const listing = await this.assertOwnership(id, requester);
 
     const currentMax = await this.prisma.listingImage.aggregate({
       where: { listingId: id },
@@ -540,29 +601,49 @@ export class ListingsService {
       data: imageUrls.map((url) => ({ listingId: id, imageUrl: url, sortOrder: nextOrder++ })),
     });
 
+    // BE-03: Thêm ảnh mới vào tin đang active cần kiểm duyệt lại để tránh tráo ảnh lừa đảo
+    if (requester.role !== 'admin' && listing.status === ListingStatus.active) {
+      await this.prisma.listing.update({
+        where: { id },
+        data: {
+          status: ListingStatus.pending,
+          verificationStatus: 'chua_xac_thuc',
+          verifiedAt: null,
+          verifiedByUserId: null,
+        },
+      });
+    }
+
     return this.findOneForOwner(id, requester);
   }
 
   async revealPhone(id: bigint, requesterId: bigint) {
+    const now = new Date();
     const listing = await this.prisma.listing.findUnique({
       where: { id },
-      include: { owner: { select: { phone: true } } },
+      include: { owner: { select: { phone: true, isBlocked: true } } },
     });
-    if (!listing || listing.status !== ListingStatus.active) {
-      throw new NotFoundException('Không tìm thấy tin đăng.');
+    // BE-04, BE-05: Kiểm tra trạng thái active, hết hạn và seller có bị block không
+    if (
+      !listing ||
+      listing.status !== ListingStatus.active ||
+      (listing.expiresAt && listing.expiresAt <= now) ||
+      listing.owner.isBlocked
+    ) {
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn.');
     }
 
-    // CHỐNG SPAM SỐ LIỆU (audit 02/09/2026): kiểm tra nếu user này đã bấm xem SĐT trước đó rồi
-    // thì không ghi thêm dòng log trùng lặp và không tăng ảo revealPhoneCount.
-    const alreadyRevealed = await this.prisma.phoneRevealLog.findFirst({
-      where: { listingId: id, userId: requesterId },
-    });
-
-    if (!alreadyRevealed) {
+    // BE-09: Atomic write chống race condition bằng composite unique constraint
+    try {
       await this.prisma.$transaction([
         this.prisma.phoneRevealLog.create({ data: { listingId: id, userId: requesterId } }),
         this.prisma.listing.update({ where: { id }, data: { revealPhoneCount: { increment: 1 } } }),
       ]);
+    } catch (err: any) {
+      // P2002: Bỏ qua lỗi duplicate nếu user đã reveal cùng lúc từ tab khác
+      if (err.code !== 'P2002') {
+        throw err;
+      }
     }
 
     return { phone: listing.owner.phone };
@@ -644,10 +725,11 @@ export class ListingsService {
   async findSaved(userId: bigint, query: { page?: number; pageSize?: number }) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
+    const publicWhere = ListingsService.getPublicWhereClause();
 
     const [savedItems, total] = await this.prisma.$transaction([
       this.prisma.savedListing.findMany({
-        where: { userId, listing: { status: ListingStatus.active } },
+        where: { userId, listing: publicWhere },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -658,7 +740,7 @@ export class ListingsService {
         },
       }),
       this.prisma.savedListing.count({
-        where: { userId, listing: { status: ListingStatus.active } },
+        where: { userId, listing: publicWhere },
       }),
     ]);
 

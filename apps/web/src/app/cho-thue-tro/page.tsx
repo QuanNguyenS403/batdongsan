@@ -50,6 +50,8 @@ export default async function ChoThueTroPage({ searchParams }: Props) {
     categoryGroup: 'thue_tro',
     keyword: searchParams.keyword,
     locationSlug: searchParams.locationSlug,
+    universitySlug: searchParams.universitySlug,
+    utilitiesIncluded: searchParams.utilitiesIncluded,
     propertyType: searchParams.propertyType,
     priceMin: searchParams.priceMin,
     priceMax: searchParams.priceMax,

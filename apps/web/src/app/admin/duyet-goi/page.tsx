@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { authFetch } from '@/lib/auth-client';
-import { formatPrice } from '@/lib/api';
+import { formatExactPrice } from '@/lib/api';
 
 interface MembershipRequest {
   id: string;
@@ -29,21 +29,29 @@ interface MembershipRequest {
   };
 }
 
-export default function AdminMembershipRequestsPage() {
+export default function AdminDuyetGoiPage() {
   const [requests, setRequests] = useState<MembershipRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  async function loadRequests() {
+  async function loadRequests(targetPage = page) {
     setLoading(true);
     try {
-      const query = activeTab === 'pending' ? '?status=pending' : '';
-      const res = await authFetch(`/admin/membership-requests${query}`);
+      const statusParam = activeTab === 'pending' ? 'status=pending&' : '';
+      const res = await authFetch(`/admin/membership-requests?${statusParam}page=${targetPage}&pageSize=20`);
       if (res.ok) {
         const data = await res.json();
         setRequests(data.items || []);
+        if (data.pagination) {
+          setPage(data.pagination.page);
+          setTotalPages(data.pagination.totalPages || 1);
+          setTotal(data.pagination.total || 0);
+        }
       }
     } catch {
       // safe-fail
@@ -53,7 +61,8 @@ export default function AdminMembershipRequestsPage() {
   }
 
   useEffect(() => {
-    loadRequests();
+    setPage(1);
+    loadRequests(1);
   }, [activeTab]);
 
   async function handleApprove(requestId: string, planName: string, userPhone: string) {
@@ -224,8 +233,8 @@ export default function AdminMembershipRequestsPage() {
 
                       {/* Số tiền */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <strong className="text-rose-600 font-extrabold text-sm">
-                          {formatPrice(item.pricePaid)}
+                        <strong className="text-rose-600 font-extrabold text-sm font-mono">
+                          {formatExactPrice(item.pricePaid)}
                         </strong>
                       </td>
 
@@ -297,6 +306,33 @@ export default function AdminMembershipRequestsPage() {
                 })}
               </tbody>
             </table>
+
+            {/* Phân trang */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+                <p className="text-xs text-slate-500">
+                  Hiển thị trang <strong>{page}</strong> / <strong>{totalPages}</strong> (tổng số {total} yêu cầu)
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={page <= 1 || loading}
+                    onClick={() => loadRequests(page - 1)}
+                    className="px-3 py-1 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-slate-100"
+                  >
+                    ← Trước
+                  </button>
+                  <button
+                    type="button"
+                    disabled={page >= totalPages || loading}
+                    onClick={() => loadRequests(page + 1)}
+                    className="px-3 py-1 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-slate-100"
+                  >
+                    Sau →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -38,9 +38,9 @@ export default async function ThuePage({ searchParams }: Props) {
   const isStudio = searchParams.categoryGroup === 'thue_studio';
   const isTro = searchParams.categoryGroup === 'thue_tro';
   const isMatBang = searchParams.categoryGroup === 'thue_mat_bang';
-  const isCanHo = !isStudio && !isTro && !isMatBang;
+  const isCanHo = searchParams.categoryGroup === 'thue_can_ho';
 
-  // Lựa chọn bộ lọc loại phòng chuyên biệt theo từng mục
+  // Lựa chọn bộ lọc loại phòng chuyên biệt theo từng mục (nếu có chọn chuyên mục cụ thể)
   const propertyTypesForCategory = isStudio
     ? PROPERTY_TYPES_STUDIO
     : isCanHo
@@ -58,7 +58,8 @@ export default async function ThuePage({ searchParams }: Props) {
           ? DEMO_SPACE_RENT_LISTINGS
           : ALL_DEMO_LISTINGS;
 
-  const currentCategoryGroup = searchParams.categoryGroup ?? (isCanHo ? 'thue_can_ho' : undefined);
+  // FE-03: Route tổng /thue mặc định hiển thị TẤT CẢ loại phòng cho thuê, không ép thành thue_can_ho
+  const currentCategoryGroup = searchParams.categoryGroup;
   const isProduction = process.env.NODE_ENV === 'production';
   let isApiError = false;
 
@@ -69,6 +70,7 @@ export default async function ThuePage({ searchParams }: Props) {
     locationSlug: searchParams.locationSlug,
     universitySlug: searchParams.universitySlug,
     propertyType: searchParams.propertyType,
+    utilitiesIncluded: searchParams.utilitiesIncluded,
     priceMin: searchParams.priceMin,
     priceMax: searchParams.priceMax,
     areaMin: searchParams.areaMin,
@@ -91,9 +93,9 @@ export default async function ThuePage({ searchParams }: Props) {
 
   const month = new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
   const categoryLabel = searchParams.categoryGroup
-    ? (CATEGORY_NAMES[searchParams.categoryGroup] ?? 'Căn hộ')
-    : 'Căn hộ';
-  const pageTitle = `Cho thuê ${categoryLabel}`;
+    ? (CATEGORY_NAMES[searchParams.categoryGroup] ?? 'bất động sản')
+    : 'Bất động sản';
+  const pageTitle = searchParams.categoryGroup ? `Cho thuê ${categoryLabel}` : 'Cho thuê Bất động sản';
 
   const filterSummary = searchParams.keyword
     ? ` — "${searchParams.keyword}"`

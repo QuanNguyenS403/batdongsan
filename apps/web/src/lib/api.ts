@@ -32,6 +32,7 @@ export interface Listing {
   legalStatus: string | null;
   addressDetail: string | null;
   status: string;
+  rejectionReason?: string | null;
   verificationStatus?: 'chua_xac_thuc' | 'cho_xac_thuc' | 'da_xac_thuc';
   verifiedAt?: string | null;
   publishedAt: string | null;
@@ -102,15 +103,41 @@ export function fetchUniversities(params?: { locationSlug?: string; keyword?: st
   return apiFetch<UniversityItem[]>(`/universities?${query.toString()}`);
 }
 
-export function formatPrice(price: string | number): string {
-  const value = typeof price === 'string' ? Number(price) : price;
+/**
+ * Format giá chính xác theo số nguyên VNĐ đầy đủ (P0-08, AF-02).
+ * Dùng bắt buộc cho các màn hình tài chính, admin duyệt gói, thanh toán, chi tiết tiền cọc/điện/nước.
+ */
+export function formatExactPrice(price: string | number | bigint | null | undefined): string {
+  if (price === null || price === undefined) return '0 đ';
+  const value = typeof price === 'bigint' ? Number(price) : typeof price === 'string' ? Number(price) : price;
+  if (isNaN(value)) return '0 đ';
+  return `${value.toLocaleString('vi-VN')} đ`;
+}
+
+/**
+ * Format giá hiển thị rút gọn cho thẻ danh sách tin đăng.
+ * Đã sửa lỗi P0-08: Giữ tối đa 2 chữ số thập phân thay vì Math.round làm tròn mất 498.500 đ thành 1 triệu.
+ */
+export function formatPrice(price: string | number | bigint | null | undefined): string {
+  if (price === null || price === undefined) return 'Thoả thuận';
+  const value = typeof price === 'bigint' ? Number(price) : typeof price === 'string' ? Number(price) : price;
   if (!value || value <= 0) return 'Thoả thuận';
+
   if (value >= 1_000_000_000) {
     const ty = Math.floor(value / 1_000_000_000);
-    const trieu = Math.round((value % 1_000_000_000) / 1_000_000);
-    return trieu > 0 ? `${ty} tỷ ${trieu} triệu` : `${ty} tỷ`;
+    const du = value % 1_000_000_000;
+    if (du === 0) return `${ty} tỷ`;
+    const trieuFormatted = (du / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+    return `${ty} tỷ ${trieuFormatted} tr`;
   }
-  if (value >= 1_000_000) return `${Math.round(value / 1_000_000)} triệu`;
+
+  if (value >= 1_000_000) {
+    const trieu = value / 1_000_000;
+    // Nếu là số nguyên triệu (3.000.000 -> 3 triệu), nếu lẻ (1.498.500 -> 1,5 triệu)
+    const formatted = trieu.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+    return `${formatted} triệu`;
+  }
+
   return `${value.toLocaleString('vi-VN')} đ`;
 }
 

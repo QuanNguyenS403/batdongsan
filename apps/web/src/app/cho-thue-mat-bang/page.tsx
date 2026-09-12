@@ -52,6 +52,8 @@ export default async function ChoThueMatBangPage({ searchParams }: Props) {
     categoryGroup: 'thue_mat_bang',
     keyword: searchParams.keyword,
     locationSlug: searchParams.locationSlug,
+    universitySlug: searchParams.universitySlug,
+    utilitiesIncluded: searchParams.utilitiesIncluded,
     propertyType: searchParams.propertyType,
     priceMin: searchParams.priceMin,
     priceMax: searchParams.priceMax,

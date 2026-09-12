@@ -28,6 +28,11 @@ export class QueryListingsDto {
   @IsString()
   amenities?: string;
 
+  @ApiPropertyOptional({ description: 'Lọc tin đã bao gồm điện nước (true)' })
+  @IsOptional()
+  @IsString()
+  utilitiesIncluded?: string;
+
   @ApiPropertyOptional({ description: 'Loại trừ các propertyType, cách nhau bởi dấu phẩy' })
   @IsOptional()
   @IsString()

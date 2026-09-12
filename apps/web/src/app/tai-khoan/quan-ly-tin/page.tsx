@@ -36,16 +36,19 @@ export default function QuanLyTinPage() {
   const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
 
-  const load = useCallback(async (status: string) => {
+  const load = useCallback(async (status: string, targetPage = page) => {
     setLoading(true);
     setError(null);
     try {
-      const query = status ? `?status=${status}&pageSize=50` : '?pageSize=50';
+      const statusParam = status ? `status=${status}&` : '';
+      const query = `?${statusParam}page=${targetPage}&pageSize=15`;
       const res = await authFetch(`/listings/mine${query}`);
       if (res.status === 401) {
         setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
@@ -56,12 +59,14 @@ export default function QuanLyTinPage() {
       const data: ListingListResponse = await res.json();
       setListings(data.items);
       setTotal(data.pagination.total);
+      setPage(data.pagination.page);
+      setTotalPages(data.pagination.totalPages || 1);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -72,17 +77,23 @@ export default function QuanLyTinPage() {
   }, [router]);
 
   useEffect(() => {
-    if (checkedAuth) load(statusFilter);
-  }, [checkedAuth, statusFilter, load]);
+    if (checkedAuth) {
+      setPage(1);
+      load(statusFilter, 1);
+    }
+  }, [checkedAuth, statusFilter]);
 
-  async function handleRemove(listingId: string) {
-    if (!confirm('Bạn có chắc chắn muốn gỡ tin đăng này? Tin sau khi gỡ sẽ không hiển thị công khai.')) {
+  async function handleRemove(listingId: string, isRented = false) {
+    const msg = isRented
+      ? 'Xác nhận phòng này ĐÃ CHO THUÊ THÀNH CÔNG và bạn muốn gỡ tin đăng khỏi sàn?'
+      : 'Bạn có chắc chắn muốn gỡ tin đăng này? Tin sau khi gỡ sẽ không hiển thị công khai.';
+    if (!confirm(msg)) {
       return;
     }
     try {
       const res = await authFetch(`/listings/${listingId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Không thể gỡ tin đăng.');
-      load(statusFilter);
+      if (!res.ok) throw new Error('Không thể cập nhật trạng thái tin đăng.');
+      load(statusFilter, page);
     } catch (err) {
       alert((err as Error).message);
     }
@@ -175,22 +186,37 @@ export default function QuanLyTinPage() {
                         <p className="truncate font-semibold text-text-primary">{listing.title}</p>
                         <p className="text-sm text-text-muted">{listing.addressDetail ?? listing.location.name}</p>
                         <p className="text-sm font-bold text-brand">{formatPrice(listing.price)}</p>
+                        {listing.status === 'rejected' && listing.rejectionReason && (
+                          <p className="mt-1 text-xs text-rose-600 font-medium">
+                            Lý do từ chối: {listing.rejectionReason}
+                          </p>
+                        )}
                       </div>
                       <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
                         {status.label}
                       </span>
                       <div className="flex shrink-0 items-center gap-3">
                         {listing.status === 'active' && (
-                          <Link
-                            href={`/tin/${listing.slug}`}
-                            className="text-sm font-medium text-brand hover:text-brand-700 transition-colors"
-                          >
-                            Xem
-                          </Link>
+                          <>
+                            <Link
+                              href={`/tin/${listing.slug}`}
+                              className="text-sm font-medium text-brand hover:text-brand-700 transition-colors"
+                            >
+                              Xem
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleRemove(listing.id, true)}
+                              className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
+                            >
+                              ✓ Đã cho thuê
+                            </button>
+                          </>
                         )}
                         {listing.status !== 'removed' && (
                           <button
-                            onClick={() => handleRemove(listing.id)}
+                            type="button"
+                            onClick={() => handleRemove(listing.id, false)}
                             className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
                           >
                             Gỡ tin
@@ -200,6 +226,33 @@ export default function QuanLyTinPage() {
                     </div>
                   );
                 })}
+
+                {/* Phân trang */}
+                {totalPages > 1 && (
+                  <div className="px-6 py-4 border-t border-surface-border flex items-center justify-between bg-surface-muted/30">
+                    <p className="text-xs text-text-muted">
+                      Hiển thị trang <strong>{page}</strong> / <strong>{totalPages}</strong> (tổng số {total} tin)
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={page <= 1 || loading}
+                        onClick={() => load(statusFilter, page - 1)}
+                        className="px-3 py-1 bg-white border border-surface-border text-text-primary text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-surface-muted"
+                      >
+                        ← Trang trước
+                      </button>
+                      <button
+                        type="button"
+                        disabled={page >= totalPages || loading}
+                        onClick={() => load(statusFilter, page + 1)}
+                        className="px-3 py-1 bg-white border border-surface-border text-text-primary text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-surface-muted"
+                      >
+                        Trang sau →
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>

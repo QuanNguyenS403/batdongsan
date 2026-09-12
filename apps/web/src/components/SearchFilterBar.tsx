@@ -130,9 +130,9 @@ export function SearchFilterBar({
     if (price.min) params.set('priceMin', price.min);
     if (price.max) params.set('priceMax', price.max);
 
-    const area = AREA_PRESETS[areaIndex];
-    if (area.min) params.set('areaMin', area.min);
-    if (area.max) params.set('areaMax', area.max);
+    const area = areaPresets[areaIndex];
+    if (area?.min) params.set('areaMin', area.min);
+    if (area?.max) params.set('areaMax', area.max);
 
     // Reset về trang 1 khi lọc mới
     params.set('page', '1');
