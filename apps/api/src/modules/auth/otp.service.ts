@@ -76,6 +76,13 @@ export class OtpService {
   }
 
   private async sendViaProvider(phone: string, code: string): Promise<void> {
+    const isStaging = process.env.APP_ENV === 'staging' || process.env.SAFETY_NET_DISABLE_OUTBOUND === 'true';
+    if (isStaging) {
+      this.logger.warn(`🛡️ [SAFETY NET] Đang chạy trong môi trường STAGING (hoặc SAFETY_NET_DISABLE_OUTBOUND=true). Chặn gửi SMS thật tới ${phone}.`);
+      this.logger.log(`[STAGING MOCK SMS] Gửi OTP tới ${phone}: ${code} (chỉ ghi log nội bộ)`);
+      return;
+    }
+
     const provider = process.env.SMS_PROVIDER ?? 'mock';
 
     if (provider === 'mock') {

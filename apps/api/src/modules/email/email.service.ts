@@ -18,6 +18,15 @@ export class EmailService {
   }
 
   private initTransporter() {
+    const isStaging = (this.config?.get<string>('APP_ENV') ?? process.env.APP_ENV) === 'staging' ||
+      (this.config?.get<string>('SAFETY_NET_DISABLE_OUTBOUND') ?? process.env.SAFETY_NET_DISABLE_OUTBOUND) === 'true';
+
+    if (isStaging) {
+      this.isMock = true;
+      this.logger.warn(`🛡️ [SAFETY NET] Đang chạy trong môi trường STAGING (hoặc SAFETY_NET_DISABLE_OUTBOUND=true). Toàn bộ email bị chặn gửi thật, cưỡng chế chuyển sang chế độ MOCK.`);
+      return;
+    }
+
     const driver = this.config?.get<string>('MAIL_DRIVER') ?? process.env.MAIL_DRIVER ?? 'mock';
     const host = this.config?.get<string>('SMTP_HOST') ?? process.env.SMTP_HOST;
     const port = Number(this.config?.get<number>('SMTP_PORT') ?? process.env.SMTP_PORT ?? 587);
