@@ -13,9 +13,9 @@
 | Mã Finding | Wave | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Ghi chú nghiệm thu | Commit |
 |---|---|---|---|---|---|
 | **P0-01** | Wave 0 | Xóa credential admin hardcoded trong `auth.service.ts`, bootstrap qua env bí mật ngoài repo, rotate secret | **verified** | `packages/database/scripts/test-wave-0.js` chạy 11/11 test PASS: credential cũ bị 401, không tạo user, user thường không bị leo quyền, đổi mật khẩu không bị ghi đè, bootstrap qua ADMIN_BOOTSTRAP_SECRET hoạt động chính xác | `da9488b` |
-| **P0-02** | Wave 1 | Xây entity/API `Lead` thật, thay thế modal giả `setTimeout`, response success chỉ sau persist DB | open | | |
-| **P0-03** | Wave 1 | Bỏ tick trust 100% vô điều kiện, tách xác thực phone/identity/physical dựa trên evidence thật | open | | |
-| **P0-04** | Wave 1 | Tắt fallback dữ liệu demo khi API lỗi ở production (home & 3 route thuê), chặn mutation trên tin demo | open | | |
+| **P0-02** | Wave 1 | Xây entity/API `Lead` thật, thay thế modal giả `setTimeout`, response success chỉ sau persist DB | **verified** | Thêm bảng `leads` (DDL migration `20260912100000_add_lead_entity_p0_02`), `LeadsModule` NestJS (`POST /leads`, `GET /leads/mine`, `GET /leads/admin`, `PATCH /leads/:id/status`). Dedupe key sha256 composite chống spam. Nối `ContactBrokerModal.tsx` gọi API thật, kiểm tra consent, xử lý 4xx/5xx/offline. Tạo `/admin/leads` queue và `/tai-khoan/leads`. Chạy `test-wave-1.js` PASS 100%. | `feat(P0-02)` |
+| **P0-03** | Wave 1 | Bỏ tick trust 100% vô điều kiện, tách xác thực phone/identity/physical dựa trên evidence thật | **verified** | Xóa bỏ hoàn toàn cụm từ tuyệt đối "Tin cậy 100%" và tick xanh vô điều kiện trong `OwnerContactBox.tsx` và `tin/[slug]/page.tsx`. Phân rã hiển thị huy hiệu theo dữ liệu thật CSDL: `isPhoneVerified`, `isIdVerified`, `verificationStatus === 'da_xac_thuc'`. Nếu chưa xác thực, không vẽ tick giả. Chạy `test-wave-1.js` PASS 100%. | `fix(P0-03,FE-07)` |
+| **P0-04** | Wave 1 | Tắt fallback dữ liệu demo khi API lỗi ở production (home & 3 route thuê), chặn mutation trên tin demo | **verified** | Kiểm tra `process.env.NODE_ENV === 'production'` ở 4 trang (`/`, `/thue`, `/cho-thue-tro`, `/cho-thue-mat-bang`), ở production trả về mảng rỗng `[]` và hiển thị empty state/error trung thực, không ép demo data. Ở dev có banner cảnh báo mẫu. Chặn mutation (/save, /reveal-phone, /report, /leads) trên demo ID tại `SaveListingButton`, `RevealPhoneButton`, `ReportListingModal`, `ContactBrokerModal`. Chạy `test-wave-1.js` PASS 100%. | `fix(P0-04)` |
 | **P0-05** | Wave 0 | Đồng bộ `apps/api/package.json` với `pnpm-lock.yaml`, pin Node/pnpm, pass `pnpm install --frozen-lockfile` | **verified** | `pnpm install --frozen-lockfile` chạy thành công (exit code 0, 4/4 packages up-to-date, không còn ERR_PNPM_OUTDATED_LOCKFILE). Đã pin engines node >=20.0.0, pnpm >=9.0.0 | `1b10ac9` |
 | **P0-06** | Wave 3 | Adapter SMS provider thật, Redis lưu OTP phân tán, không trả/log OTP ở production | open | | |
 | **P0-07** | Wave 4 | Không ghi `pricePaid` khi pending, tách chuỗi Order/Payment/Allocation/Refund/Ledger | open | | |
@@ -54,7 +54,7 @@
 | **FE-04** | Wave 2 | Chuẩn hoá bộ phân loại phòng (taxonomy package) dùng chung giữa UI, DTO và DB | open | | |
 | **FE-05** | Wave 2 | Hiển thị minh bạch chi phí điện nước trên trang chi tiết, import MoveInCostEstimator | open | | |
 | **FE-06** | Wave 3 | Kiểm tra toàn diện mọi response upload ảnh tại trang đăng tin, hỗ trợ resume/retry | open | | |
-| **FE-07** | Wave 1 | Bỏ tick và chữ "Tin cậy 100%" vô điều kiện tại OwnerContactBox & trang chi tiết | open | | |
+| **FE-07** | Wave 1 | Bỏ tick và chữ "Tin cậy 100%" vô điều kiện tại OwnerContactBox & trang chi tiết | **verified** | Đã loại bỏ chuỗi "Tin cậy 100%", thay thế tick xanh vô điều kiện bằng conditional render kiểm tra `isPhoneVerified` và `isIdVerified`. Chạy `test-wave-1.js` PASS 100%. | `fix(P0-03,FE-07)` |
 | **FE-08** | Wave 3 | Đồng bộ trạng thái Auth toàn cục trên Header, hỗ trợ returnTo sau đăng nhập | open | | |
 | **FE-09** | Wave 2 | Phân trang, tìm kiếm và bộ lọc trên trang quản lý tin cá nhân | open | | |
 | **FE-10** | Wave 5 | Tối ưu CTA liên hệ và gallery ảnh xem phòng trên giao diện mobile | open | | |
@@ -105,8 +105,8 @@
 ## 6. Nhật ký tiến độ theo Wave
 
 - **Wave 0**: **HOÀN THÀNH 100%** (Đã đóng và verify đầy đủ P0-01, P0-05, OPS-01, OPS-06, OPS-07, OPS-08; đã bổ sung Staging Safety Net commit `fb86b5a`).
-- **Wave 1**: Sẵn sàng bắt đầu sau khi Quan phê duyệt Wave 0 (P0-02, P0-03, P0-04, FE-07).
-- **Wave 2**: Chưa bắt đầu (P0-08, BE-03, BE-04, BE-05, BE-09, BE-14, FE-01, FE-02, FE-03, FE-04, FE-05, FE-09, FE-14).
+- **Wave 1**: **HOÀN THÀNH 100%** (Đã đóng và verify đầy đủ P0-02, P0-03, P0-04, FE-07; chạy `test-wave-1.js` 9/9 PASS, `next build` 31/31 routes thành công).
+- **Wave 2**: Sẵn sàng bắt đầu sau khi Quan phê duyệt Wave 1 (P0-08, BE-03, BE-04, BE-05, BE-09, BE-14, FE-01, FE-02, FE-03, FE-04, FE-05, FE-09, FE-14).
 - **Wave 3**: Chưa bắt đầu (P0-06, BE-01, BE-02, BE-06, BE-07, BE-08, FE-06, FE-08, OPS-02).
 - **Wave 4**: Chưa bắt đầu (P0-07, AF-01 đến AF-14, BE-13).
 - **Wave 5**: Chưa bắt đầu (OPS-03, OPS-04, OPS-05, FE-10, FE-11, FE-12, FE-13, FE-15, BE-10, BE-11, BE-12).

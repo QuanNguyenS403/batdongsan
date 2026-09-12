@@ -146,4 +146,25 @@
 7. **Sổ theo dõi thực thi**:
    - Tạo `docs/audit/BATDONGSAN-AUDIT-EXECUTION-PLAN.md` và `docs/audit/EXECUTION-STATUS.md` với đầy đủ mã finding. Cập nhật toàn bộ finding của Wave 0 sang trạng thái `verified` kèm commit SHA và bằng chứng kiểm thử thật.
 
+**Việc vừa hoàn thành (12/09/2026 — THỰC THI AUDIT ĐỘC LẬP: WAVE 1 — PRODUCT TRUTH VÀ LEAD THẬT):**
+1. **P0-02 (Lead thật & Chống spam submit)**:
+   - Tạo entity `Lead` trong `packages/database/prisma/schema.prisma` và migration DDL `20260912100000_add_lead_entity_p0_02`.
+   - Xây dựng `LeadsModule` đầy đủ trong NestJS API: DTO validation (phone VN di động 10 số, consent = true), dedupe key sha256 composite chống spam submit lặp trong ngày, chỉ trả success sau khi đã persist vào CSDL thật.
+   - Cung cấp API `GET /leads/mine` cho chủ phòng xem khách liên hệ, `GET /leads/admin` và `PATCH /leads/:id/status` cho admin quản lý queue.
+   - Nối `ContactBrokerModal.tsx` vào API thật, xử lý 4xx/5xx/offline, chỉ hiện tick xanh thành công khi có phản hồi 200/201.
+   - Khởi tạo UI Admin Lead Queue (`/admin/leads`) và UI Khách thuê liên hệ cho seller (`/tai-khoan/leads`).
+2. **P0-03 & FE-07 (Bỏ "Tin cậy 100%" và Trust Tick vô điều kiện)**:
+   - Xóa bỏ chuỗi "Tin cậy 100%" tại trang chi tiết `/tin/[slug]`, đổi thành nhãn trung thực "Đã kiểm tra thực tế".
+   - Xóa bỏ tick xanh vô điều kiện ở `OwnerContactBox.tsx` và trang chi tiết. Thay thế bằng conditional render 3 cấp độ xác thực độc lập từ CSDL: `isPhoneVerified`, `isIdVerified`, `verificationStatus === 'da_xac_thuc'`.
+3. **P0-04 (Tắt Demo Fallback ở Production & Chặn Mutation trên Demo)**:
+   - Tắt fallback sang dữ liệu mẫu ở production tại 4 trang (`/`, `/thue`, `/cho-thue-tro`, `/cho-thue-mat-bang`), hiển thị empty state và thông báo lỗi kết nối trung thực. Ở dev hiển thị banner cảnh báo mẫu.
+   - Chặn toàn bộ mutation (lưu tin, gọi điện thoại, báo cáo vi phạm, gửi lead) trên các tin có ID demo (`demo-*`).
+4. **Xác minh kiểm thử tự động**:
+   - `packages/database/scripts/test-wave-1.js`: 9/9 tests PASS 100%.
+   - `pnpm build`: Compile sạch sẽ cả API và Web (31/31 routes Next.js).
+5. **Sổ theo dõi thực thi**:
+   - Cập nhật `EXECUTION-STATUS.md`: chuyển `P0-02`, `P0-03`, `P0-04`, `FE-07` sang trạng thái `verified`.
 
+## Trạng thái hiện tại:
+- Wave 0 & Wave 1 đã hoàn thành 100% và được kiểm thử tự động xác minh.
+- Chuẩn bị đẩy commit lên `origin/main` và báo cáo Quan để xin phép chuyển sang Wave 2.

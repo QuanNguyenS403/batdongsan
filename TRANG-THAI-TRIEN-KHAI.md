@@ -35,6 +35,37 @@ Thực thi theo đặc tả chính thức tại `docs/audit/BATDONGSAN-AUDIT-EXE
 
 ---
 
+## 🎯 ĐỢT AUDIT ĐỘC LẬP & THỰC THI WAVE 1 (12/09/2026) — PRODUCT TRUTH VÀ LEAD THẬT
+
+Thực thi theo đặc tả chính thức tại `docs/audit/BATDONGSAN-AUDIT-EXECUTION-PLAN.md` và theo dõi tại `docs/audit/EXECUTION-STATUS.md`:
+
+1. **P0-02 (Lead thật & Chống spam - verified)**:
+   - Thêm model `Lead` vào schema Prisma (`packages/database/prisma/schema.prisma`) và migration DDL `20260912100000_add_lead_entity_p0_02`.
+   - Xây dựng `LeadsModule` đầy đủ trong NestJS (`apps/api/src/modules/leads/`):
+     - `POST /leads` (Public): Nhận lead, validate số điện thoại di động Việt Nam 10 chữ số, kiểm tra consent.
+     - Cơ chế Deduplication thông minh: Tạo `dedupeKey = sha256(listingId + phone + YYYY-MM-DD)` chặn triệt để spam submit trùng trong ngày, trả về idempotent success thay vì lỗi 500 hoặc duplicate bản ghi.
+     - Chỉ trả về response thành công sau khi dữ liệu đã được persist vào CSDL thật.
+     - `GET /leads/mine`: Dành cho chủ tin xem danh sách khách thuê quan tâm tới các phòng của mình.
+     - `GET /leads/admin` & `PATCH /leads/:id/status`: Dành cho Admin quản lý Lead Queue toàn sàn.
+   - Nối lại `ContactBrokerModal.tsx`: Xóa bỏ hoàn toàn `setTimeout` giả lập 500ms, gọi API `/leads` thật, xử lý lỗi mạng/4xx/5xx và chỉ hiện tick thành công khi máy chủ phản hồi 200/201.
+   - Khởi tạo giao diện Admin Lead Queue (`/admin/leads`) và Seller Lead List (`/tai-khoan/leads`).
+   - Bằng chứng nghiệm thu: Chạy `packages/database/scripts/test-wave-1.js` PASS 100%.
+
+2. **P0-03 & FE-07 (Bỏ "Tin cậy 100%" và Trust Tick vô điều kiện - verified)**:
+   - Xóa bỏ hoàn toàn cụm từ tuyệt đối "Tin cậy 100%" tại `apps/web/src/app/tin/[slug]/page.tsx`, đổi thành nhãn trung thực "Đã kiểm tra thực tế".
+   - Xóa bỏ tick xanh vô điều kiện ở `OwnerContactBox.tsx` và trang chi tiết: Trước đây mọi tài khoản đều vẽ cứng tick xanh dù chưa xác thực.
+   - Thay thế bằng conditional render 3 cấp độ xác thực độc lập từ CSDL: `isPhoneVerified` (SĐT đã xác thực OTP), `isIdVerified` (Danh tính CCCD), `verificationStatus === 'da_xac_thuc'` (Đã kiểm tra thực tế/thực địa). Nếu chủ phòng chưa xác thực, không vẽ bất kỳ tick giả nào.
+   - Bằng chứng nghiệm thu: Chạy `packages/database/scripts/test-wave-1.js` PASS 100%.
+
+3. **P0-04 (Tắt Fallback dữ liệu demo ở Production & Chặn Mutation trên Demo - verified)**:
+   - Tại 4 trang: Trang chủ (`/`), Cho thuê (`/thue`), Cho thuê trọ (`/cho-thue-tro`), Mặt bằng (`/cho-thue-mat-bang`):
+     - Kiểm tra `process.env.NODE_ENV === 'production'`: Khi ở Production, nếu API rỗng hoặc lỗi kết nối, trả về mảng rỗng `[]` và render Empty State / Error Banner trung thực, tuyệt đối không ép fallback vào `DEMO_ROOM_RENT_LISTINGS` hay dữ liệu mẫu.
+     - Ở môi trường thử nghiệm (development/staging): Khi dùng dữ liệu mẫu, hiển thị banner cảnh báo rõ ràng trên giao diện: "⚠️ CHẾ ĐỘ THỬ NGHIỆM: Đang hiển thị dữ liệu mẫu cục bộ".
+   - Chặn mutation trên dữ liệu mẫu: Trong `SaveListingButton.tsx`, `RevealPhoneButton.tsx`, `ReportListingModal.tsx`, và `ContactBrokerModal.tsx`, mọi thao tác lưu tin, gọi điện, báo cáo, gửi lead đối với ID demo (bắt đầu bằng `demo-`) đều bị chặn và hiển thị thông báo rõ ràng cho người dùng.
+   - Bằng chứng nghiệm thu: Chạy `packages/database/scripts/test-wave-1.js` PASS 100%, Next.js compile 31/31 routes thành công.
+
+---
+
 ## 🔄 PIVOT CHIẾN LƯỢC — Chuyên biệt hoá "Cho thuê" 100% (05/09/2026)
 
 ### Tầm nhìn & Quyết định cốt lõi
