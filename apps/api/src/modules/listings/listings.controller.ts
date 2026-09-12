@@ -131,6 +131,12 @@ export class ListingsController {
     // Trước đây uploadsService.saveListingImages chạy trước, ghi hàng chục file và convert webp
     // vào ổ cứng rồi mới gọi assertOwnership, mở ra lỗ hổng làm tràn đĩa server (DoS).
     await this.listingsService.assertOwnership(id, user);
+    const currentCount = await this.listingsService.getImageCount(id);
+    if (currentCount + files.length > 20) {
+      throw new BadRequestException(
+        `Một tin đăng chỉ được phép có tối đa 20 ảnh (hiện đã có ${currentCount} ảnh, không thể thêm ${files.length} ảnh nữa).`,
+      );
+    }
     const urls = await this.uploadsService.saveListingImages(id.toString(), files);
     return this.listingsService.addImages(id, user, urls);
   }

@@ -86,23 +86,118 @@ export class OtpService {
     const provider = process.env.SMS_PROVIDER ?? 'mock';
 
     if (provider === 'mock') {
-      this.logger.warn(`[MOCK SMS] Gửi OTP tới ${phone}: ${code} (chỉ hiện trong log, KHÔNG gửi SMS thật)`);
+      if (process.env.NODE_ENV === 'production') {
+        throw new HttpException('Chế độ SMS mock không được phép chạy ở môi trường production.', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+      this.logger.warn(`[MOCK SMS] Gửi OTP tới ${phone}: ${code} (chỉ hiện trong log dev/test)`);
       return;
     }
 
-    // TODO: tích hợp nhà cung cấp SMS thật (eSMS / SpeedSMS / Twilio) tại đây khi có API key.
-    // Ví dụ khung sườn:
-    // if (provider === 'esms') {
-    //   await axios.post('https://rest.esms.vn/MainService.svc/json/SendMultipleMessage_V4_post_json/', {
-    //     ApiKey: process.env.SMS_API_KEY,
-    //     SecretKey: process.env.SMS_SECRET_KEY,
-    //     Phone: phone,
-    //     Content: `Ma OTP cua ban la: ${code}`,
-    //     ...
-    //   });
-    // }
-    this.logger.error(`SMS_PROVIDER="${provider}" chưa được implement. Đang fallback về chế độ mock.`);
-    this.logger.warn(`[MOCK SMS] Gửi OTP tới ${phone}: ${code}`);
+    // P0-06 / BE-01: Tích hợp adapter nhà mạng SMS thật với AbortSignal timeout 5s
+    const timeoutMs = 5000;
+    try {
+      if (provider === 'esms') {
+        const apiKey = process.env.SMS_API_KEY;
+        const secretKey = process.env.SMS_SECRET_KEY;
+        if (!apiKey || !secretKey) {
+          throw new Error('Thiếu SMS_API_KEY hoặc SMS_SECRET_KEY cho eSMS');
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        const res = await fetch('https://rest.esms.vn/MainService.svc/json/SendMultipleMessage_V4_post_json/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ApiKey: apiKey,
+            SecretKey: secretKey,
+            Phone: phone,
+            Content: `Ma xac thuc Thue Tro Nhanh cua ban la: ${code}. Hieu luc 5 phut.`,
+            SmsType: '2', // CSKH / OTP
+          }),
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId));
+
+        if (!res.ok) {
+          throw new Error(`eSMS trả mã HTTP lỗi: ${res.status}`);
+        }
+        const data: any = await res.json();
+        if (data.CodeResult !== '100') {
+          throw new Error(`eSMS từ chối gửi tin (CodeResult=${data.CodeResult}, ErrorMessage=${data.ErrorMessage})`);
+        }
+        this.logger.log(`[eSMS] Đã phát OTP thành công tới ${phone}`);
+        return;
+      }
+
+      if (provider === 'twilio') {
+        const accountSid = process.env.TWILIO_ACCOUNT_SID;
+        const authToken = process.env.TWILIO_AUTH_TOKEN;
+        const fromPhone = process.env.TWILIO_PHONE_NUMBER;
+        if (!accountSid || !authToken || !fromPhone) {
+          throw new Error('Thiếu TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN hoặc TWILIO_PHONE_NUMBER');
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        const params = new URLSearchParams();
+        params.set('To', phone.startsWith('+') ? phone : `+84${phone.replace(/^0/, '')}`);
+        params.set('From', fromPhone);
+        params.set('Body', `Ma xac thuc Thue Tro Nhanh cua ban la: ${code}. Hieu luc 5 phut.`);
+
+        const authHeader = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+        const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${authHeader}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params.toString(),
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId));
+
+        if (!res.ok) {
+          throw new Error(`Twilio trả mã HTTP lỗi: ${res.status}`);
+        }
+        this.logger.log(`[Twilio] Đã phát OTP thành công tới ${phone}`);
+        return;
+      }
+
+      if (provider === 'speedsms') {
+        const accessToken = process.env.SMS_API_KEY;
+        if (!accessToken) throw new Error('Thiếu SMS_API_KEY cho SpeedSMS');
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        const res = await fetch('https://api.speedsms.vn/index.php/sms/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${Buffer.from(`${accessToken}:x`).toString('base64')}`,
+          },
+          body: JSON.stringify({
+            to: [phone],
+            content: `Ma xac thuc Thue Tro Nhanh cua ban la: ${code}. Hieu luc 5 phut.`,
+            sms_type: 2,
+          }),
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId));
+
+        if (!res.ok) throw new Error(`SpeedSMS trả mã HTTP lỗi: ${res.status}`);
+        this.logger.log(`[SpeedSMS] Đã phát OTP thành công tới ${phone}`);
+        return;
+      }
+
+      throw new Error(`SMS_PROVIDER="${provider}" không được hỗ trợ.`);
+    } catch (err: any) {
+      this.logger.error(`Lỗi khi gửi SMS OTP qua provider "${provider}": ${err.message}`);
+      throw new HttpException(
+        'Không thể gửi mã xác thực SMS qua nhà mạng viễn thông. Vui lòng kiểm tra lại số điện thoại hoặc thử lại sau ít phút.',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
   }
 
   /** Dọn dẹp các bản ghi OTP đã hết hạn khỏi bộ nhớ */

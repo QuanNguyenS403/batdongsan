@@ -532,7 +532,11 @@ export class AdminService {
     const nextState = !user.isBlocked;
     const updated = await this.prisma.user.update({
       where: { id },
-      data: { isBlocked: nextState },
+      data: {
+        isBlocked: nextState,
+        // BE-02: Cắt đứt lập tức toàn bộ phiên làm việc của user bị khóa
+        ...(nextState ? { tokenVersion: { increment: 1 } } : {}),
+      },
       select: {
         id: true,
         phone: true,

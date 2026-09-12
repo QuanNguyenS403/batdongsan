@@ -56,12 +56,29 @@ export function assertRequiredSecrets(): void {
     }
   }
 
-  // BẢO MẬT & VẬN HÀNH (#34): Trong môi trường production, KHÔNG được phép dùng mock SMS
-  if (isProduction && (!process.env.SMS_PROVIDER || process.env.SMS_PROVIDER === 'mock')) {
-    throw new Error(
-      `[CẤU HÌNH PRODUCTION KHÔNG HỢP LỆ] SMS_PROVIDER đang đặt là "${process.env.SMS_PROVIDER ?? 'chưa có'}" (chế độ mock).\n` +
-        `→ Trong môi trường production (NODE_ENV=production), KHÔNG được phép dùng mock SMS vì người dùng thật không thể nhận được OTP.\n` +
-        `Vui lòng cấu hình tài khoản SMS thật (esms, speedsms, twilio...) và API key tương ứng trong .env trước khi khởi động.`,
-    );
+  // BẢO MẬT & VẬN HÀNH (P0-06): Trong môi trường production, BẮT BUỘC có nhà cung cấp SMS thật và API key hợp lệ
+  const SUPPORTED_SMS_PROVIDERS = ['esms', 'twilio', 'speedsms'];
+  if (isProduction) {
+    const provider = process.env.SMS_PROVIDER;
+    if (!provider || provider === 'mock') {
+      throw new Error(
+        `[CẤU HÌNH PRODUCTION KHÔNG HỢP LỆ] SMS_PROVIDER đang đặt là "${provider ?? 'chưa có'}" (chế độ mock).\n` +
+          `→ Trong môi trường production (NODE_ENV=production), KHÔNG được phép dùng mock SMS vì người dùng thật không thể nhận được OTP.\n` +
+          `Vui lòng cấu hình tài khoản SMS thật (${SUPPORTED_SMS_PROVIDERS.join(', ')}) trong .env trước khi khởi động.`,
+      );
+    }
+    if (!SUPPORTED_SMS_PROVIDERS.includes(provider)) {
+      throw new Error(
+        `[CẤU HÌNH PRODUCTION KHÔNG HỢP LỆ] SMS_PROVIDER="${provider}" không được hỗ trợ.\n` +
+          `→ Các nhà mạng SMS được hỗ trợ chính thức: ${SUPPORTED_SMS_PROVIDERS.join(', ')}. ` +
+          `Ứng dụng sẽ dừng khởi động để tránh người dùng bị kẹt không nhận được OTP.`,
+      );
+    }
+    if (!process.env.SMS_API_KEY && !process.env.TWILIO_ACCOUNT_SID) {
+      throw new Error(
+        `[CẤU HÌNH PRODUCTION THIẾU SECRET] SMS_PROVIDER="${provider}" nhưng thiếu SMS_API_KEY hoặc TWILIO_ACCOUNT_SID trong .env.\n` +
+          `→ Vui lòng điền API credentials thật của nhà mạng SMS trước khi deploy production.`,
+      );
+    }
   }
 }

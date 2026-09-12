@@ -134,7 +134,7 @@ export class AuthService {
    * 15 phút là người dùng bị văng ra phải đăng nhập lại bằng mật khẩu, refreshToken sinh ra vô nghĩa.
    */
   async refresh(dto: RefreshTokenDto) {
-    let payload: { sub: string; phone: string; role: string };
+    let payload: { sub: string; phone: string; role: string; tokenVersion?: number };
     try {
       // Không còn fallback "?? 'changeme_refresh'" — assertRequiredSecrets() trong main.ts đã
       // đảm bảo biến này luôn tồn tại và không phải giá trị placeholder trước khi app khởi động,
@@ -149,7 +149,21 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: BigInt(payload.sub) } });
     if (!user || user.isBlocked) throw new UnauthorizedException('Tài khoản không hợp lệ hoặc đã bị khóa.');
 
+    // BE-02: Kiểm tra tokenVersion — thu hồi phiên nếu mật khẩu đã đổi hoặc user đã logout
+    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.tokenVersion) {
+      throw new UnauthorizedException('Phiên đăng nhập đã bị thu hồi hoặc mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.');
+    }
+
     return this.issueTokens(user);
+  }
+
+  async logout(userId: bigint) {
+    // BE-02: Tăng tokenVersion để hủy lập tức toàn bộ phiên JWT (cả access token và refresh token)
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    return { message: 'Đăng xuất thành công, toàn bộ phiên làm việc đã được thu hồi.' };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -160,7 +174,14 @@ export class AuthService {
     if (!otpValid) throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn.');
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10);
-    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    // BE-02: Đổi mật khẩu đồng thời tăng tokenVersion để cắt đứt mọi session cũ
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        tokenVersion: { increment: 1 },
+      },
+    });
 
     return { message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.' };
   }
@@ -171,8 +192,13 @@ export class AuthService {
     return serializeUser(user);
   }
 
-  private issueTokens(user: { id: bigint; phone: string; fullName: string | null; avatarUrl: string | null; role: string; createdAt: Date }) {
-    const payload = { sub: user.id.toString(), phone: user.phone, role: user.role };
+  private issueTokens(user: { id: bigint; phone: string; fullName: string | null; avatarUrl: string | null; role: string; createdAt: Date; tokenVersion?: number }) {
+    const payload = {
+      sub: user.id.toString(),
+      phone: user.phone,
+      role: user.role,
+      tokenVersion: user.tokenVersion ?? 0,
+    };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET as string,

@@ -127,7 +127,7 @@ export default function DangTinPage() {
 
     setLoading(true);
     try {
-      const res = await authFetch(`${API_URL}/listings`, {
+      const res = await authFetch('/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -140,45 +140,24 @@ export default function DangTinPage() {
 
       const newListing = await res.json();
 
-      // Nếu có ảnh được chọn, upload từng ảnh một qua S3 presigned URL
+      // FE-06: Upload ảnh trực tiếp qua FormData tới API /listings/:id/images
       if (selectedFiles.length > 0 && newListing?.id) {
-        setUploadStatus(`Đang tải lên ${selectedFiles.length} ảnh...`);
-        const uploadedUrls: string[] = [];
+        setUploadStatus(`Đang tải lên ${selectedFiles.length} ảnh thực tế...`);
+        const formData = new FormData();
+        selectedFiles.forEach((file) => {
+          formData.append('files', file);
+        });
 
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const file = selectedFiles[i];
-          setUploadStatus(`Đang tải ảnh ${i + 1}/${selectedFiles.length}...`);
+        const imgRes = await authFetch(`/listings/${newListing.id}/images`, {
+          method: 'POST',
+          body: formData,
+        });
 
-          const presignRes = await authFetch(`${API_URL}/upload/presigned-url`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              filename: file.name,
-              contentType: file.type || 'image/jpeg',
-            }),
-          });
-
-          if (presignRes.ok) {
-            const { uploadUrl, publicUrl } = await presignRes.json();
-            const putRes = await fetch(uploadUrl, {
-              method: 'PUT',
-              headers: { 'Content-Type': file.type || 'image/jpeg' },
-              body: file,
-            });
-
-            if (putRes.ok) {
-              uploadedUrls.push(publicUrl);
-            }
-          }
-        }
-
-        if (uploadedUrls.length > 0) {
-          setUploadStatus('Đang liên kết ảnh với tin đăng...');
-          await authFetch(`${API_URL}/listings/${newListing.id}/images`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrls: uploadedUrls }),
-          });
+        if (!imgRes.ok) {
+          const errData = await imgRes.json().catch(() => ({}));
+          throw new Error(
+            `Tin đăng #${newListing.id} đã được tạo thành công, nhưng tải ảnh lên bị lỗi: ${errData.message ?? 'Không thể tải ảnh'}. Vui lòng vào trang "Quản lý tin" để thêm ảnh bổ sung.`,
+          );
         }
       }
 

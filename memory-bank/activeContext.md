@@ -357,7 +357,28 @@
    - `packages/database/scripts/test-wave-2.js`: 6/6 tests PASS 100%.
    - `pnpm build`: 3/3 packages compile sạch sẽ (Next.js 31/31 routes, NestJS API dist sạch lỗi).
 
+**Việc vừa hoàn thành (12/09/2026 — THỰC THI AUDIT ĐỘC LẬP: WAVE 3 — AUTH HARDENING, SESSION REVOCATION & UPLOAD TRUTH):**
+1. **P0-06 & BE-01 (SMS Adapter thật & Fail-fast Production)**:
+   - `assert-env.ts`: Bổ sung kiểm tra fail-fast khi khởi động production: nếu `SMS_PROVIDER` là `mock` hoặc không thuộc danh sách `['esms', 'twilio', 'speedsms']`, hoặc thiếu API key/secret, ứng dụng sẽ ném lỗi và từ chối khởi động.
+   - `OtpService`: Triển khai SMS adapter thật cho `esms`, `twilio`, `speedsms` với `AbortSignal.timeout(5000)`, ném `HttpException` HTTP 502 khi nhà mạng lỗi (không nuốt lỗi), ẩn mã OTP khỏi console ở môi trường production.
+2. **BE-02 (Session Revocation & Token Invalidation)**:
+   - Thêm cột `tokenVersion Int @default(0) @map("token_version")` vào model `User` trong `packages/database/prisma/schema.prisma`.
+   - Tạo migration DDL `20260912120000_user_token_version_be_02` và sinh Prisma Client v5.22.0.
+   - `JwtStrategy`: Kiểm tra `payload.tokenVersion === user.tokenVersion`, từ chối ngay lập tức token cũ nếu phiên bị thu hồi.
+   - `AuthService`: Nhúng `tokenVersion` vào JWT payload; hàm `refresh` kiểm tra khớp `tokenVersion`; `resetPassword` tăng `tokenVersion` để thu hồi các phiên cũ; bổ sung hàm `logout(userId)` tăng `tokenVersion`; bổ sung endpoint `POST /auth/logout`.
+   - `AdminService.toggleBlockUser`: Tăng `tokenVersion` ngay khi khóa tài khoản để hủy tức thì mọi phiên active của user bị khóa.
+3. **BE-06 & BE-07 (Giới hạn Upload Ảnh & Data Validation Thắt Chặt)**:
+   - `ListingsController.addImages`: Chặn upload nếu `currentCount + files.length > 20` ngay trước khi ghi đĩa.
+   - `QueryListingsDto` & `QueryMyListingsDto`: Bổ sung `@Max(100)` cho `pageSize`.
+   - `CreateListingDto`: `@IsInt()` cho `price` và `depositAmount`, `@MaxLength(150)` cho `title`, `@Min(-90) @Max(90)` cho `lat`, `@Min(-180) @Max(180)` cho `lng`.
+4. **FE-06 (Upload Client Thật Trực Tiếp)**:
+   - `apps/web/src/app/dang-tin/page.tsx`: Loại bỏ presigned-url không tồn tại (trước đây gọi `/upload/presigned-url` trả 404 và nuốt lỗi làm mất ảnh).
+   - Chuyển sang upload ảnh trực tiếp qua `FormData` multipart tới `POST /listings/:id/images`, xử lý thông báo lỗi minh bạch.
+5. **Xác minh kiểm thử tự động & Build**:
+   - `packages/database/scripts/test-wave-3.js`: 5/5 tests PASS 100%.
+   - `pnpm build`: 3/3 packages compile sạch sẽ (Next.js 31/31 routes, NestJS API dist sạch lỗi).
+
 ## Trạng thái hiện tại:
-- Wave 0, Wave 1, Wave 2 đã hoàn thành 100% và được kiểm thử tự động xác minh.
-- Chuẩn bị commit và push trực tiếp Wave 2 lên `origin/main`.
-- Tiếp tục chuyển sang Wave 3 (Auth, upload, session).
+- Wave 0, Wave 1, Wave 2, Wave 3 đã hoàn thành 100% và được kiểm thử tự động xác minh.
+- Chuẩn bị commit và push trực tiếp Wave 3 lên `origin/main`.
+- Tiếp tục chuyển ngay sang Wave 4 (Thu phí gói, Order, Payment State Machine & Quota truth).

@@ -588,6 +588,10 @@ export class ListingsService {
     return { message: 'Đã gỡ tin đăng.' };
   }
 
+  async getImageCount(listingId: bigint): Promise<number> {
+    return this.prisma.listingImage.count({ where: { listingId } });
+  }
+
   async addImages(id: bigint, requester: { id: bigint; role: string }, imageUrls: string[]) {
     const listing = await this.assertOwnership(id, requester);
 

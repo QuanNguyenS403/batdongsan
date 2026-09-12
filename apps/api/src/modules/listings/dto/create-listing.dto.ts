@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TransactionType } from '@batdongsan/database';
-import { IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreateListingDto {
   @ApiPropertyOptional({ enum: TransactionType, default: TransactionType.rent })
@@ -21,9 +21,10 @@ export class CreateListingDto {
   @IsInt()
   projectId?: number;
 
-  @ApiProperty({ minLength: 10 })
+  @ApiProperty({ minLength: 10, maxLength: 150 })
   @IsString()
   @MinLength(10, { message: 'Tiêu đề nên tối thiểu 10 ký tự để mô tả rõ tin đăng.' })
+  @MaxLength(150, { message: 'Tiêu đề tối đa 150 ký tự.' })
   title!: string;
 
   @ApiPropertyOptional()
@@ -31,16 +32,16 @@ export class CreateListingDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 3500000, description: 'Giá thuê hàng tháng (VNĐ/tháng)' })
+  @ApiProperty({ example: 3500000, description: 'Giá thuê hàng tháng (VNĐ/tháng nguyên)' })
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt({ message: 'Giá thuê phải là số nguyên VNĐ.' })
   @Min(100000, { message: 'Giá thuê phải từ 100.000 đ/tháng trở lên.' })
   @Max(10000000000, { message: 'Giá thuê không được vượt quá 10 tỷ đ/tháng.' })
   price!: number;
 
-  @ApiPropertyOptional({ example: 3500000, description: 'Tiền cọc yêu cầu (VNĐ)' })
+  @ApiPropertyOptional({ example: 3500000, description: 'Tiền cọc yêu cầu (VNĐ nguyên)' })
   @IsOptional()
-  @IsNumber()
+  @IsInt({ message: 'Tiền cọc phải là số nguyên VNĐ.' })
   @Min(0, { message: 'Tiền cọc không được là số âm.' })
   @Max(10000000000, { message: 'Tiền cọc không được vượt quá 10 tỷ đ.' })
   depositAmount?: number;
@@ -117,11 +118,22 @@ export class CreateListingDto {
   @IsString()
   legalStatus?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Địa chỉ chi tiết (số nhà, ngõ/hẻm, tên đường)' })
   @IsOptional()
   @IsString()
   addressDetail?: string;
 
-  @ApiPropertyOptional() @IsOptional() @IsNumber() lat?: number;
-  @ApiPropertyOptional() @IsOptional() @IsNumber() lng?: number;
+  @ApiPropertyOptional({ example: 10.7769, description: 'Vĩ độ (-90 đến 90)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(-90, { message: 'Vĩ độ phải từ -90 đến 90.' })
+  @Max(90, { message: 'Vĩ độ phải từ -90 đến 90.' })
+  lat?: number;
+
+  @ApiPropertyOptional({ example: 106.7009, description: 'Kinh độ (-180 đến 180)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(-180, { message: 'Kinh độ phải từ -180 đến 180.' })
+  @Max(180, { message: 'Kinh độ phải từ -180 đến 180.' })
+  lng?: number;
 }

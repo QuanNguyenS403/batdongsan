@@ -25,7 +25,8 @@
     "db:bootstrap-admin": "npm run bootstrap:admin --workspace=@batdongsan/database",
     "test:wave0": "node packages/database/scripts/test-wave-0.js",
     "test:wave1": "node packages/database/scripts/test-wave-1.js",
-    "test:wave2": "node packages/database/scripts/test-wave-2.js"
+    "test:wave2": "node packages/database/scripts/test-wave-2.js",
+    "test:wave3": "node packages/database/scripts/test-wave-3.js"
   },
   "devDependencies": {
     "turbo": "^2.1.0",
