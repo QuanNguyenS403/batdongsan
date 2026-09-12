@@ -98,12 +98,21 @@ export default function QuanLyTinPage() {
             <h1 className="text-2xl font-bold text-text-primary">Quản lý tin đăng</h1>
             <p className="mt-0.5 text-sm text-text-muted">{total} tin trong tài khoản</p>
           </div>
-          <Link href="/dang-tin" className="btn-primary">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Đăng tin mới
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/tai-khoan/leads"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-surface-border bg-white px-4 py-2.5 text-sm font-semibold text-text-secondary hover:border-brand hover:text-brand transition-colors shadow-sm"
+            >
+              <span>📬</span>
+              <span>Khách thuê liên hệ</span>
+            </Link>
+            <Link href="/dang-tin" className="btn-primary">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Đăng tin mới
+            </Link>
+          </div>
         </div>
 
         {/* Filter tabs */}

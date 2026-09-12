@@ -57,6 +57,8 @@ model User {
   phoneReveals    PhoneRevealLog[]
   memberships     UserMembership[]
   verifiedListings Listing[] @relation("VerifiedListings")
+  requestedLeads  Lead[]          @relation("RequestedLeads")
+  assignedLeads   Lead[]          @relation("AssignedLeads")
 
   @@map("users")
 }
@@ -151,6 +153,7 @@ model Listing {
   reports                ListingReport[]
   phoneReveals           PhoneRevealLog[]
   nearbyUniversities     ListingUniversity[]
+  leads                  Lead[]
 
   @@index([status, transactionType, propertyType, locationId])
   @@map("listings")
@@ -315,3 +318,31 @@ model UserMembership {
 
   @@map("user_memberships")
 }
+
+/// Khách hàng tiềm năng (Lead) gửi yêu cầu liên hệ cho tin đăng cho thuê.
+model Lead {
+  id               BigInt      @id @default(autoincrement())
+  listingId        BigInt      @map("listing_id")
+  listing          Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  requesterId      BigInt?     @map("requester_id")
+  requester        User?       @relation("RequestedLeads", fields: [requesterId], references: [id], onDelete: SetNull)
+  fullName         String      @map("full_name") @db.VarChar(150)
+  phone            String      @db.VarChar(20)
+  email            String?     @db.VarChar(150)
+  message          String?     @db.Text
+  channel          String      @default("web_form") @db.VarChar(50) // web_form | direct_call | zalo | popup
+  consent          Boolean     @default(true)
+  status           String      @default("new") @db.VarChar(30) // new | contacted | qualified | completed | spam | cancelled
+  dedupeKey        String      @unique @map("dedupe_key") @db.VarChar(128)
+  assignedToUserId BigInt?     @map("assigned_to_user_id")
+  assignedTo       User?       @relation("AssignedLeads", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  notes            String?     @db.Text
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  @@index([listingId, status])
+  @@index([phone])
+  @@index([createdAt])
+  @@map("leads")
+}
+

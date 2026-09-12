@@ -16,6 +16,7 @@ import { GoogleSheetsModule } from './modules/google-sheets/google-sheets.module
 import { UniversitiesModule } from './modules/universities/universities.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { MembershipModule } from './modules/membership/membership.module';
+import { LeadsModule } from './modules/leads/leads.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -48,6 +49,7 @@ import { AppController } from './app.controller';
     UniversitiesModule,
     TasksModule,
     MembershipModule,
+    LeadsModule,
   ],
 })
 export class AppModule {}
