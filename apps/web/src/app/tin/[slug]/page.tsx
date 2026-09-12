@@ -187,7 +187,7 @@ export default async function ListingDetailPage({ params }: Props) {
                         ✅ ĐÃ KIỂM TRA THỰC TẾ (Trust-as-a-Service)
                       </span>
                       <span className="inline-flex items-center rounded-full bg-emerald-100/90 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                        Tin cậy 100%
+                        Đã kiểm tra thực tế
                       </span>
                     </div>
                     <p className="mt-1.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
@@ -238,14 +238,26 @@ export default async function ListingDetailPage({ params }: Props) {
                   {cleanOwnerName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-sm font-bold text-text-primary">{cleanOwnerName}</p>
-                    <span
-                      title="Tài khoản đã xác thực"
-                      className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1877F2] text-[9px] text-white font-bold"
-                    >
-                      ✓
-                    </span>
+                    {listing.owner.isIdVerified && (
+                      <span
+                        title="Danh tính / CCCD đã xác thực"
+                        className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700"
+                      >
+                        <span>🛡️</span>
+                        <span>CCCD</span>
+                      </span>
+                    )}
+                    {listing.owner.isPhoneVerified && (
+                      <span
+                        title="Số điện thoại đã xác thực OTP"
+                        className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700"
+                      >
+                        <span>✓</span>
+                        <span>SĐT</span>
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-text-muted">Đã tham gia: {formatJoinedDuration(listing.owner.createdAt)}</p>
                 </div>
@@ -333,6 +345,8 @@ export default async function ListingDetailPage({ params }: Props) {
                 ownerName={cleanOwnerName}
                 joinedText={formatJoinedDuration(listing.owner.createdAt)}
                 listingTitle={displayTitle}
+                isPhoneVerified={listing.owner.isPhoneVerified}
+                isIdVerified={listing.owner.isIdVerified}
               />
 
               {/* Khối Lưu ý an toàn khi thuê trọ */}

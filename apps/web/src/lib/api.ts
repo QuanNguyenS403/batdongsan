@@ -39,7 +39,14 @@ export interface Listing {
   images: { imageUrl: string; sortOrder: number }[];
   location: { id: number; name: string; slug: string; level: string };
   project: { id: string; name: string; slug: string } | null;
-  owner: { id: string; fullName: string | null; avatarUrl: string | null; createdAt: string };
+  owner: {
+    id: string;
+    fullName: string | null;
+    avatarUrl: string | null;
+    createdAt: string;
+    isPhoneVerified?: boolean;
+    isIdVerified?: boolean;
+  };
   nearbyUniversities?: {
     distanceMeters: number | null;
     travelTimeMinutes: number | null;

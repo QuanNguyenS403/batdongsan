@@ -12,6 +12,8 @@ interface OwnerContactBoxProps {
   ownerName: string;
   joinedText: string;
   listingTitle: string;
+  isPhoneVerified?: boolean;
+  isIdVerified?: boolean;
 }
 
 export function OwnerContactBox({
@@ -19,6 +21,8 @@ export function OwnerContactBox({
   ownerName,
   joinedText,
   listingTitle,
+  isPhoneVerified = false,
+  isIdVerified = false,
 }: OwnerContactBoxProps) {
   const [phone, setPhone] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -43,14 +47,26 @@ export function OwnerContactBox({
             {initialLetter}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <p className="font-bold text-text-primary truncate">{cleanOwnerName}</p>
-              <span
-                title="Tài khoản đã xác thực"
-                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#1877F2] text-[10px] text-white font-bold"
-              >
-                ✓
-              </span>
+              {isIdVerified && (
+                <span
+                  title="Danh tính / CCCD đã xác thực"
+                  className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700"
+                >
+                  <span>🛡️</span>
+                  <span>CCCD</span>
+                </span>
+              )}
+              {isPhoneVerified && (
+                <span
+                  title="Số điện thoại đã xác thực OTP"
+                  className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700"
+                >
+                  <span>✓</span>
+                  <span>SĐT</span>
+                </span>
+              )}
             </div>
             <p className="text-xs text-text-muted mt-0.5">Đã tham gia: {joinedText}</p>
           </div>

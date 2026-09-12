@@ -39,7 +39,7 @@ const PUBLIC_LISTING_SELECT = {
   images: { select: { imageUrl: true, sortOrder: true }, orderBy: { sortOrder: 'asc' as const } },
   location: { select: { id: true, name: true, slug: true, level: true } },
   project: { select: { id: true, name: true, slug: true } },
-  owner: { select: { id: true, fullName: true, avatarUrl: true, createdAt: true } },
+  owner: { select: { id: true, fullName: true, avatarUrl: true, createdAt: true, isPhoneVerified: true, isIdVerified: true } },
   nearbyUniversities: {
     select: {
       distanceMeters: true,
