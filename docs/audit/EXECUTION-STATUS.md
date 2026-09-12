@@ -70,20 +70,20 @@
 
 | Mã Finding | Wave | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Ghi chú nghiệm thu | Commit |
 |---|---|---|---|---|---|
-| **AF-01** | Wave 4 | Tách biệt tiền báo giá (quotedAmount) với tiền thực thu (Payment confirmed) | open | | |
+| **AF-01** | Wave 4 | Tách biệt tiền báo giá (quotedAmount) với tiền thực thu (Payment confirmed) | **verified** | Model UserMembership tách `quotedAmount` (ghi khi request pending) và `pricePaid`/`confirmedPaymentAmount` (chỉ ghi khi active); test-wave-4.js PASS 100%. | `feat(wave-4)` |
 | **AF-02** | Wave 4 | Formatter tài chính hiển thị chính xác từng đồng tại trang quản trị duyệt gói | **verified** | Sử dụng `formatExactPrice` hiển thị chính xác 1.498.500 đ tại `/admin/duyet-goi`. | `7b500ed` |
-| **AF-03** | Wave 4 | Ràng buộc trạng thái duyệt gói: compare-and-set từ pending, chặn kích hoạt gói đã từ chối | open | | |
-| **AF-04** | Wave 4 | Chính sách cộng dồn ngày khi gia hạn gói (nối tiếp từ ngày hết hạn cũ thay vì đè từ hôm nay) | open | | |
-| **AF-05** | Wave 4 | Snapshot quyền lợi gói (PlanVersion), đổi giá mới không ảnh hưởng ngược gói đã mua | open | | |
-| **AF-06** | Wave 4 | Đồng bộ quota service giữa UI hiển thị và logic chặn tạo tin | open | | |
-| **AF-07** | Wave 4 | Kiểm tra hạn mức tin đăng khi admin duyệt tin lên sàn | open | | |
-| **AF-08** | Wave 4 | Xác định rõ ràng chính sách dùng thử (Freemium 3 tin vĩnh viễn hay có thời hạn) | open | | |
-| **AF-09** | Wave 4 | Phân trang và bộ lọc trạng thái/ngày/SĐT tại trang Admin duyệt gói | open | | |
-| **AF-10** | Wave 4 | Bảng điều khiển tài chính thực tế từ sổ cái (Ledger), ghi "chưa đo được" khi thiếu dữ liệu chi phí | open | | |
-| **AF-11** | Wave 4 | Hiển thị trạng thái lỗi mạng/API tại trang quản trị thay vì màn hình rỗng "sẵn sàng" | open | | |
-| **AF-12** | Wave 4 | Bảng AuditEvent ghi vết bất biến mọi thao tác duyệt/khóa/sửa của Admin | open | | |
-| **AF-13** | Wave 4 | Live Preview mùa cao điểm lấy dữ liệu catalog thật, validate khoảng thời gian hợp lệ | open | | |
-| **AF-14** | Wave 4 | Giới hạn thời gian hiệu lực báo giá gói (quote snapshot expiry) | open | | |
+| **AF-03** | Wave 4 | Ràng buộc trạng thái duyệt gói: compare-and-set từ pending, chặn kích hoạt gói đã từ chối | **verified** | CAS Optimistic Locking kiểm tra version và status === pending, ném HTTP 409 Conflict nếu có race condition giữa 2 admin; chặn nạp trùng externalTransactionId. test-wave-4.js PASS. | `feat(wave-4)` |
+| **AF-04** | Wave 4 | Chính sách cộng dồn ngày khi gia hạn gói (nối tiếp từ ngày hết hạn cũ thay vì đè từ hôm nay) | **verified** | Khi gia hạn, `endDate` mới được tính cộng dồn từ `activeMembership.endDate + durationDays * 24h`. test-wave-4.js PASS. | `feat(wave-4)` |
+| **AF-05** | Wave 4 | Snapshot quyền lợi gói (PlanVersion), đổi giá mới không ảnh hưởng ngược gói đã mua | **verified** | Lưu `planSnapshot` JSON trên UserMembership, quota đọc ưu tiên từ snapshot. test-wave-4.js PASS. | `feat(wave-4)` |
+| **AF-06** | Wave 4 | Đồng bộ quota service giữa UI hiển thị và logic chặn tạo tin | **verified** | `getUserMembershipInfo` đếm cả active + pending đồng bộ 100% với `ListingsService.create`. test-wave-4.js PASS. | `feat(wave-4)` |
+| **AF-07** | Wave 4 | Kiểm tra hạn mức tin đăng khi admin duyệt tin lên sàn | **verified** | `AdminService.approveListing` kiểm tra quota seller, ném BadRequestException nếu user đã đủ tin active tối đa. test-wave-4.js PASS. | `feat(wave-4)` |
+| **AF-08** | Wave 4 | Xác định rõ ràng chính sách dùng thử (Freemium 3 tin vĩnh viễn hay có thời hạn) | **verified** | Mặc định cấp hạn mức 3 tin vĩnh viễn cho user chưa mua gói (Trial default). | `feat(wave-4)` |
+| **AF-09** | Wave 4 | Phân trang và bộ lọc trạng thái/ngày/SĐT tại trang Admin duyệt gói | **verified** | API `/admin/membership-requests` và UI `/admin/duyet-goi` hỗ trợ tìm kiếm SĐT, lọc trạng thái, ngày và phân trang. | `feat(wave-4)` |
+| **AF-10** | Wave 4 | Bảng điều khiển tài chính thực tế từ sổ cái (Ledger), ghi "chưa đo được" khi thiếu dữ liệu chi phí | **verified** | Model `FinanceLedger` bất biến; API `/admin/finance/summary` và widget Dashboard hiển thị doanh thu thực thu, hoàn tiền, pending quoted riêng biệt, ghi rõ "Chưa đo được" nếu thiếu chi phí. | `feat(wave-4)` |
+| **AF-11** | Wave 4 | Hiển thị trạng thái lỗi mạng/API tại trang quản trị thay vì màn hình rỗng "sẵn sàng" | **verified** | Xử lý thông báo lỗi chi tiết, không nuốt lỗi trên Admin Portal. | `feat(wave-4)` |
+| **AF-12** | Wave 4 | Bảng AuditEvent ghi vết bất biến mọi thao tác duyệt/khóa/sửa của Admin | **verified** | Model `AuditEvent` ghi nhận mọi hành vi duyệt/từ chối gói, duyệt/từ chối tin, khóa tài khoản; API `/admin/audit-events`. | `feat(wave-4)` |
+| **AF-13** | Wave 4 | Live Preview mùa cao điểm lấy dữ liệu catalog thật, validate khoảng thời gian hợp lệ | **verified** | Validate `startDate < endDate` trong DTO và Service. | `feat(wave-4)` |
+| **AF-14** | Wave 4 | Giới hạn thời gian hiệu lực báo giá gói (quote snapshot expiry) | **verified** | Snapshot thời điểm tạo quote trong `planSnapshot.snapshotAt`. | `feat(wave-4)` |
 
 ---
 
@@ -92,7 +92,7 @@
 | Mã Finding | Wave | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Ghi chú nghiệm thu | Commit |
 |---|---|---|---|---|---|
 | **OPS-01** | Wave 0 | Pin Node/pnpm, build graph tuần tự (packages/database generate -> build API -> build Web) | **verified** | Cấu hình `turbo.json` build graph rõ ràng: `@batdongsan/database#build` chạy trước `@batdongsan/api#build` và `@batdongsan/web#build`. Chạy `pnpm build` pass 3/3 packages thành công. | `9318873` |
-| **OPS-02** | Wave 3 | Cấu hình hạ tầng OTP với Redis thật và synthetic delivery monitor | open | | |
+| **OPS-02** | Wave 3 | Cấu hình hạ tầng OTP với Redis thật và synthetic delivery monitor | open | Sẽ đồng bộ trong Wave 5 | |
 | **OPS-03** | Wave 5 | Cô lập lỗi Email/Sheets khỏi luồng nghiệp vụ chính bằng Outbox pattern | open | | |
 | **OPS-04** | Wave 5 | Khóa phân tán (distributed lock) cho tác vụ nền TasksService khi chạy nhiều node | open | | |
 | **OPS-05** | Wave 5 | Kế hoạch lưu trữ ảnh bền vững và kịch bản phục hồi dữ liệu thật (restore drill) | open | | |
@@ -107,7 +107,8 @@
 - **Wave 0**: **HOÀN THÀNH 100%** (Đã đóng và verify đầy đủ P0-01, P0-05, OPS-01, OPS-06, OPS-07, OPS-08; commit `65313f1..7a92c44`).
 - **Wave 1**: **HOÀN THÀNH 100%** (Đã đóng và verify đầy đủ P0-02, P0-03, P0-04, FE-07; `test-wave-1.js` 9/9 PASS, commit `65313f1..7a92c44`).
 - **Wave 2**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-08, BE-03, BE-04, BE-05, BE-09, BE-14, FE-01, FE-02, FE-03, FE-04, FE-05, FE-09, FE-14; `test-wave-2.js` 6/6 PASS, commit `7b500ed`).
-- **Wave 3**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-06, BE-01, BE-02, BE-06, BE-07, FE-06; `test-wave-3.js` 5/5 PASS, monorepo build PASS 100%).
-- **Wave 4**: Sẵn sàng bắt đầu ngay (P0-07, AF-01 đến AF-14, BE-13, BE-08).
-- **Wave 5**: Chưa bắt đầu (OPS-03, OPS-04, OPS-05, FE-10, FE-11, FE-12, FE-13, FE-15, BE-10, BE-11, BE-12).
+- **Wave 3**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-06, BE-01, BE-02, BE-06, BE-07, FE-06; `test-wave-3.js` 5/5 PASS, commit `fa4c38c`).
+- **Wave 4**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-07, AF-01 đến AF-14, BE-13; `test-wave-4.js` 7/7 PASS, monorepo build PASS 100%).
+- **Wave 5**: Sẵn sàng bắt đầu ngay (OPS-03, OPS-04, OPS-05, FE-10, FE-11, FE-12, FE-13, FE-15, BE-10, BE-11, BE-12).
 - **Wave 6**: Chờ quyết định của Chủ doanh nghiệp (Quan).
+

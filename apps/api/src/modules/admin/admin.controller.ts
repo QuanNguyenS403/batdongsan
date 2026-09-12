@@ -42,26 +42,34 @@ export class AdminController {
 
   @ApiOperation({ summary: 'Duyệt tin đăng (POST/PATCH)' })
   @Post('listings/:id/approve')
-  approveListing(@Param('id', ParseBigIntPipe) id: bigint) {
-    return this.adminService.approveListing(id);
+  approveListing(@CurrentUser() admin: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.adminService.approveListing(id, admin.id);
   }
 
   @Patch('listings/:id/approve')
-  approveListingPatch(@Param('id', ParseBigIntPipe) id: bigint) {
-    return this.adminService.approveListing(id);
+  approveListingPatch(@CurrentUser() admin: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.adminService.approveListing(id, admin.id);
   }
 
   @ApiOperation({ summary: 'Từ chối tin đăng (POST/PATCH)' })
   @Post('listings/:id/reject')
-  rejectListing(@Param('id', ParseBigIntPipe) id: bigint, @Body() dto: RejectListingDto) {
+  rejectListing(
+    @CurrentUser() admin: AuthUser,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: RejectListingDto,
+  ) {
     const finalReason = dto.reason ?? dto.rejectionReason ?? 'Vi phạm quy định kiểm duyệt';
-    return this.adminService.rejectListing(id, finalReason);
+    return this.adminService.rejectListing(id, finalReason, admin.id);
   }
 
   @Patch('listings/:id/reject')
-  rejectListingPatch(@Param('id', ParseBigIntPipe) id: bigint, @Body() dto: RejectListingDto) {
+  rejectListingPatch(
+    @CurrentUser() admin: AuthUser,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body() dto: RejectListingDto,
+  ) {
     const finalReason = dto.reason ?? dto.rejectionReason ?? 'Vi phạm quy định kiểm duyệt';
-    return this.adminService.rejectListing(id, finalReason);
+    return this.adminService.rejectListing(id, finalReason, admin.id);
   }
 
   @ApiOperation({ summary: 'Admin đánh dấu tin đã xác thực thực tế (Giai đoạn 2 Trust-as-a-Service)' })
@@ -72,8 +80,8 @@ export class AdminController {
 
   @ApiOperation({ summary: 'Admin huỷ nhãn xác thực thực tế' })
   @Post('listings/:id/unverify')
-  unverifyListing(@Param('id', ParseBigIntPipe) id: bigint) {
-    return this.adminService.unverifyListing(id);
+  unverifyListing(@CurrentUser() admin: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.adminService.unverifyListing(id, admin.id);
   }
 
   @ApiOperation({ summary: 'Danh sách báo cáo vi phạm' })

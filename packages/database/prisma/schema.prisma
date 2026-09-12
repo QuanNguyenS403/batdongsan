@@ -60,6 +60,7 @@ model User {
   verifiedListings Listing[] @relation("VerifiedListings")
   requestedLeads  Lead[]          @relation("RequestedLeads")
   assignedLeads   Lead[]          @relation("AssignedLeads")
+  financeLedgers  FinanceLedger[]
 
   @@map("users")
 }
@@ -303,21 +304,30 @@ model PricingSeason {
 
 /// Đăng ký và lịch sử sử dụng gói của Người dùng.
 model UserMembership {
-  id               BigInt           @id @default(autoincrement())
-  userId           BigInt           @map("user_id")
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  planId           Int              @map("plan_id")
-  plan             MembershipPlan   @relation(fields: [planId], references: [id])
-  status           MembershipStatus @default(pending)
-  pricePaid        BigInt           @map("price_paid")
-  startDate        DateTime?        @map("start_date")
-  endDate          DateTime?        @map("end_date")
-  paymentNote      String?          @map("payment_note")
-  approvedAt       DateTime?        @map("approved_at")
-  approvedByUserId BigInt?          @map("approved_by_user_id")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
+  id                     BigInt           @id @default(autoincrement())
+  userId                 BigInt           @map("user_id")
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId                 Int              @map("plan_id")
+  plan                   MembershipPlan   @relation(fields: [planId], references: [id])
+  status                 MembershipStatus @default(pending)
+  quotedAmount           BigInt           @default(0) @map("quoted_amount") // Giá báo tại thời điểm gửi yêu cầu
+  pricePaid              BigInt           @default(0) @map("price_paid") // Tiền thực tế đã thu (chỉ ghi khi active/confirmed)
+  confirmedPaymentAmount BigInt           @default(0) @map("confirmed_payment_amount")
+  externalTransactionId String?          @map("external_transaction_id") @db.VarChar(150)
+  planSnapshot           Json?            @map("plan_snapshot") // Snapshot quyền lợi gói lúc mua
+  version                Int              @default(1) // CAS Optimistic concurrency
+  rejectionReason        String?          @map("rejection_reason")
+  startDate              DateTime?        @map("start_date")
+  endDate                DateTime?        @map("end_date")
+  paymentNote            String?          @map("payment_note")
+  approvedAt             DateTime?        @map("approved_at")
+  approvedByUserId       BigInt?          @map("approved_by_user_id")
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
 
+  financeLedgers         FinanceLedger[]
+
+  @@index([userId, status])
   @@map("user_memberships")
 }
 
@@ -346,5 +356,44 @@ model Lead {
   @@index([phone])
   @@index([createdAt])
   @@map("leads")
+}
+
+/// Sổ cái tài chính bất biến (Append-only Financial Ledger) — nguồn sự thật duy nhất về dòng tiền thực thu / hoàn tiền.
+model FinanceLedger {
+  id                    BigInt          @id @default(autoincrement())
+  transactionType       String          @map("transaction_type") @db.VarChar(50) // cash_in | refund | adjustment
+  amount                BigInt          // Số tiền VNĐ nguyên
+  userMembershipId      BigInt?         @map("user_membership_id")
+  userMembership        UserMembership? @relation(fields: [userMembershipId], references: [id], onDelete: SetNull)
+  userId                BigInt          @map("user_id")
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalTransactionId String?         @unique @map("external_transaction_id") @db.VarChar(150) // Mã giao dịch ngân hàng chống nạp trùng
+  note                  String?         @db.Text
+  recordedByUserId      BigInt?         @map("recorded_by_user_id")
+  createdAt             DateTime        @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([transactionType])
+  @@index([createdAt])
+  @@map("finance_ledgers")
+}
+
+/// Nhật ký kiểm toán bất biến (Audit Events) — theo dõi mọi hành động phê duyệt, từ chối, khóa tài khoản của Admin.
+model AuditEvent {
+  id          BigInt   @id @default(autoincrement())
+  actorId     BigInt?  @map("actor_id")
+  actorPhone  String?  @map("actor_phone") @db.VarChar(50)
+  action      String   @db.VarChar(100) // membership.approve | membership.reject | listing.verify | user.block ...
+  entityType  String   @map("entity_type") @db.VarChar(100) // user_membership | listing | user
+  entityId    String   @map("entity_id") @db.VarChar(100)
+  beforeState Json?    @map("before_state")
+  afterState  Json?    @map("after_state")
+  reason      String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_events")
 }
 

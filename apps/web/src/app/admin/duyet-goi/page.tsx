@@ -9,7 +9,11 @@ interface MembershipRequest {
   userId: string;
   planId: number;
   status: 'pending' | 'active' | 'rejected' | 'expired';
+  quotedAmount: string;
   pricePaid: string;
+  confirmedPaymentAmount: string;
+  externalTransactionId: string | null;
+  rejectionReason: string | null;
   startDate: string | null;
   endDate: string | null;
   paymentNote: string | null;
@@ -29,21 +33,48 @@ interface MembershipRequest {
   };
 }
 
+interface FinanceSummary {
+  confirmedCashIn: number;
+  refundsPaid: number;
+  netCashIn: number;
+  cashInCount: number;
+  refundCount: number;
+  pendingOrdersCount: number;
+  pendingQuotedTotal: number;
+  operationalCosts: string;
+  notes: string;
+}
+
 export default function AdminDuyetGoiPage() {
   const [requests, setRequests] = useState<MembershipRequest[]>([]);
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
+  const [searchPhone, setSearchPhone] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  async function loadFinanceSummary() {
+    try {
+      const res = await authFetch('/admin/finance/summary');
+      if (res.ok) {
+        const data = await res.json();
+        setFinanceSummary(data);
+      }
+    } catch {
+      // safe-fail
+    }
+  }
+
   async function loadRequests(targetPage = page) {
     setLoading(true);
     try {
       const statusParam = activeTab === 'pending' ? 'status=pending&' : '';
-      const res = await authFetch(`/admin/membership-requests?${statusParam}page=${targetPage}&pageSize=20`);
+      const phoneParam = searchPhone.trim() ? `phone=${encodeURIComponent(searchPhone.trim())}&` : '';
+      const res = await authFetch(`/admin/membership-requests?${statusParam}${phoneParam}page=${targetPage}&pageSize=20`);
       if (res.ok) {
         const data = await res.json();
         setRequests(data.items || []);
@@ -61,20 +92,36 @@ export default function AdminDuyetGoiPage() {
   }
 
   useEffect(() => {
+    loadFinanceSummary();
+  }, []);
+
+  useEffect(() => {
     setPage(1);
     loadRequests(1);
   }, [activeTab]);
 
-  async function handleApprove(requestId: string, planName: string, userPhone: string) {
-    if (!confirm(`Xác nhận bạn ĐÃ NHẬN ĐỦ TIỀN chuyển khoản và muốn KÍCH HOẠT gói "${planName}" cho SĐT ${userPhone}?`)) {
-      return;
-    }
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setPage(1);
+    loadRequests(1);
+  }
+
+  async function handleApprove(requestId: string, planName: string, userPhone: string, defaultAmount: string) {
+    const extTx = prompt(
+      `Nhập mã giao dịch ngân hàng / Bank Ref (để trống sẽ tạo tự động):`,
+      `BANK_${Date.now().toString().slice(-6)}`,
+    );
+    if (extTx === null) return; // hủy
 
     setActionLoading(requestId);
     setFeedback(null);
     try {
       const res = await authFetch(`/admin/membership-requests/${requestId}/approve`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          externalTransactionId: extTx.trim(),
+        }),
       });
 
       if (!res.ok) {
@@ -84,9 +131,41 @@ export default function AdminDuyetGoiPage() {
 
       setFeedback({
         type: 'success',
-        message: `Đã kích hoạt thành công gói "${planName}" cho khách hàng ${userPhone}! Hạn mức tin đăng của họ đã được cập nhật.`,
+        message: `Đã kích hoạt thành công gói "${planName}" cho SĐT ${userPhone}! Đã ghi nhận dòng tiền vào Sổ cái.`,
       });
       loadRequests();
+      loadFinanceSummary();
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Đã có lỗi xảy ra.' });
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRefund(requestId: string, userPhone: string) {
+    const reason = prompt(`Nhập lý do hoàn tiền cho SĐT ${userPhone}:`);
+    if (!reason || !reason.trim()) return;
+
+    setActionLoading(requestId);
+    setFeedback(null);
+    try {
+      const res = await authFetch(`/admin/membership-requests/${requestId}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Không thể thực hiện hoàn tiền.');
+      }
+
+      setFeedback({
+        type: 'success',
+        message: `Đã xử lý hoàn tiền cho SĐT ${userPhone} và hủy kích hoạt gói.`,
+      });
+      loadRequests();
+      loadFinanceSummary();
     } catch (err: any) {
       setFeedback({ type: 'error', message: err.message || 'Đã có lỗi xảy ra.' });
     } finally {
@@ -95,8 +174,8 @@ export default function AdminDuyetGoiPage() {
   }
 
   async function handleReject(requestId: string, userPhone: string) {
-    const reason = prompt(`Nhập lý do từ chối yêu cầu của SĐT ${userPhone} (ví dụ: Sai số tiền, chưa nhận được chuyển khoản):`);
-    if (reason === null) return; // bấm Hủy
+    const reason = prompt(`Nhập lý do từ chối yêu cầu của SĐT ${userPhone}:`);
+    if (reason === null) return;
 
     setActionLoading(requestId);
     setFeedback(null);
@@ -117,6 +196,7 @@ export default function AdminDuyetGoiPage() {
         message: `Đã từ chối yêu cầu của SĐT ${userPhone}.`,
       });
       loadRequests();
+      loadFinanceSummary();
     } catch (err: any) {
       setFeedback({ type: 'error', message: err.message || 'Đã có lỗi xảy ra.' });
     } finally {
@@ -129,12 +209,49 @@ export default function AdminDuyetGoiPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-          Duyệt Yêu Cầu Gói Thành Viên
+          Duyệt Yêu Cầu Gói Thành Viên & Sổ Cái Tài Chính
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Đối soát sao kê ngân hàng và kích hoạt gói đăng tin cho chủ trọ / môi giới. Sau khi kích hoạt, hạn mức tin đăng của khách hàng sẽ tự động tăng tương ứng.
+          Đối soát sao kê ngân hàng và kích hoạt gói đăng tin cho chủ trọ / môi giới. Dòng tiền thực thu được ghi nhận độc lập vào Sổ cái tài chính (FinanceLedger).
         </p>
       </div>
+
+      {/* Finance Ledger Summary (AF-10: Truth từ FinanceLedger) */}
+      {financeSummary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 shadow-xs">
+            <p className="text-xs font-medium text-emerald-800">Tiền thực thu (Confirmed Cash-in)</p>
+            <p className="text-xl font-extrabold text-emerald-700 font-mono mt-1">
+              {formatExactPrice(financeSummary.confirmedCashIn)}
+            </p>
+            <p className="text-[11px] text-emerald-600 mt-1">{financeSummary.cashInCount} giao dịch xác nhận</p>
+          </div>
+
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 shadow-xs">
+            <p className="text-xs font-medium text-rose-800">Đã hoàn tiền (Refunds)</p>
+            <p className="text-xl font-extrabold text-rose-700 font-mono mt-1">
+              {formatExactPrice(financeSummary.refundsPaid)}
+            </p>
+            <p className="text-[11px] text-rose-600 mt-1">{financeSummary.refundCount} giao dịch hoàn</p>
+          </div>
+
+          <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 shadow-xs">
+            <p className="text-xs font-medium text-teal-800">Doanh thu thuần (Net Cash-in)</p>
+            <p className="text-xl font-extrabold text-teal-800 font-mono mt-1">
+              {formatExactPrice(financeSummary.netCashIn)}
+            </p>
+            <p className="text-[11px] text-teal-600 mt-1">Nguồn sự thật: Sổ cái bất biến</p>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-xs">
+            <p className="text-xs font-medium text-amber-800">Chờ thu (Pending Quoted)</p>
+            <p className="text-xl font-extrabold text-amber-700 font-mono mt-1">
+              {formatExactPrice(financeSummary.pendingQuotedTotal)}
+            </p>
+            <p className="text-[11px] text-amber-600 mt-1">⚠️ Chưa phải doanh thu ({financeSummary.pendingOrdersCount} đơn)</p>
+          </div>
+        </div>
+      )}
 
       {feedback && (
         <div
@@ -154,28 +271,47 @@ export default function AdminDuyetGoiPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 gap-6">
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`pb-3 text-sm font-bold border-b-2 transition-all ${
-            activeTab === 'pending'
-              ? 'border-teal-600 text-teal-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          ⏳ Chờ duyệt thanh toán
-        </button>
-        <button
-          onClick={() => setActiveTab('all')}
-          className={`pb-3 text-sm font-bold border-b-2 transition-all ${
-            activeTab === 'all'
-              ? 'border-teal-600 text-teal-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          📋 Tất cả lịch sử yêu cầu
-        </button>
+      {/* Tabs & Search */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
+        <div className="flex gap-6">
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`pb-3 text-sm font-bold border-b-2 -mb-3 transition-all ${
+              activeTab === 'pending'
+                ? 'border-teal-600 text-teal-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            ⏳ Chờ duyệt thanh toán
+          </button>
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`pb-3 text-sm font-bold border-b-2 -mb-3 transition-all ${
+              activeTab === 'all'
+                ? 'border-teal-600 text-teal-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            📋 Tất cả lịch sử yêu cầu
+          </button>
+        </div>
+
+        {/* Tìm kiếm theo số điện thoại (AF-09) */}
+        <form onSubmit={handleSearch} className="flex gap-2 w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="Tìm theo số điện thoại..."
+            value={searchPhone}
+            onChange={(e) => setSearchPhone(e.target.value)}
+            className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:border-teal-500 w-full sm:w-56"
+          />
+          <button
+            type="submit"
+            className="px-3 py-1.5 bg-teal-600 text-white font-semibold text-xs rounded-xl hover:bg-teal-700"
+          >
+            Tìm
+          </button>
+        </form>
       </div>
 
       {/* Bảng dữ liệu */}
@@ -186,7 +322,7 @@ export default function AdminDuyetGoiPage() {
           <div className="p-12 text-center text-slate-500 text-xs">
             {activeTab === 'pending'
               ? 'Hiện không có yêu cầu nâng cấp gói nào đang chờ duyệt. 🎉'
-              : 'Chưa có lịch sử yêu cầu nào.'}
+              : 'Chưa có lịch sử yêu cầu nào khớp điều kiện tìm kiếm.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -195,9 +331,9 @@ export default function AdminDuyetGoiPage() {
                 <tr>
                   <th className="px-6 py-3.5">Khách hàng</th>
                   <th className="px-6 py-3.5">Gói đăng ký</th>
-                  <th className="px-6 py-3.5">Số tiền cần thu</th>
-                  <th className="px-6 py-3.5">Ghi chú thanh toán</th>
-                  <th className="px-6 py-3.5">Thời gian gửi</th>
+                  <th className="px-6 py-3.5">Số tiền</th>
+                  <th className="px-6 py-3.5">Ghi chú & Mã GD</th>
+                  <th className="px-6 py-3.5">Thời gian</th>
                   <th className="px-6 py-3.5">Trạng thái</th>
                   <th className="px-6 py-3.5 text-right">Thao tác</th>
                 </tr>
@@ -231,21 +367,41 @@ export default function AdminDuyetGoiPage() {
                         </p>
                       </td>
 
-                      {/* Số tiền */}
+                      {/* Số tiền (AF-01 / P0-07 / P0-08) */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <strong className="text-rose-600 font-extrabold text-sm font-mono">
-                          {formatExactPrice(item.pricePaid)}
-                        </strong>
+                        {isPending ? (
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 block">Báo giá:</span>
+                            <strong className="text-amber-600 font-extrabold text-sm font-mono">
+                              {formatExactPrice(item.quotedAmount || item.pricePaid)}
+                            </strong>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="text-[10px] font-bold text-emerald-600 block">Thực thu:</span>
+                            <strong className="text-emerald-700 font-extrabold text-sm font-mono">
+                              {formatExactPrice(item.confirmedPaymentAmount || item.pricePaid)}
+                            </strong>
+                          </div>
+                        )}
                       </td>
 
-                      {/* Ghi chú chuyển khoản */}
+                      {/* Ghi chú & Mã GD */}
                       <td className="px-6 py-4">
+                        {item.externalTransactionId && (
+                          <p className="text-[10px] font-mono text-slate-500 mb-1">
+                            Ref: <strong className="text-slate-800">{item.externalTransactionId}</strong>
+                          </p>
+                        )}
                         {item.paymentNote ? (
                           <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-[11px] text-slate-700 font-mono max-w-xs">
                             {item.paymentNote}
                           </div>
                         ) : (
                           <span className="text-slate-400 italic text-[11px]">Không có ghi chú</span>
+                        )}
+                        {item.rejectionReason && (
+                          <p className="text-[11px] text-rose-600 mt-1">Lý do từ chối: {item.rejectionReason}</p>
                         )}
                       </td>
 
@@ -283,7 +439,7 @@ export default function AdminDuyetGoiPage() {
                             <button
                               type="button"
                               disabled={actionLoading === item.id}
-                              onClick={() => handleApprove(item.id, item.plan.name, item.user.phone)}
+                              onClick={() => handleApprove(item.id, item.plan.name, item.user.phone, item.quotedAmount || item.pricePaid)}
                               className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-colors shadow-xs"
                             >
                               {actionLoading === item.id ? 'Đang duyệt...' : '✓ Xác nhận & Kích hoạt'}
@@ -297,8 +453,17 @@ export default function AdminDuyetGoiPage() {
                               Từ chối
                             </button>
                           </div>
+                        ) : isActive ? (
+                          <button
+                            type="button"
+                            disabled={actionLoading === item.id}
+                            onClick={() => handleRefund(item.id, item.user.phone)}
+                            className="px-2.5 py-1 text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg transition-colors border border-rose-200"
+                          >
+                            Hoàn tiền (Refund)
+                          </button>
                         ) : (
-                          <span className="text-slate-400 text-[11px]">Đã xử lý</span>
+                          <span className="text-slate-400 text-[11px]">Đã kết thúc</span>
                         )}
                       </td>
                     </tr>

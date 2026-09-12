@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { authFetch } from '@/lib/auth-client';
+import { formatExactPrice } from '@/lib/api';
 
 interface ServiceDrivers {
   email: { isMock: boolean; driver: string };
@@ -14,6 +15,17 @@ interface Stats {
   newReportsCount: number;
   activeListingsCount: number;
   totalUsersCount: number;
+}
+
+interface FinanceSummary {
+  confirmedCashIn: number;
+  refundsPaid: number;
+  netCashIn: number;
+  cashInCount: number;
+  refundCount: number;
+  pendingOrdersCount: number;
+  pendingQuotedTotal: number;
+  operationalCosts: string;
 }
 
 interface RecentPendingListing {
@@ -71,6 +83,7 @@ const REASON_LABELS: Record<string, string> = {
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [serviceDrivers, setServiceDrivers] = useState<ServiceDrivers | null>(null);
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummary | null>(null);
   const [recentListings, setRecentListings] = useState<RecentPendingListing[]>([]);
   const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,13 +97,22 @@ export default function AdminDashboardPage() {
   async function loadDashboard() {
     setLoading(true);
     try {
-      const res = await authFetch('/admin/dashboard');
-      if (res.ok) {
-        const data = await res.json();
+      const [resDash, resFin] = await Promise.all([
+        authFetch('/admin/dashboard'),
+        authFetch('/admin/finance/summary'),
+      ]);
+
+      if (resDash.ok) {
+        const data = await resDash.json();
         setStats(data.stats);
         setServiceDrivers(data.serviceDrivers ?? null);
         setRecentListings(data.recentPendingListings ?? []);
         setRecentReports(data.recentReports ?? []);
+      }
+
+      if (resFin.ok) {
+        const dataFin = await resFin.json();
+        setFinanceSummary(dataFin);
       }
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu dashboard:', err);
@@ -203,6 +225,56 @@ export default function AdminDashboardPage() {
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm font-medium flex items-center gap-2">
           <span>✅</span>
           <span>{actionMessage}</span>
+        </div>
+      )}
+
+      {/* AF-10: Khối Dòng tiền Sổ cái Tài chính (Truth from FinanceLedger) */}
+      {financeSummary && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Sổ Cái Dòng Tiền Thực Thu (Finance Ledger)
+            </h2>
+            <Link
+              href="/admin/duyet-goi"
+              className="text-xs font-semibold text-teal-600 hover:text-teal-700"
+            >
+              Chi tiết giao dịch & đối soát →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 shadow-xs">
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Tiền thực thu</span>
+              <p className="text-2xl font-extrabold text-emerald-700 font-mono mt-1">
+                {formatExactPrice(financeSummary.confirmedCashIn)}
+              </p>
+              <p className="text-[11px] text-emerald-600 mt-1">{financeSummary.cashInCount} giao dịch xác nhận</p>
+            </div>
+
+            <div className="bg-teal-50/70 border border-teal-200 rounded-2xl p-5 shadow-xs">
+              <span className="text-xs font-bold text-teal-800 uppercase tracking-wider">Doanh thu thuần</span>
+              <p className="text-2xl font-extrabold text-teal-800 font-mono mt-1">
+                {formatExactPrice(financeSummary.netCashIn)}
+              </p>
+              <p className="text-[11px] text-teal-600 mt-1">Đã trừ {formatExactPrice(financeSummary.refundsPaid)} tiền hoàn</p>
+            </div>
+
+            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 shadow-xs">
+              <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Chờ thanh toán</span>
+              <p className="text-2xl font-extrabold text-amber-700 font-mono mt-1">
+                {formatExactPrice(financeSummary.pendingQuotedTotal)}
+              </p>
+              <p className="text-[11px] text-amber-600 mt-1">⚠️ Chưa phải doanh thu ({financeSummary.pendingOrdersCount} đơn)</p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Chi phí vận hành</span>
+              <p className="text-sm font-bold text-slate-700 mt-2">
+                {financeSummary.operationalCosts}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">Báo cáo trung thực theo AF-10</p>
+            </div>
+          </div>
         </div>
       )}
 

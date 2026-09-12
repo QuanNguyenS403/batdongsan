@@ -378,7 +378,30 @@
    - `packages/database/scripts/test-wave-3.js`: 5/5 tests PASS 100%.
    - `pnpm build`: 3/3 packages compile sạch sẽ (Next.js 31/31 routes, NestJS API dist sạch lỗi).
 
+**Việc vừa hoàn thành (12/09/2026 — THỰC THI AUDIT ĐỘC LẬP: WAVE 4 — THU PHÍ GÓI & ADMIN TÀI CHÍNH):**
+1. **P0-07 & AF-01 (Tách Quoted Amount khỏi Tiền thực thu)**:
+   - Thêm cột `quotedAmount`, `confirmedPaymentAmount`, `externalTransactionId`, `planSnapshot`, `version`, `rejectionReason` trên model `UserMembership`.
+   - Tạo model `FinanceLedger` (Sổ cái tài chính bất biến) và `AuditEvent` (Nhật ký kiểm toán bất biến).
+   - Tạo file migration DDL `20260912130000_finance_ledger_audit_events_af_wave4` và sinh Prisma Client v5.22.0.
+   - `requestUpgrade`: Lưu `quotedAmount = finalPrice` và `pricePaid = 0` khi request ở trạng thái `pending`. Tuyệt đối không ghi nhận doanh thu khi pending.
+2. **AF-03 & BE-13 (CAS State Machine & Chống trùng transaction)**:
+   - `approveRequest`: Kiểm tra CAS `status === 'pending'`, ném `ConflictException` nếu trạng thái không còn pending; kiểm tra `externalTransactionId` chống nạp trùng; ghi nhận dòng tiền `cash_in` vào `FinanceLedger` và ghi `AuditEvent`.
+   - `rejectRequest`: Kiểm tra CAS `status === 'pending'`, ném `ConflictException` nếu không còn pending; ghi `rejectionReason` và `AuditEvent`.
+3. **AF-04 (Renewal Policy Cộng dồn Hạn sử dụng)**:
+   - Khi gia hạn gói (user đã có gói active chưa hết hạn `endDate > now`), `endDate` mới được cộng dồn tiếp nối từ `activeMembership.endDate + durationDays * 24h`, bảo toàn tối đa quyền lợi của khách hàng.
+4. **AF-05 (PlanSnapshot Bất biến)**:
+   - Lưu trữ toàn bộ snapshot cấu hình gói lúc mua (`id`, `name`, `code`, `basePrice`, `finalPrice`, `durationDays`, `maxActiveListings`) vào trường `planSnapshot`. Catalog sửa giá mới không ảnh hưởng quyền lợi cũ của người dùng.
+5. **AF-06 & AF-07 (Quota Service Đồng bộ & Duyệt tin kiểm tra hạn mức)**:
+   - `getUserMembershipInfo`: Đếm cả `active` và `pending` đồng bộ 100% với `ListingsService.create`.
+   - `AdminService.approveListing`: Kiểm tra quota người dùng trước khi duyệt tin; nếu user đã đủ số tin active tối đa của gói thì từ chối duyệt và yêu cầu nâng cấp gói.
+6. **AF-09, AF-10, AF-11 (Giao diện Duyệt gói, Dashboard và Sổ cái tài chính)**:
+   - `/admin/duyet-goi`: Bổ sung khối Finance Summary, ô tìm kiếm nhanh theo SĐT, cột hiển thị rõ Báo giá (pending) vs Thực thu (active), nút Hoàn tiền (Refund) khiếu nại.
+   - `/admin`: Hiển thị khối Sổ cái Dòng tiền Thực thu (Confirmed Cash-in, Doanh thu thuần, Chờ thanh toán và Chi phí vận hành "Chưa đo được" trung thực).
+7. **Xác minh kiểm thử tự động & Build**:
+   - `packages/database/scripts/test-wave-4.js`: 7/7 tests PASS 100%.
+   - `pnpm build`: 3/3 packages compile sạch sẽ (Next.js 31/31 routes, NestJS API dist sạch lỗi).
+
 ## Trạng thái hiện tại:
-- Wave 0, Wave 1, Wave 2, Wave 3 đã hoàn thành 100% và được kiểm thử tự động xác minh.
-- Chuẩn bị commit và push trực tiếp Wave 3 lên `origin/main`.
-- Tiếp tục chuyển ngay sang Wave 4 (Thu phí gói, Order, Payment State Machine & Quota truth).
+- Wave 0, Wave 1, Wave 2, Wave 3, Wave 4 đã hoàn thành 100% và được kiểm thử tự động xác minh.
+- Chuẩn bị commit và push trực tiếp Wave 4 lên `origin/main`.
+- Tiếp tục chuyển ngay sang Wave 5 (Reliability, Outbox, SEO, Accessibility và Mobile).

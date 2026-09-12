@@ -53,25 +53,63 @@ export class AdminMembershipController {
   @Get('membership-requests')
   getMembershipRequests(
     @Query('status') status?: string,
+    @Query('phone') phone?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
     @Query('page') page?: number,
     @Query('pageSize') pageSize?: number,
   ) {
-    return this.membershipService.getAdminRequests({ status, page, pageSize });
+    return this.membershipService.getAdminRequests({ status, phone, dateFrom, dateTo, page, pageSize });
   }
 
-  @ApiOperation({ summary: 'Admin duyệt yêu cầu nâng cấp gói (Xác nhận chuyển khoản)' })
+  @ApiOperation({ summary: 'Admin duyệt yêu cầu nâng cấp gói (Xác nhận chuyển khoản & Ghi sổ cái)' })
   @Post('membership-requests/:id/approve')
-  approveRequest(@CurrentUser() admin: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
-    return this.membershipService.approveRequest(admin.id, id);
+  approveRequest(
+    @CurrentUser() admin: AuthUser,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body('externalTransactionId') externalTransactionId?: string,
+    @Body('confirmedAmount') confirmedAmount?: number,
+  ) {
+    return this.membershipService.approveRequest(admin.id, id, externalTransactionId, confirmedAmount);
   }
 
   @ApiOperation({ summary: 'Admin từ chối yêu cầu nâng cấp gói' })
   @Post('membership-requests/:id/reject')
   rejectRequest(
+    @CurrentUser() admin: AuthUser,
     @Param('id', ParseBigIntPipe) id: bigint,
     @Body('reason') reason?: string,
   ) {
-    return this.membershipService.rejectRequest(id, reason);
+    return this.membershipService.rejectRequest(admin.id, id, reason);
+  }
+
+  @ApiOperation({ summary: 'Admin hoàn tiền yêu cầu gói (Refund)' })
+  @Post('membership-requests/:id/refund')
+  refundRequest(
+    @CurrentUser() admin: AuthUser,
+    @Param('id', ParseBigIntPipe) id: bigint,
+    @Body('reason') reason: string,
+    @Body('refundAmount') refundAmount?: number,
+  ) {
+    return this.membershipService.refundRequest(admin.id, id, reason, refundAmount);
+  }
+
+  // ================= BÁO CÁO TÀI CHÍNH & AUDIT LOGS =================
+
+  @ApiOperation({ summary: 'Admin lấy báo cáo tài chính sổ cái (Finance Ledger Summary)' })
+  @Get('finance/summary')
+  getFinanceSummary() {
+    return this.membershipService.getFinanceSummary();
+  }
+
+  @ApiOperation({ summary: 'Admin lấy nhật ký kiểm toán (Audit Events)' })
+  @Get('audit-events')
+  getAuditEvents(
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number,
+    @Query('entityType') entityType?: string,
+  ) {
+    return this.membershipService.getAuditEvents({ page, pageSize, entityType });
   }
 
   // ================= CẤU HÌNH MÙA CAO ĐIỂM (SURGE PRICING) =================
@@ -100,3 +138,4 @@ export class AdminMembershipController {
     return this.membershipService.deletePricingSeason(id);
   }
 }
+
