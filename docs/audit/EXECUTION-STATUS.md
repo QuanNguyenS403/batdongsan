@@ -110,5 +110,111 @@
 - **Wave 3**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-06, BE-01, BE-02, BE-06, BE-07, FE-06; `test-wave-3.js` 5/5 PASS, commit `fa4c38c`).
 - **Wave 4**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-07, AF-01 đến AF-14, BE-13; `test-wave-4.js` 7/7 PASS, monorepo build PASS 100%, commit `3a4e718`).
 - **Wave 5**: **HOÀN THÀNH 100%** (Đã đóng và verify BE-10, BE-11, BE-12, OPS-03, OPS-04, OPS-05, FE-08, FE-10, FE-11, FE-12, FE-13, FE-15; `test-wave-5.js` 9/9 PASS; build 3/3 packages PASS 100%).
-- **Wave 6**: **HOÀN THÀNH 100% & SẴN SÀNG KHỞI CHẠY (PILOT READY)**: Xây dựng công cụ Synthetic Monitor (`synthetic-monitor.js`), ban hành Pilot Runbook SOP & Incident Log (`docs/ops/PILOT-RUNBOOK-SOP.md`), đáp ứng 100% tiêu chí mở Pilot có kiểm soát.
+- **Wave 6**: **ĐÃ THỰC THI (commit `3468454`)** — Báo cáo độc lập sau đó phát hiện bộ test có lỗi báo xanh giả; toàn bộ trạng thái sẵn sàng được đưa vào audit đợt 2 bên dưới.
+
+---
+
+# PHẦN II: THEO DÕI THỰC THI AUDIT ĐỘC LẬP 3468454 (BATDONGSAN-REVIEW-3468454-COMPLETE)
+
+> ⚠️ **CẢNH BÁO ĐẶC TẢ THỰC THI & NGUYÊN TẮC KIỂM THỬ:**
+> Báo cáo kiểm toán độc lập `BATDONGSAN-REVIEW-3468454-COMPLETE.md` (commit `3468454`) phát hiện bộ công cụ xác minh cũ (`test-wave-*.js`, `backup-restore-drill.js`, `synthetic-monitor.js`) kiểm tra chuỗi ký tự source thay vì hành vi thật, gate policy hardcode true.
+> **TUYỆT ĐỐI KHÔNG TIN BẤT KỲ NHÃN VERIFIED CŨ NÀO.**
+> Toàn bộ 57 findings mới dưới đây khởi tạo ở trạng thái mặc định `open`. Chỉ chuyển sang `verified` khi có bằng chứng integration/E2E thật.
+> Quy tắc dừng: Sau MỖI Gate (0, A, B, C, D), dừng lại báo cáo cho Quan và đợi xác nhận trước khi tiếp tục.
+
+---
+
+## 7. GATE 0: Sửa Bộ Công Cụ Xác Minh & CI Integrity (Phần 9)
+
+| Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
+|---|---|---|---|---|---|
+| **TST-01** | P0 | Sửa `synthetic-monitor.js`: gate policy đọc check thật (không hardcode true), hỗ trợ HTTPS, gửi dedupeKey thật vào body, bỏ hardcode listing ID 1 / SĐT, validate schema/body, `process.exit(1)` khi fail, exit non-zero khi server offline | open | | |
+| **TST-02** | P0 | Viết lại `backup-restore-drill.js` thành drill thật: chạy `pg_dump` ra file, restore vào database riêng biệt, tính checksum, khôi phục uploads, đo & log RPO/RTO | open | | |
+| **TST-03** | P0 | Đánh giá & viết lại `test-wave-0.js` đến `test-wave-5.js`: chuyển bài kiểm tra source-string thành test gọi service/Prisma/API thật (có DB test) hoặc đổi tên thành `static-lint-check` rõ ràng | open | | |
+| **CI-01** | P0 | Thêm lệnh lint thật vào job "Lint, Typecheck, Migration & Build" trong `.github/workflows/ci.yml` | open | | |
+| **CI-02** | P0 | Bỏ `\|\| true` ở `pnpm audit --audit-level high` trong CI để chặn fail-open | open | | |
+| **CI-03** | P0 | Thêm chạy các bài test-wave đã sửa thật vào CI pipeline | open | | |
+| **CI-04** | P0 | Thêm production start smoke test trong CI pipeline | open | | |
+
+---
+
+## 8. GATE A: Trước Mọi Giao Dịch / Pilot Có Tiền (P0)
+
+| Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
+|---|---|---|---|---|---|
+| **FE-N01** | P0 | Sửa `ContactBrokerModal.tsx`: chuyển early return `!isOpen` xuống sau toàn bộ hooks (`useState`, `useEffect`); test mở/đóng 3 lần desktop/mobile, Escape, backdrop, submit | open | | |
+| **FE-N02** | P0 | Sửa `gia-thanh-vien/page.tsx`: tắt hoàn toàn `FALLBACK_PLANS` khi `NODE_ENV=production` và API lỗi/rỗng; vô hiệu hóa CTA chuyển khoản; server tạo quote có snapshot + expiry | open | | |
+| **FE-N03** | P1 | Sử dụng `formatExactPrice` (số nguyên VNĐ đầy đủ) ở mọi nơi liên quan đến hướng dẫn thanh toán/chuyển khoản; test boundary 1.498.500đ | open | | |
+| **SEC-HOTLINE** | P0 | Rà soát toàn bộ repo/fixtures: loại bỏ số điện thoại hotline `0981753082` và seed admin `0900000001` hardcoded; thay bằng fixture prefix rõ ràng (`TEST_`) | open | | |
+| **RB-14** | P0 | Fail-fast khi production startup thiếu cấu hình bắt buộc SMTP, Google Sheets, Storage; không fallback về mock ngoài dev/staging | open | | |
+
+---
+
+## 9. GATE B: Dữ Liệu & Bảo Mật Cốt Lõi (P1)
+
+| Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
+|---|---|---|---|---|---|
+| **RB-01** | P1 | Mọi thay đổi mật khẩu/vai trò/bootstrap phải tăng `tokenVersion`; JWT strategy từ chối token thiếu/sai version; test đổi pass 401 token cũ | open | | |
+| **RB-02** | P1 | Chuyển OTP từ `Map` sang Redis thật, có TTL + đếm lượt gửi tách riêng khỏi việc xóa record khi verify; dùng `crypto.randomInt` | open | | |
+| **RB-03** | P1 | Sửa `assert-env.ts` kiểm tra đúng bộ biến theo từng SMS provider (eSMS secret, Twilio auth/from, SpeedSMS error check) | open | | |
+| **RB-04** | P1 | Sửa regex SĐT `POST /auth/bootstrap-admin` (`^0[35789]` thay vì `^0[3\|5\|7\|8\|9]`); biến endpoint thành one-shot có audit log | open | | |
+| **RB-05** | P1 | Sửa duyệt/từ chối tin thành CAS thật: where chứa `status: 'pending'` trong cùng query update; quota count nằm trong transaction; test race 2 admin | open | | |
+| **RB-08** | P1 | Sửa advisory lock dùng đúng 1 connection/transaction qua pool; loại bỏ fallback in-memory khi raw query lỗi | open | | |
+| **RB-09** | P1 | Upload ảnh transaction-safe: stage/shared storage, atomic DB state, orphan cleanup, giới hạn dung lượng/số lượng concurrency | open | | |
+| **RB-10** | P1 | Quota create và slug generation transaction-safe: serializable transaction hoặc lock cấp user; loại bỏ race slug idtemp | open | | |
+| **RB-11** | P1 | `LeadsService.createLead` kiểm tra thêm `expiresAt > now()` và chủ tin không bị block | open | | |
+| **RB-12** | P1 | Thêm BigInt serializer toàn cục (global JSON serializer / interceptor) ngăn ngừa 500 do nested BigInt như `listing.owner.id` | open | | |
+| **FE-N12** | P1 | Hợp nhất về đúng 1 key lưu token (`accessToken`) xuyên suốt AuthModal, trang login, ContactBrokerModal, auth-client | open | | |
+| **FE-N14** | P1 | Sửa `sitemap.ts` đọc đúng field `items` (không phải `data.data`); thêm phân trang/cursor vượt 50 bản ghi, chỉ lấy tin `active` | open | | |
+
+---
+
+## 10. GATE C: Outbox, Finance & Operations (P1)
+
+| Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
+|---|---|---|---|---|---|
+| **RB-06** | P1 | Nối transactional outbox vào tất cả mutation chính: listing create, report, admin approve/reject, membership request/approve, lead create trong cùng DB transaction | open | | |
+| **RB-07** | P1 | Cơ chế lease/reclaim thật cho worker outbox (`workerId`, `lockedUntil`, hoặc `FOR UPDATE SKIP LOCKED`), chống stuck processing vĩnh viễn | open | | |
+| **RB-15** | P1 | Sửa `OutboxService.dispatchEvent`: phân định rõ 3 trạng thái handler `SENT` / `SKIPPED` / `RETRYABLE_FAILURE`; chỉ `SENT` mới thành `COMPLETED` | open | | |
+| **FIN-01** | P1 | DTO validation nghiêm ngặt cho `confirmedAmount`/`refundAmount` (số nguyên dương, không vượt quote, bắt buộc bank reference thật hoặc manual proof) | open | | |
+| **FIN-02** | P1 | Viết migration backfill dữ liệu lịch sử cho membership cũ sang ledger mới; script kiểm tra bản ghi không đủ bằng chứng | open | | |
+| **FIN-03** | P1 | Khóa theo user khi tính `endDate` gia hạn để 2 request đồng thời không cộng nhầm từ cùng ngày gốc gây mất ngày | open | | |
+| **FIN-04** | P1 | Xây dựng entitlement policy rõ ràng: snapshot dùng nhất quán ở approve/email/dashboard; quy tắc upgrade/downgrade/renewal/refund | open | | |
+| **FIN-05** | P1 | Sử dụng snapshot gói nhất quán ở mọi nơi lúc approve, email, dashboard thay vì đọc lẫn giá trị live từ catalog | open | | |
+| **FIN-06** | P2 | Sửa dashboard tài chính: phân biệt rõ dòng tiền thu ròng (net cash flow) với lợi nhuận; ghi rõ chi phí chưa đo được | open | | |
+| **FIN-07** | P2 | Đảm bảo chuyển đổi tiền tệ an toàn giữa BigInt và Number boundary (safe integer / string) | open | | |
+| **FIN-08** | P1 | Đổi `onDelete: Cascade` giữa User và FinanceLedger thành `RESTRICT` (hoặc soft-delete User) để bảo toàn tính bất biến của sổ cái | open | | |
+| **FIN-09** | P1 | Thêm idempotency key và expiry/sweep cho membership pending request; validation admin query filters | open | | |
+
+---
+
+## 11. GATE D: Trải Nghiệm & Tăng Trưởng (P1/P2)
+
+| Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
+|---|---|---|---|---|---|
+| **FE-N04** | P1 | Loại bỏ demo fallback ở detail tin trên production; phân biệt 404 thật với lỗi 5xx/timeout (hiển thị error banner có retry) | open | | |
+| **FE-N05** | P1 | Bổ sung cơ chế phục hồi/retry khi upload ảnh lỗi sau khi tạo tin; tránh mồ côi tin không ảnh | open | | |
+| **FE-N06** | P1 | Bổ sung đầy đủ field USP vào form đăng tin: điện/nước, amenities, khoảng cách trường, toạ độ, tình trạng phòng | open | | |
+| **FE-N07** | P1 | Thống nhất 1 bộ mã taxonomy loại hình phòng dùng chung form/filter/backend (chuẩn hóa kebab/snake synonym mapping) | open | | |
+| **FE-N08** | P1 | Sửa phân trang inbox lead (`/tai-khoan/leads`) và trang tin đã lưu (thêm nút chuyển trang, pagination controls) | open | | |
+| **FE-N09** | P1 | Tách rõ hành động "Đã cho thuê" khỏi "Gỡ tin": thêm outcome/status riêng, không gộp chung vào DELETE status=removed | open | | |
+| **FE-N10** | P1 | Fix mất location filter khi đổi giá/loại phòng trong SearchFilterBar; đồng bộ URL query với input state khi Back/Forward | open | | |
+| **FE-N11** | P1 | Sửa Header auth state đồng bộ toàn cục qua event/store; không xóa token khi API `/auth/me` gặp lỗi mạng/500 | open | | |
+| **FE-N13** | P1 | Đồng bộ param return-to giữa pricing (`redirect`), auth (`returnTo`) và lưu tin | open | | |
+| **FE-N15** | P1 | Sửa các chỗ nuốt lỗi HTTP ở lead/mutation thành trạng thái loading/error/empty/data rõ ràng có retry | open | | |
+| **FE-N16** | P2 | Sửa thời hạn gói đọc theo `durationDays` thật thay vì hardcode 30 ngày; fix cache next revalidate | open | | |
+| **FE-N17** | P2 | Fix MoveInCostEstimator: phân biệt `depositAmount = 0` với chưa có; chuẩn hóa nước/dịch vụ theo dữ liệu thật | open | | |
+| **FE-N18** | P2 | Xử lý lỗi nạp locations trong form đăng tin; hỗ trợ retry và dropdown cascade tỉnh-quận-phường | open | | |
+| **FE-N19** | P2 | Client validate chặn chọn 21+ ảnh / >10MB trước khi tạo listing; revoke object URL khi unmount | open | | |
+| **FE-N20** | P2 | Trợ năng AuthModal: `role="dialog"`, `aria-modal="true"`, Escape key, focus trap; chống tràn màn hình 320-375px | open | | |
+| **FE-N21** | P2 | Bổ sung quên mật khẩu vào AuthModal; làm rõ trạng thái Google auth | open | | |
+| **FE-N22** | P2 | Chuyển `Promise.all` ở Homepage sang `Promise.allSettled` để 1 chuyên mục lỗi không làm mất 3 chuyên mục còn lại | open | | |
+| **RB-13** | P1 | Enqueue sự kiện `LEAD_CREATED` qua transactional outbox để chủ tin nhận thông báo; optional-auth cho requesterId | open | | |
+| **RB-16** | P1 | Sửa `amenities` được đưa vào Prisma `where` thật; sửa lỗi conflict giữa `categoryGroup` và `excludePropertyTypes` | open | | |
+| **RB-17** | P1 | Sửa cập nhật university relation không bị bỏ qua; đưa `lat`, `lng`, `minLeaseMonths` vào core fields kích hoạt re-review | open | | |
+| **RB-18** | P1 | Thêm endpoint resubmit cho tin `rejected` và renew cho tin `expired` bảo toàn URL và lịch sử | open | | |
+| **RB-19** | P1 | DTO pagination validation cho saved/report (min/max pageSize); report gắn requesterId khi đã đăng nhập | open | | |
+| **BRAND-SYNC**| P2 | Đồng bộ thương hiệu thống nhất: Header, layout, detail chốt 1 tên; config brand tập trung; dọn dấu vết Mogi/mua bán | open | | |
+| **OPS-OBS** | P2 | Xây observability tối thiểu: structured logging, request ID requestId, metrics p95/5xx, outbox pending age, stale leads | open | | |
+
 
