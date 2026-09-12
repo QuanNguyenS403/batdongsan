@@ -44,6 +44,9 @@ interface Props {
 }
 
 export default async function ChoThueMatBangPage({ searchParams }: Props) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  let isApiError = false;
+
   const { items, pagination } = await fetchListings({
     transactionType: 'rent',
     categoryGroup: 'thue_mat_bang',
@@ -55,16 +58,35 @@ export default async function ChoThueMatBangPage({ searchParams }: Props) {
     areaMin: searchParams.areaMin,
     areaMax: searchParams.areaMax,
     page: searchParams.page ?? '1',
-  }).catch(() => ({
-    items: DEMO_SPACE_RENT_LISTINGS,
-    pagination: { page: 1, pageSize: 20, total: DEMO_SPACE_RENT_LISTINGS.length, totalPages: 1 },
-  }));
+  }).catch(() => {
+    isApiError = true;
+    return {
+      items: isProduction ? [] : DEMO_SPACE_RENT_LISTINGS,
+      pagination: {
+        page: 1,
+        pageSize: 20,
+        total: isProduction ? 0 : DEMO_SPACE_RENT_LISTINGS.length,
+        totalPages: isProduction ? 0 : 1,
+      },
+    };
+  });
 
+  const isUsingDemo = !isProduction && isApiError;
   const month = new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
 
   return (
     <div className="min-h-screen bg-surface-muted">
+      {isUsingDemo && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-xs font-medium">
+          ⚠️ CHẾ ĐỘ THỬ NGHIỆM: Đang hiển thị dữ liệu mẫu cục bộ. Dữ liệu này tự động tắt trên Production.
+        </div>
+      )}
       <div className="container-max py-8">
+        {isApiError && isProduction && (
+          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
+            ⚠️ Đang có gián đoạn kết nối tới máy chủ dữ liệu. Danh sách mặt bằng tạm thời chưa tải được.
+          </div>
+        )}
         {/* Breadcrumb */}
         <nav className="mb-4 flex items-center gap-2 text-xs text-text-muted">
           <Link href="/" className="hover:text-brand transition-colors">Trang chủ</Link>

@@ -65,6 +65,7 @@ const VALUE_PROPOSITIONS = [
 ];
 
 export default async function HomePage() {
+  const isProduction = process.env.NODE_ENV === 'production';
   let roomListings: Awaited<ReturnType<typeof fetchListings>> | null = null;
   let apartmentListings: Awaited<ReturnType<typeof fetchListings>> | null = null;
   let studioListings: Awaited<ReturnType<typeof fetchListings>> | null = null;
@@ -78,16 +79,41 @@ export default async function HomePage() {
       fetchListings({ categoryGroup: 'thue_mat_bang', pageSize: '4' }),
     ]);
   } catch {
-    // API offline fallback
+    // API offline
   }
 
-  const roomItems = (roomListings?.items?.length ?? 0) > 0 ? roomListings!.items : DEMO_ROOM_RENT_LISTINGS;
-  const aptItems = (apartmentListings?.items?.length ?? 0) > 0 ? apartmentListings!.items : DEMO_CAN_HO_RENT_LISTINGS;
-  const studioItems = (studioListings?.items?.length ?? 0) > 0 ? studioListings!.items : DEMO_STUDIO_RENT_LISTINGS;
-  const spaceItems = (spaceListings?.items?.length ?? 0) > 0 ? spaceListings!.items : DEMO_SPACE_RENT_LISTINGS;
+  // Ở Production (P0-04): Tuyệt đối KHÔNG fallback sang dữ liệu demo giả lập
+  const roomItems = (roomListings?.items?.length ?? 0) > 0
+    ? roomListings!.items
+    : (isProduction ? [] : DEMO_ROOM_RENT_LISTINGS);
+
+  const aptItems = (apartmentListings?.items?.length ?? 0) > 0
+    ? apartmentListings!.items
+    : (isProduction ? [] : DEMO_CAN_HO_RENT_LISTINGS);
+
+  const studioItems = (studioListings?.items?.length ?? 0) > 0
+    ? studioListings!.items
+    : (isProduction ? [] : DEMO_STUDIO_RENT_LISTINGS);
+
+  const spaceItems = (spaceListings?.items?.length ?? 0) > 0
+    ? spaceListings!.items
+    : (isProduction ? [] : DEMO_SPACE_RENT_LISTINGS);
+
+  const isUsingDemo = !isProduction && (
+    (roomListings?.items?.length ?? 0) === 0 ||
+    (apartmentListings?.items?.length ?? 0) === 0 ||
+    (studioListings?.items?.length ?? 0) === 0 ||
+    (spaceListings?.items?.length ?? 0) === 0
+  );
 
   return (
     <div>
+      {/* Cảnh báo khi dùng dữ liệu mẫu ở môi trường dev/staging */}
+      {isUsingDemo && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-xs font-medium">
+          ⚠️ CHẾ ĐỘ THỬ NGHIỆM: Đang hiển thị dữ liệu mẫu cục bộ. Dữ liệu này sẽ tự động tắt trên Production.
+        </div>
+      )}
       {/* ── Hero Section ── */}
       <section className="hero-pattern">
         <div className="container-max py-14 lg:py-20">
@@ -238,11 +264,17 @@ export default async function HomePage() {
               </svg>
             </Link>
           </div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {roomItems.slice(0, 4).map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+          {roomItems.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {roomItems.slice(0, 4).map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center text-sm text-slate-500">
+              Hiện chưa có tin đăng nào trong chuyên mục này.
+            </div>
+          )}
         </div>
 
         {/* Section 2: Căn hộ */}
@@ -269,11 +301,17 @@ export default async function HomePage() {
               </svg>
             </Link>
           </div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {aptItems.slice(0, 4).map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+          {aptItems.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {aptItems.slice(0, 4).map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center text-sm text-slate-500">
+              Hiện chưa có tin đăng nào trong chuyên mục này.
+            </div>
+          )}
         </div>
 
         {/* Section 3: Studio */}
@@ -300,11 +338,17 @@ export default async function HomePage() {
               </svg>
             </Link>
           </div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {studioItems.slice(0, 4).map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+          {studioItems.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {studioItems.slice(0, 4).map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center text-sm text-slate-500">
+              Hiện chưa có tin đăng nào trong chuyên mục này.
+            </div>
+          )}
         </div>
 
         {/* Section 3: Mặt bằng kinh doanh */}
@@ -331,11 +375,17 @@ export default async function HomePage() {
               </svg>
             </Link>
           </div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {spaceItems.slice(0, 4).map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+          {spaceItems.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {spaceItems.slice(0, 4).map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center text-sm text-slate-500">
+              Hiện chưa có tin đăng nào trong chuyên mục này.
+            </div>
+          )}
         </div>
       </section>
     </div>

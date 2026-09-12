@@ -28,6 +28,10 @@ export function RevealPhoneButton({
 
   async function handleReveal() {
     setError(null);
+    if (listingId.startsWith('demo-')) {
+      setError('Đây là tin mẫu thử nghiệm, không có số điện thoại thật.');
+      return;
+    }
     if (!isLoggedIn()) {
       if (onRequireAuth) {
         onRequireAuth();
