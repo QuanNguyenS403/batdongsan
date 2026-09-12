@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -15,8 +15,19 @@ function formatFriendlyError(err: unknown): string {
   return msg;
 }
 
-export default function DangNhapPage() {
+function getSafeReturnUrl(rawUrl: string | null): string {
+  if (!rawUrl) return '/';
+  // Chỉ chấp nhận relative URL bắt đầu bằng 1 dấu '/' duy nhất (chống open redirect //attacker.com)
+  if (rawUrl.startsWith('/') && !rawUrl.startsWith('//')) {
+    return rawUrl;
+  }
+  return '/';
+}
+
+function DangNhapContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnToParam = searchParams.get('returnTo');
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -63,8 +74,9 @@ export default function DangNhapPage() {
       if (!res.ok) throw new Error(data.message ?? 'Đăng nhập thất bại.');
 
       localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('access_token', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
-      router.push('/');
+      router.push(getSafeReturnUrl(returnToParam));
     } catch (err) {
       setError(formatFriendlyError(err));
     } finally {
@@ -150,8 +162,9 @@ export default function DangNhapPage() {
       if (!res.ok) throw new Error(data.message ?? 'Đăng ký thất bại.');
 
       localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('access_token', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
-      router.push('/');
+      router.push(getSafeReturnUrl(returnToParam));
     } catch (err) {
       setError(formatFriendlyError(err));
     } finally {
@@ -368,5 +381,13 @@ export default function DangNhapPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function DangNhapPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-text-muted">Đang tải...</div>}>
+      <DangNhapContent />
+    </Suspense>
   );
 }

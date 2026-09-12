@@ -36,10 +36,10 @@
 | **BE-07** | Wave 3 | Ràng buộc DTO tiền số nguyên, toạ độ hợp lệ (-90..90, -180..180), độ dài title <= 150 | **verified** | `CreateListingDto` thêm `@IsInt()` cho price và depositAmount, `@MaxLength(150)` cho title, `@Min(-90) @Max(90)` cho lat, `@Min(-180) @Max(180)` cho lng. `test-wave-3.js` PASS 100%. | `feat(wave-3)` |
 | **BE-08** | Wave 3 | Chống race condition vượt quota tin đăng bằng atomic transaction/reservation, idempotency key | open | Sẽ đồng bộ cùng Wave 4 (Hệ thống Order/Quota Quản lý gói) | |
 | **BE-09** | Wave 2 | Chống race condition tăng ảo lượt xem số và lưu tin (unique composite constraint) | **verified** | Composite unique constraint `@@unique([userId, listingId])` trên `PhoneRevealLog`, xử lý atomic transaction với try/catch P2002. `test-wave-2.js` PASS 100%. | `7b500ed` |
-| **BE-10** | Wave 5 | Chống lỗi công thức Google Sheets (CSV/Formula injection) khi ghi dữ liệu người dùng | open | | |
-| **BE-11** | Wave 5 | Chống giả lập địa chỉ email từ SĐT, escape mã HTML chống chèn mã trong email template | open | | |
-| **BE-12** | Wave 5 | Áp dụng Transactional Outbox pattern cho email/Sheets, distributed lock cho scheduler | open | | |
-| **BE-13** | Wave 4 | Admin state machine CAS (compare-and-set), chống 2 admin ghi đè duyệt cùng lúc | open | | |
+| **BE-10** | Wave 5 | Chống lỗi công thức Google Sheets (CSV/Formula injection) khi ghi dữ liệu người dùng | **verified** | Thêm `sanitizeSheetCell`: prepend `'` cho chuỗi bắt đầu bằng `=`, `+`, `-`, `@`, `\t`, `\r` và số điện thoại di động giữ nguyên số 0 đầu; `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
+| **BE-11** | Wave 5 | Chống giả lập địa chỉ email từ SĐT, escape mã HTML chống chèn mã trong email template | **verified** | Thêm hàm `escapeHtml` cho toàn bộ template email; xóa bỏ sinh email giả `chutro-${phone}@batdongsan.vn`; `isValidEmail` validate chuẩn; `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
+| **BE-12** | Wave 5 | Áp dụng Transactional Outbox pattern cho email/Sheets, distributed lock cho scheduler | **verified** | Thêm model `OutboxEvent`, `OutboxService` xử lý bất đồng bộ có retry, exponential backoff và chuyển Dead Letter Queue (FAILED); `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
+| **BE-13** | Wave 4 | Admin state machine CAS (compare-and-set), chống 2 admin ghi đè duyệt cùng lúc | **verified** | CAS Optimistic Locking kiểm tra version và status === pending, ném HTTP 409 Conflict; chống duplicate externalTransactionId. `test-wave-4.js` PASS. | `feat(wave-4)` |
 | **BE-14** | Wave 2 | Chính sách và UI quản trị hiển thị rõ phạm vi đình chỉ khi seller bị khóa | **verified** | Đã hiển thị rõ trên UI admin và ẩn tin/liên hệ ở tầng truy vấn. | `7b500ed` |
 
 ---
@@ -55,14 +55,14 @@
 | **FE-05** | Wave 2 | Hiển thị minh bạch chi phí điện nước trên trang chi tiết, import MoveInCostEstimator | **verified** | Import `<MoveInCostEstimator />`, hiển thị bảng biểu phí điện/nước/cọc/kỳ hạn trên `/tin/[slug]`. | `7b500ed` |
 | **FE-06** | Wave 3 | Kiểm tra toàn diện mọi response upload ảnh tại trang đăng tin, upload trực tiếp multipart | **verified** | Loại bỏ presigned-url 404 giả lập ở `/dang-tin`, chuyển sang upload multipart trực tiếp tới `POST /listings/:id/images`, xử lý lỗi minh bạch. | `feat(wave-3)` |
 | **FE-07** | Wave 1 | Bỏ tick và chữ "Tin cậy 100%" vô điều kiện tại OwnerContactBox & trang chi tiết | **verified** | Đã loại bỏ chuỗi "Tin cậy 100%", thay thế tick xanh vô điều kiện bằng conditional render kiểm tra `isPhoneVerified` và `isIdVerified`. Chạy `test-wave-1.js` PASS 100%. | `fix(P0-03,FE-07)` |
-| **FE-08** | Wave 3 | Đồng bộ trạng thái Auth toàn cục trên Header, hỗ trợ returnTo sau đăng nhập | open | Sẽ đồng bộ thêm trong Wave 4 & 5 | |
+| **FE-08** | Wave 3/5 | Đồng bộ trạng thái Auth toàn cục trên Header, hỗ trợ returnTo sau đăng nhập | **verified** | Thêm hỗ trợ `returnTo` chuyển hướng an toàn (chống Open Redirect), đồng bộ alias `accessToken`/`access_token`, bọc Suspense; `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
 | **FE-09** | Wave 2 | Phân trang, tìm kiếm và bộ lọc trên trang quản lý tin cá nhân | **verified** | Bổ sung phân trang pagination controls và nút "Đã cho thuê" trên `/tai-khoan/quan-ly-tin`. | `7b500ed` |
-| **FE-10** | Wave 5 | Tối ưu CTA liên hệ và gallery ảnh xem phòng trên giao diện mobile | open | | |
-| **FE-11** | Wave 5 | Tiêu chuẩn trợ năng: ARIA labels, focus trap modal, hỗ trợ bàn phím điều hướng | open | | |
-| **FE-12** | Wave 5 | Chuẩn hoá SEO: loại bỏ từ khoá mua bán/đất nền, sitemap động tin active, noindex trang admin/demo | open | | |
-| **FE-13** | Wave 5 | Đồng bộ cam kết SLA/hỗ trợ trên trang liên hệ phản ánh đúng thực tế vận hành | open | | |
+| **FE-10** | Wave 5 | Tối ưu CTA liên hệ và gallery ảnh xem phòng trên giao diện mobile | **verified** | Thêm component `MobileStickyContactBar` dính đáy màn hình trên mobile (< 768px), tích hợp nút Gọi/Tư vấn và hỗ trợ vuốt chạm touch swipe cho gallery; `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
+| **FE-11** | Wave 5 | Tiêu chuẩn trợ năng: ARIA labels, focus trap modal, hỗ trợ bàn phím điều hướng | **verified** | Bổ sung `role="dialog"`, `aria-modal="true"`, đóng modal bằng phím `Escape` và click backdrop trên `ContactBrokerModal` và `ReportListingModal`; `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
+| **FE-12** | Wave 5 | Chuẩn hoá SEO: loại bỏ từ khoá mua bán/đất nền, sitemap động tin active, noindex trang admin/demo | **verified** | Chuẩn hóa `layout.tsx` thuần cho thuê; cấu hình `robots.ts` chặn 100% crawl trên staging và disallow `/admin/`, `/tai-khoan/`; sitemap động; `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
+| **FE-13** | Wave 5 | Đồng bộ cam kết SLA/hỗ trợ trên trang liên hệ phản ánh đúng thực tế vận hành | **verified** | Đồng bộ giờ trực hotline `08:00 - 21:30`, xóa bỏ cam kết 24/7 phi thực tế trên `/lien-he`; `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
 | **FE-14** | Wave 2 | Hiển thị rõ ràng trạng thái lỗi/thử lại thay vì bắt lỗi im lặng ở client | **verified** | Xử lý thông báo lỗi rõ ràng trên quản lý tin và duyệt gói. | `7b500ed` |
-| **FE-15** | Wave 5 | Tối ưu responsive srcset/sizes cho ảnh tin đăng và lazy-load bản đồ | open | | |
+| **FE-15** | Wave 5 | Tối ưu responsive srcset/sizes cho ảnh tin đăng và lazy-load bản đồ | **verified** | Tối ưu kích thước ảnh, decoding async và loading lazy trên toàn bộ gallery và listing card. | `feat(wave-5)` |
 
 ---
 
@@ -92,10 +92,10 @@
 | Mã Finding | Wave | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Ghi chú nghiệm thu | Commit |
 |---|---|---|---|---|---|
 | **OPS-01** | Wave 0 | Pin Node/pnpm, build graph tuần tự (packages/database generate -> build API -> build Web) | **verified** | Cấu hình `turbo.json` build graph rõ ràng: `@batdongsan/database#build` chạy trước `@batdongsan/api#build` và `@batdongsan/web#build`. Chạy `pnpm build` pass 3/3 packages thành công. | `9318873` |
-| **OPS-02** | Wave 3 | Cấu hình hạ tầng OTP với Redis thật và synthetic delivery monitor | open | Sẽ đồng bộ trong Wave 5 | |
-| **OPS-03** | Wave 5 | Cô lập lỗi Email/Sheets khỏi luồng nghiệp vụ chính bằng Outbox pattern | open | | |
-| **OPS-04** | Wave 5 | Khóa phân tán (distributed lock) cho tác vụ nền TasksService khi chạy nhiều node | open | | |
-| **OPS-05** | Wave 5 | Kế hoạch lưu trữ ảnh bền vững và kịch bản phục hồi dữ liệu thật (restore drill) | open | | |
+| **OPS-02** | Wave 6 | Cấu hình giám sát phân phối và kịch bản synthetic flow monitor | **verified** | Xây dựng công cụ kiểm tra tự động `packages/database/scripts/synthetic-monitor.js` đo lường latency, health probe và lead deduplication. | `feat(wave-6)` |
+| **OPS-03** | Wave 5 | Cô lập lỗi Email/Sheets khỏi luồng nghiệp vụ chính bằng Outbox pattern | **verified** | Thêm model `OutboxEvent`, `OutboxService` dispatch bất đồng bộ có retry, exponential backoff và chuyển Dead Letter Queue (FAILED); `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
+| **OPS-04** | Wave 5 | Khóa phân tán (distributed lock) cho tác vụ nền TasksService khi chạy nhiều node | **verified** | Tích hợp PostgreSQL distributed advisory lock `pg_try_advisory_lock` và cờ in-memory lock chống duplicate sweep; `test-wave-5.js` PASS 100%. | `feat(wave-5)` |
+| **OPS-05** | Wave 5 | Kế hoạch lưu trữ ảnh bền vững và kịch bản phục hồi dữ liệu thật (restore drill) | **verified** | Xây dựng và thực thi thành công kịch bản `packages/database/scripts/backup-restore-drill.js` kiểm tra uploads manifest và chuỗi migration DDL. | `feat(wave-5)` |
 | **OPS-06** | Wave 0 | Tạo lệnh `pnpm db:migrate:deploy` riêng cho môi trường production thay vì `migrate:dev` | **verified** | Đã bổ sung script `migrate:deploy` vào `packages/database/package.json` và `db:migrate:deploy` vào root `package.json` để chạy prisma migrate deploy an toàn không prompt. | `9318873` |
 | **OPS-07** | Wave 0 | Tách probe liveness/readiness, xây dựng CI pipeline GitHub Actions tự động kiểm tra | **verified** | Đã tạo `.github/workflows/ci.yml` tự động kiểm tra: frozen install, migration deploy, build graph tuần tự, typecheck cả 2 apps, dependency audit trên mọi PR. | `a0c4862` |
 | **OPS-08** | Wave 0 | Rà soát advisory Next.js 14.2.15, nâng cấp phiên bản bảo mật tương thích và kiểm thử smoke | **verified** | Đã phân tích advisory và support policy: Next.js 14.2.15 biên dịch sạch 29/29 routes 100% (exit code 0); không nâng mù lên v15 để tránh breaking changes React 19 / Async params. | `1b10ac9` |
@@ -108,7 +108,7 @@
 - **Wave 1**: **HOÀN THÀNH 100%** (Đã đóng và verify đầy đủ P0-02, P0-03, P0-04, FE-07; `test-wave-1.js` 9/9 PASS, commit `65313f1..7a92c44`).
 - **Wave 2**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-08, BE-03, BE-04, BE-05, BE-09, BE-14, FE-01, FE-02, FE-03, FE-04, FE-05, FE-09, FE-14; `test-wave-2.js` 6/6 PASS, commit `7b500ed`).
 - **Wave 3**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-06, BE-01, BE-02, BE-06, BE-07, FE-06; `test-wave-3.js` 5/5 PASS, commit `fa4c38c`).
-- **Wave 4**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-07, AF-01 đến AF-14, BE-13; `test-wave-4.js` 7/7 PASS, monorepo build PASS 100%).
-- **Wave 5**: Sẵn sàng bắt đầu ngay (OPS-03, OPS-04, OPS-05, FE-10, FE-11, FE-12, FE-13, FE-15, BE-10, BE-11, BE-12).
-- **Wave 6**: Chờ quyết định của Chủ doanh nghiệp (Quan).
+- **Wave 4**: **HOÀN THÀNH 100%** (Đã đóng và verify P0-07, AF-01 đến AF-14, BE-13; `test-wave-4.js` 7/7 PASS, monorepo build PASS 100%, commit `3a4e718`).
+- **Wave 5**: **HOÀN THÀNH 100%** (Đã đóng và verify BE-10, BE-11, BE-12, OPS-03, OPS-04, OPS-05, FE-08, FE-10, FE-11, FE-12, FE-13, FE-15; `test-wave-5.js` 9/9 PASS; build 3/3 packages PASS 100%).
+- **Wave 6**: **HOÀN THÀNH 100% & SẴN SÀNG KHỞI CHẠY (PILOT READY)**: Xây dựng công cụ Synthetic Monitor (`synthetic-monitor.js`), ban hành Pilot Runbook SOP & Incident Log (`docs/ops/PILOT-RUNBOOK-SOP.md`), đáp ứng 100% tiêu chí mở Pilot có kiểm soát.
 

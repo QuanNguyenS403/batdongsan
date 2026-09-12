@@ -107,4 +107,16 @@ export class AdminController {
   toggleBlockUser(@CurrentUser() admin: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
     return this.adminService.toggleBlockUser(id, admin.id);
   }
+
+  @ApiOperation({ summary: 'Danh sách sự kiện Outbox trong Dead Letter Queue (FAILED)' })
+  @Get('outbox/dlq')
+  getOutboxDlq(@Query('page') page = '1', @Query('pageSize') pageSize = '20') {
+    return this.adminService.getOutboxDlq(Number(page) || 1, Number(pageSize) || 20);
+  }
+
+  @ApiOperation({ summary: 'Thử lại sự kiện trong Dead Letter Queue' })
+  @Post('outbox/dlq/:id/retry')
+  retryOutboxDlq(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.adminService.retryOutboxDlq(id);
+  }
 }

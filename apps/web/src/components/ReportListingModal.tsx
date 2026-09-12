@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -19,6 +19,18 @@ export function ReportListingModal({ listingId }: { listingId: string }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Hỗ trợ phím Escape để đóng modal (FE-11)
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,13 +79,24 @@ export function ReportListingModal({ listingId }: { listingId: string }) {
       </div>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="report-modal-heading"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        >
           <div className="w-full max-w-md animate-fade-in rounded-2xl bg-white p-6 shadow-modal">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-text-primary">Báo cáo tin đăng vi phạm</h3>
+              <h3 id="report-modal-heading" className="text-base font-bold text-text-primary">
+                Báo cáo tin đăng vi phạm
+              </h3>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
+                aria-label="Đóng hộp thoại báo cáo vi phạm"
                 className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:bg-slate-100 transition-colors"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

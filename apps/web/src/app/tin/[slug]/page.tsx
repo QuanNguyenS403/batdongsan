@@ -8,6 +8,7 @@ import { PropertyGallery } from './PropertyGallery';
 import { ReportListingModal } from '@/components/ReportListingModal';
 import { OwnerContactBox } from './OwnerContactBox';
 import { MoveInCostEstimator } from '@/components/MoveInCostEstimator';
+import { MobileStickyContactBar } from './MobileStickyContactBar';
 
 interface Props {
   params: { slug: string };
@@ -425,6 +426,14 @@ export default async function ListingDetailPage({ params }: Props) {
           </aside>
         </div>
       </div>
+
+      {/* Mobile Sticky Contact Bar (FE-10) */}
+      <MobileStickyContactBar
+        listingId={listing.id}
+        listingTitle={displayTitle}
+        priceFormatted={formatExactPrice(listing.price)}
+        depositFormatted={listing.depositAmount ? formatExactPrice(listing.depositAmount) : undefined}
+      />
     </div>
   );
 }

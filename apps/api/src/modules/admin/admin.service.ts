@@ -7,6 +7,7 @@ import { QueryAdminUsersDto } from './dto/query-admin-users.dto';
 import { EmailService } from '../email/email.service';
 import { GoogleSheetsService } from '../google-sheets/google-sheets.service';
 import { TasksService } from '../tasks/tasks.service';
+import { OutboxService } from '../outbox/outbox.service';
 
 function serialize<T extends Record<string, any>>(obj: T): any {
   return JSON.parse(
@@ -21,6 +22,7 @@ export class AdminService {
     private readonly emailService: EmailService,
     private readonly googleSheetsService: GoogleSheetsService,
     private readonly tasksService: TasksService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   /** Thống kê số liệu trang Dashboard quản trị */
@@ -667,5 +669,16 @@ export class AdminService {
         : `Đã mở khóa tài khoản của người dùng ${user.fullName ?? user.phone}.`,
       user: serialize(updated),
     };
+  }
+
+  /** Lấy danh sách sự kiện lỗi trong Dead Letter Queue (FAILED) */
+  async getOutboxDlq(page = 1, pageSize = 20) {
+    return this.outboxService.getDlqEvents(page, pageSize);
+  }
+
+  /** Thử lại thủ công 1 sự kiện trong Dead Letter Queue */
+  async retryOutboxDlq(id: bigint) {
+    const ok = await this.outboxService.retryDlqEvent(id);
+    return { success: ok, message: ok ? 'Đã kích hoạt thử lại sự kiện' : 'Không tìm thấy sự kiện FAILED' };
   }
 }

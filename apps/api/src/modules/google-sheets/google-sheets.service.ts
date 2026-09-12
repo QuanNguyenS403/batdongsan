@@ -2,6 +2,42 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { google } from 'googleapis';
 
+/**
+ * Sanitize giá trị trước khi ghi vào Google Sheets để triệt tiêu lỗ hổng Formula Injection (CSV Injection - BE-10).
+ * Nếu chuỗi bắt đầu bằng =, +, -, @, tab, newline, thêm dấu nháy đơn ' ở đầu để Google Sheets coi là plain text.
+ * Nếu là chuỗi số điện thoại (bắt đầu bằng 0 hoặc +), cũng prepend ' để tránh Google Sheets tự convert sang number làm mất số 0 đầu.
+ */
+export function sanitizeSheetCell(val: any): string | number {
+  if (val === null || val === undefined) {
+    return '';
+  }
+  if (typeof val === 'number') {
+    return Number.isFinite(val) ? val : 0;
+  }
+  const rawStr = String(val);
+  if (!rawStr) return '';
+
+  // Ký tự khởi đầu công thức nguy hiểm trong bảng tính Excel / Google Sheets
+  const DANGEROUS_CHARS = ['=', '+', '-', '@', '\t', '\r'];
+  if (DANGEROUS_CHARS.some((char) => rawStr.startsWith(char))) {
+    return `'${rawStr}`;
+  }
+
+  const str = rawStr.trim();
+  if (!str) return '';
+
+  if (DANGEROUS_CHARS.some((char) => str.startsWith(char))) {
+    return `'${str}`;
+  }
+
+  // Số điện thoại Việt Nam bắt đầu bằng 0 hoặc +84
+  if (/^0\d{8,11}$/.test(str) || /^\+84\d{8,11}$/.test(str)) {
+    return `'${str}`;
+  }
+
+  return str;
+}
+
 @Injectable()
 export class GoogleSheetsService {
   private readonly logger = new Logger(GoogleSheetsService.name);
@@ -48,9 +84,11 @@ export class GoogleSheetsService {
   }
 
   /**
-   * Thêm 1 dòng vào Google Sheet theo tên tab (1 chiều ghi)
+   * Thêm 1 dòng vào Google Sheet theo tên tab (1 chiều ghi), tự động sanitize chống Formula Injection
    */
-  private async appendRow(sheetName: string, rowData: (string | number)[]): Promise<boolean> {
+  private async appendRow(sheetName: string, rawRowData: (string | number)[]): Promise<boolean> {
+    const rowData = rawRowData.map(sanitizeSheetCell);
+
     if (this.isMock || !this.sheets || !this.spreadsheetId) {
       this.logger.log(`\n📊 ========== [MOCK GOOGLE SHEETS SYNC] ==========
 Sheet:   "${sheetName}"

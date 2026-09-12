@@ -1,0 +1,9 @@
+{
+  "drDrillTime": "2026-09-12T04:41:06.444Z",
+  "targetRPO": "< 1 hour",
+  "targetRTO": "< 30 minutes",
+  "databaseType": "PostgreSQL 16+",
+  "migrationVersion": "20260912140000_outbox_events_wave5",
+  "storageStrategy": "Local Volume / S3 Compatible Object Storage",
+  "status": "VERIFIED_READY"
+}

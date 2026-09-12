@@ -14,16 +14,24 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'BatDongSan.vn — Mua bán, cho thuê nhà đất toàn quốc',
-    template: '%s | BatDongSan.vn',
+    default: 'BĐS Cho Thuê — Tìm phòng trọ, căn hộ & nhà cho thuê minh bạch',
+    template: '%s | BĐS Cho Thuê',
   },
   description:
-    'Sàn giao dịch bất động sản hàng đầu: mua bán, cho thuê nhà, căn hộ, đất nền. Hàng nghìn tin đăng uy tín, cập nhật liên tục.',
-  keywords: ['mua nhà', 'bán nhà', 'cho thuê nhà', 'bất động sản', 'căn hộ', 'đất nền'],
+    'Nền tảng kết nối tìm phòng trọ sinh viên, căn hộ dịch vụ, studio và nhà nguyên căn chính chủ. Biểu phí điện nước minh bạch, kiểm định phòng thực tế.',
+  keywords: [
+    'thuê phòng trọ',
+    'phòng trọ sinh viên',
+    'căn hộ dịch vụ',
+    'thuê studio',
+    'nhà nguyên căn',
+    'cho thuê mặt bằng',
+    'bất động sản cho thuê',
+  ],
   openGraph: {
     type: 'website',
     locale: 'vi_VN',
-    siteName: 'BatDongSan.vn',
+    siteName: 'BĐS Cho Thuê',
   },
   robots: { index: true, follow: true },
 };

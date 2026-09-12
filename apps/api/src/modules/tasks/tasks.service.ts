@@ -3,11 +3,13 @@ import { ListingStatus } from '@batdongsan/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OtpService } from '../auth/otp.service';
 import { EmailService } from '../email/email.service';
+import { OutboxService } from '../outbox/outbox.service';
 
 @Injectable()
 export class TasksService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(TasksService.name);
   private timer: NodeJS.Timeout | null = null;
+  private isRunning = false;
   // Chu kỳ quét mặc định: mỗi 10 phút (600.000 ms)
   private readonly SWEEP_INTERVAL_MS = 10 * 60 * 1000;
 
@@ -15,6 +17,7 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
     private readonly prisma: PrismaService,
     private readonly otpService: OtpService,
     private readonly emailService: EmailService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   onApplicationBootstrap() {
@@ -39,27 +42,63 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
   }
 
   /**
-   * Thực thi chuỗi tác vụ định kỳ
+   * Thực thi chuỗi tác vụ định kỳ có Distributed Lock (OPS-04)
    */
-  async runPeriodicTasks(): Promise<{ expiredCount: number; cleanedOtpCount: number }> {
+  async runPeriodicTasks(): Promise<{ expiredCount: number; cleanedOtpCount: number; outboxResult?: any }> {
+    if (this.isRunning) {
+      this.logger.debug('[TasksService] Tác vụ trước vẫn đang chạy, bỏ qua chu kỳ này.');
+      return { expiredCount: 0, cleanedOtpCount: 0 };
+    }
+
+    this.isRunning = true;
+    let hasAdvisoryLock = false;
+
     try {
+      // PostgreSQL Distributed Lock (OPS-04): Chống race condition khi chạy multi-node/multi-worker
+      try {
+        const lockRes: any = await this.prisma.$queryRawUnsafe(
+          `SELECT pg_try_advisory_lock(hashtext('tasks_sweep_lock')) as locked;`,
+        );
+        hasAdvisoryLock = Boolean(lockRes?.[0]?.locked);
+        if (!hasAdvisoryLock) {
+          this.logger.debug('[TasksService] Node khác đang chạy task sweep, bỏ qua.');
+          return { expiredCount: 0, cleanedOtpCount: 0 };
+        }
+      } catch {
+        // Fallback in-memory lock nếu DB không hỗ trợ advisory lock
+        hasAdvisoryLock = true;
+      }
+
       const expiredCount = await this.expirePastDueListings();
       const cleanedOtpCount = this.sweepExpiredOtps();
-      return { expiredCount, cleanedOtpCount };
+      const outboxResult = await this.outboxService.processPendingBatch(50);
+
+      return { expiredCount, cleanedOtpCount, outboxResult };
     } catch (err) {
       this.logger.error('Lỗi khi thực thi tác vụ nền định kỳ:', (err as Error).stack);
       return { expiredCount: 0, cleanedOtpCount: 0 };
+    } finally {
+      if (hasAdvisoryLock) {
+        try {
+          await this.prisma.$queryRawUnsafe(
+            `SELECT pg_advisory_unlock(hashtext('tasks_sweep_lock'));`,
+          );
+        } catch {
+          // safe-fail
+        }
+      }
+      this.isRunning = false;
     }
   }
 
   /**
    * Quét và tự động chuyển trạng thái tin đăng hết hạn (expiresAt < now) sang 'expired',
-   * đồng thời gửi email thông báo cho chủ trọ.
+   * ghi nhận thông báo qua Transactional Outbox.
    */
   async expirePastDueListings(): Promise<number> {
     const now = new Date();
-    
-    // Tìm các tin cần chuyển trạng thái kèm thông tin liên hệ chủ nhà
+
+    // Conditional update atomic: Chỉ chuyển trạng thái những tin THỰC SỰ đang 'active' và quá hạn
     const expiredCandidates = await this.prisma.listing.findMany({
       where: {
         status: ListingStatus.active,
@@ -96,12 +135,21 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
         `[Tin hết hạn] Đã tự động chuyển ${result.count} tin đăng quá hạn sang trạng thái '${ListingStatus.expired}'.`,
       );
 
-      // Gửi thông báo an toàn cho chủ trọ
+      // Ghi nhận thông báo qua Outbox an toàn
       for (const item of expiredCandidates) {
         try {
-          void this.emailService.sendListingExpiredToLandlord(item, item.owner.phone);
+          await this.outboxService.recordEvent({
+            aggregateType: 'LISTING',
+            aggregateId: item.id.toString(),
+            eventType: 'EMAIL_LISTING_EXPIRED',
+            payload: {
+              listing: { id: item.id.toString(), title: item.title },
+              landlordPhone: item.owner.phone,
+            },
+          });
         } catch {
-          // safe-fail
+          // fallback trực tiếp nếu outbox fail
+          void this.emailService.sendListingExpiredToLandlord(item, item.owner.phone);
         }
       }
     }
@@ -119,4 +167,3 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
     return count;
   }
 }
-

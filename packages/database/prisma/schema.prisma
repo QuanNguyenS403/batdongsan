@@ -397,3 +397,31 @@ model AuditEvent {
   @@map("audit_events")
 }
 
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+/// Transactional Outbox Pattern — cô lập gửi email, Google Sheets khỏi luồng HTTP chính, hỗ trợ retry/backoff/DLQ.
+model OutboxEvent {
+  id            BigInt        @id @default(autoincrement())
+  aggregateType String        @map("aggregate_type") @db.VarChar(100) // LISTING | LEAD | MEMBERSHIP | REPORT
+  aggregateId   String        @map("aggregate_id") @db.VarChar(100)
+  eventType     String        @map("event_type") @db.VarChar(100)     // LISTING_SUBMITTED | LISTING_APPROVED | LEAD_CREATED | etc.
+  payload       Json
+  status        OutboxStatus  @default(PENDING)
+  retryCount    Int           @default(0) @map("retry_count")
+  maxRetries    Int           @default(5) @map("max_retries")
+  nextRetryAt   DateTime      @default(now()) @map("next_retry_at")
+  errorMessage  String?       @map("error_message") @db.Text
+  processedAt   DateTime?     @map("processed_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@index([status, nextRetryAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}
+

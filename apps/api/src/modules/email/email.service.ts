@@ -7,6 +7,27 @@ export interface EmailRecipient {
   name?: string;
 }
 
+/**
+ * Hàm escape các ký tự đặc biệt trong chuỗi để triệt tiêu lỗi HTML/XSS injection trong email clients (BE-11).
+ */
+export function escapeHtml(unsafe: string | null | undefined): string {
+  if (!unsafe) return '';
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Kiểm tra địa chỉ email có đúng định dạng chuẩn RFC hay không.
+ */
+export function isValidEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -66,6 +87,12 @@ Content: ${textSummary}
       return true;
     }
 
+    // Nếu là môi trường SMTP thật nhưng địa chỉ nhận không hợp lệ, không cố gửi để tránh blacklisting domain
+    if (!isValidEmail(to)) {
+      this.logger.warn(`[EmailService] Bỏ qua gửi email thật: Địa chỉ "${to}" không hợp lệ.`);
+      return false;
+    }
+
     try {
       await this.transporter.sendMail({
         from,
@@ -86,16 +113,24 @@ Content: ${textSummary}
    * (a) Thông báo cho Chủ trọ/Môi giới: Tin đăng đã được tiếp nhận và đang chờ duyệt
    */
   async sendListingSubmittedToLandlord(listing: { id: bigint | string; title: string; price: bigint | number }, landlordPhone: string, landlordEmail?: string) {
-    const targetEmail = landlordEmail || `chutro-${landlordPhone}@batdongsan.vn`;
+    if (!isValidEmail(landlordEmail)) {
+      if (!this.isMock) {
+        this.logger.log(`[EmailService] Chủ tin ${landlordPhone} chưa cấu hình email thật. Bỏ qua gửi email thông báo tiếp nhận.`);
+        return false;
+      }
+    }
+    const targetEmail = isValidEmail(landlordEmail) ? landlordEmail! : `landlord-${landlordPhone}@mock.batdongsan.local`;
+    const safeTitle = escapeHtml(listing.title);
+    const safePhone = escapeHtml(landlordPhone);
     const subject = `[BĐS Cho Thuê] Xác nhận tiếp nhận tin đăng: ${listing.title}`;
     const summary = `Xin chào! Tin đăng "${listing.title}" (Mã BĐS: #${listing.id}) của bạn đã được tiếp nhận thành công và đang trong hàng đợi kiểm duyệt. Ban quản trị sẽ xét duyệt trong vòng 24h.`;
     const html = `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #0d9488;">BĐS Cho Thuê — Xác nhận tiếp nhận tin</h2>
-        <p>Xin chào quý chủ nhà / môi giới <strong>${landlordPhone}</strong>,</p>
+        <p>Xin chào quý chủ nhà / môi giới <strong>${safePhone}</strong>,</p>
         <p>Tin cho thuê của bạn đã được gửi thành công lên hệ thống:</p>
         <blockquote style="background: #f0fdfa; padding: 12px 16px; border-left: 4px solid #0d9488; margin: 16px 0;">
-          <strong>Tiêu đề:</strong> ${listing.title}<br/>
+          <strong>Tiêu đề:</strong> ${safeTitle}<br/>
           <strong>Mã tin:</strong> #${listing.id}<br/>
           <strong>Trạng thái:</strong> Đang chờ duyệt (Pending)
         </blockquote>
@@ -112,16 +147,24 @@ Content: ${textSummary}
    * (b1) Thông báo cho Chủ trọ/Môi giới: Tin đăng ĐÃ ĐƯỢC DUYỆT lên sàn
    */
   async sendListingApprovedToLandlord(listing: { id: bigint | string; title: string; slug: string }, landlordPhone: string, landlordEmail?: string) {
-    const targetEmail = landlordEmail || `chutro-${landlordPhone}@batdongsan.vn`;
+    if (!isValidEmail(landlordEmail)) {
+      if (!this.isMock) {
+        this.logger.log(`[EmailService] Chủ tin ${landlordPhone} chưa cấu hình email thật. Bỏ qua gửi email phê duyệt.`);
+        return false;
+      }
+    }
+    const targetEmail = isValidEmail(landlordEmail) ? landlordEmail! : `landlord-${landlordPhone}@mock.batdongsan.local`;
+    const safeTitle = escapeHtml(listing.title);
+    const safePhone = escapeHtml(landlordPhone);
     const subject = `[BĐS Cho Thuê] Tin đăng #${listing.id} đã được PHÊ DUYỆT`;
     const summary = `Chúc mừng bạn! Tin đăng "${listing.title}" (Mã BĐS: #${listing.id}) đã được phê duyệt và đang hiển thị công khai tới hàng nghìn sinh viên, người thuê.`;
     const html = `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #0d9488;">🎉 Tin đăng của bạn đã được phê duyệt!</h2>
-        <p>Xin chào <strong>${landlordPhone}</strong>,</p>
+        <p>Xin chào <strong>${safePhone}</strong>,</p>
         <p>Tin cho thuê của bạn đã chính thức được hiển thị công khai:</p>
         <div style="background: #ecfdf5; padding: 16px; border-radius: 8px; border: 1px solid #a7f3d0; margin: 16px 0;">
-          <p style="margin: 0; font-weight: bold; color: #065f46;">${listing.title}</p>
+          <p style="margin: 0; font-weight: bold; color: #065f46;">${safeTitle}</p>
           <p style="margin: 4px 0 0; font-size: 13px; color: #047857;">Mã tin: #${listing.id}</p>
         </div>
         <p>Khách thuê quan tâm có thể tìm kiếm và liên hệ trực tiếp với bạn qua SĐT/Zalo.</p>
@@ -137,16 +180,25 @@ Content: ${textSummary}
    * (b2) Thông báo cho Chủ trọ/Môi giới: Tin đăng BỊ TỪ CHỐI kèm lý do
    */
   async sendListingRejectedToLandlord(listing: { id: bigint | string; title: string }, landlordPhone: string, reason: string, landlordEmail?: string) {
-    const targetEmail = landlordEmail || `chutro-${landlordPhone}@batdongsan.vn`;
+    if (!isValidEmail(landlordEmail)) {
+      if (!this.isMock) {
+        this.logger.log(`[EmailService] Chủ tin ${landlordPhone} chưa cấu hình email thật. Bỏ qua gửi email từ chối.`);
+        return false;
+      }
+    }
+    const targetEmail = isValidEmail(landlordEmail) ? landlordEmail! : `landlord-${landlordPhone}@mock.batdongsan.local`;
+    const safeTitle = escapeHtml(listing.title);
+    const safePhone = escapeHtml(landlordPhone);
+    const safeReason = escapeHtml(reason);
     const subject = `[BĐS Cho Thuê] Thông báo từ chối tin đăng #${listing.id}`;
     const summary = `Tin đăng "${listing.title}" (Mã BĐS: #${listing.id}) chưa đáp ứng tiêu chuẩn sàn. Lý do: "${reason}". Vui lòng cập nhật lại thông tin.`;
     const html = `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #dc2626;">Thông báo về tin đăng chưa được duyệt</h2>
-        <p>Xin chào <strong>${landlordPhone}</strong>,</p>
-        <p>Rất tiếc, tin cho thuê <strong>"${listing.title}"</strong> (Mã: #${listing.id}) chưa thể xuất bản vì lý do sau:</p>
+        <p>Xin chào <strong>${safePhone}</strong>,</p>
+        <p>Rất tiếc, tin cho thuê <strong>"${safeTitle}"</strong> (Mã: #${listing.id}) chưa thể xuất bản vì lý do sau:</p>
         <div style="background: #fef2f2; padding: 14px 18px; border-left: 4px solid #ef4444; border-radius: 4px; margin: 16px 0; color: #991b1b;">
-          <strong>Lý do từ chối:</strong> ${reason}
+          <strong>Lý do từ chối:</strong> ${safeReason}
         </div>
         <p>Bạn có thể vào trang Quản lý tin để chỉnh sửa lại thông tin và gửi yêu cầu duyệt lại.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
@@ -162,16 +214,19 @@ Content: ${textSummary}
    */
   async sendNewListingToAdmin(listing: { id: bigint | string; title: string; propertyType: string; price: bigint | number; ownerPhone?: string }) {
     const adminEmail = this.config?.get<string>('ADMIN_NOTIFICATION_EMAIL') ?? process.env.ADMIN_NOTIFICATION_EMAIL ?? 'admin@batdongsan.vn';
+    const safeTitle = escapeHtml(listing.title);
+    const safePhone = escapeHtml(listing.ownerPhone ?? 'Chưa rõ');
+    const safeType = escapeHtml(listing.propertyType);
     const subject = `[ADMIN CẦN DUYỆT] Tin cho thuê mới #${listing.id}: ${listing.title}`;
     const summary = `Có tin cho thuê mới cần duyệt từ SĐT ${listing.ownerPhone ?? 'Chưa rõ'}. Tiêu đề: "${listing.title}". Giá: ${Number(listing.price).toLocaleString('vi-VN')} đ/tháng.`;
     const html = `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #0d9488;">⚡ Cần duyệt: Tin đăng mới #${listing.id}</h2>
-        <p>Hệ thống vừa nhận được 1 tin cho thuê mới từ người dùng <strong>${listing.ownerPhone ?? 'Chưa rõ'}</strong>:</p>
+        <p>Hệ thống vừa nhận được 1 tin cho thuê mới từ người dùng <strong>${safePhone}</strong>:</p>
         <ul>
           <li><strong>Mã tin:</strong> #${listing.id}</li>
-          <li><strong>Tiêu đề:</strong> ${listing.title}</li>
-          <li><strong>Loại hình:</strong> ${listing.propertyType}</li>
+          <li><strong>Tiêu đề:</strong> ${safeTitle}</li>
+          <li><strong>Loại hình:</strong> ${safeType}</li>
           <li><strong>Giá thuê:</strong> ${Number(listing.price).toLocaleString('vi-VN')} đ/tháng</li>
         </ul>
         <p>Vui lòng đăng nhập vào trang Quản trị để kiểm tra nội dung và duyệt tin.</p>
@@ -186,17 +241,21 @@ Content: ${textSummary}
    */
   async sendNewReportToAdmin(report: { id: bigint | string; reason: string; note?: string | null; listingTitle?: string; listingId?: bigint | string; reporterPhone?: string }) {
     const adminEmail = this.config?.get<string>('ADMIN_NOTIFICATION_EMAIL') ?? process.env.ADMIN_NOTIFICATION_EMAIL ?? 'admin@batdongsan.vn';
+    const safeReason = escapeHtml(report.reason);
+    const safeTitle = escapeHtml(report.listingTitle ?? 'Chưa rõ');
+    const safePhone = escapeHtml(report.reporterPhone ?? 'Khách vãng lai');
+    const safeNote = escapeHtml(report.note ?? 'Không có');
     const subject = `[CẢNH BÁO VI PHẠM] Báo cáo mới cho tin #${report.listingId ?? ''}: ${report.reason}`;
     const summary = `Có báo cáo vi phạm mới từ SĐT ${report.reporterPhone ?? 'Ẩn danh'}. Lý do: ${report.reason}. Tin: "${report.listingTitle ?? ''}". Ghi chú: ${report.note ?? 'Không có'}.`;
     const html = `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #b91c1c;">⚠️ Cảnh báo: Có báo cáo vi phạm mới</h2>
-        <p>Người dùng <strong>${report.reporterPhone ?? 'Khách vãng lai'}</strong> vừa gửi báo cáo vi phạm:</p>
+        <p>Người dùng <strong>${safePhone}</strong> vừa gửi báo cáo vi phạm:</p>
         <div style="background: #fff1f2; border: 1px solid #fecdd3; padding: 16px; border-radius: 8px;">
           <p><strong>Mã báo cáo:</strong> #${report.id}</p>
-          <p><strong>Tin bị báo cáo:</strong> #${report.listingId} — ${report.listingTitle ?? 'Chưa rõ'}</p>
-          <p><strong>Lý do vi phạm:</strong> <span style="color: #e11d48; font-weight: bold;">${report.reason}</span></p>
-          <p><strong>Ghi chú chi tiết:</strong> ${report.note || 'Không có ghi chú'}</p>
+          <p><strong>Tin bị báo cáo:</strong> #${report.listingId} — ${safeTitle}</p>
+          <p><strong>Lý do vi phạm:</strong> <span style="color: #e11d48; font-weight: bold;">${safeReason}</span></p>
+          <p><strong>Ghi chú chi tiết:</strong> ${safeNote}</p>
         </div>
         <p>Vui lòng xử lý báo cáo tại trang Quản trị Báo cáo vi phạm.</p>
       </div>
@@ -209,14 +268,22 @@ Content: ${textSummary}
    * (e) Thông báo cho Chủ trọ/Môi giới: Tin đăng đã hết hạn hiển thị (30 ngày)
    */
   async sendListingExpiredToLandlord(listing: { id: bigint | string; title: string }, landlordPhone: string, landlordEmail?: string) {
-    const targetEmail = landlordEmail || `chutro-${landlordPhone}@batdongsan.vn`;
+    if (!isValidEmail(landlordEmail)) {
+      if (!this.isMock) {
+        this.logger.log(`[EmailService] Chủ tin ${landlordPhone} chưa cấu hình email thật. Bỏ qua gửi email hết hạn.`);
+        return false;
+      }
+    }
+    const targetEmail = isValidEmail(landlordEmail) ? landlordEmail! : `landlord-${landlordPhone}@mock.batdongsan.local`;
+    const safeTitle = escapeHtml(listing.title);
+    const safePhone = escapeHtml(landlordPhone);
     const subject = `[BĐS Cho Thuê] Tin đăng #${listing.id} đã hết hạn hiển thị`;
     const summary = `Tin đăng "${listing.title}" (Mã BĐS: #${listing.id}) của bạn đã hết hạn 30 ngày hiển thị. Nếu phòng vẫn còn trống hoặc tiếp tục cho thuê, bạn có thể gia hạn bất kỳ lúc nào tại mục Quản lý tin.`;
     const html = `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #475569;">⏰ Tin đăng của bạn đã hết hạn hiển thị</h2>
-        <p>Xin chào <strong>${landlordPhone}</strong>,</p>
-        <p>Tin cho thuê <strong>"${listing.title}"</strong> (Mã: #${listing.id}) của bạn đã hoàn thành chu kỳ hiển thị 30 ngày.</p>
+        <p>Xin chào <strong>${safePhone}</strong>,</p>
+        <p>Tin cho thuê <strong>"${safeTitle}"</strong> (Mã: #${listing.id}) của bạn đã hoàn thành chu kỳ hiển thị 30 ngày.</p>
         <p>Nếu phòng vẫn còn trống và bạn muốn tiếp tục tìm khách thuê, vui lòng đăng nhập vào trang Quản lý tin để gia hạn lại tin đăng.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
         <p style="font-size: 12px; color: #888;">BĐS Cho Thuê — Nền tảng kết nối trực tiếp chủ nhà và người thuê.</p>
@@ -239,6 +306,10 @@ Content: ${textSummary}
   }) {
     const adminEmail = this.config?.get<string>('ADMIN_NOTIFICATION_EMAIL') ?? process.env.ADMIN_NOTIFICATION_EMAIL ?? 'admin@batdongsan.vn';
     const formattedPrice = new Intl.NumberFormat('vi-VN').format(Number(request.price)) + ' đ';
+    const safePlan = escapeHtml(request.planName);
+    const safeUser = escapeHtml(request.userName || request.userPhone);
+    const safePhone = escapeHtml(request.userPhone);
+    const safeNote = escapeHtml(request.paymentNote || 'Không có');
     const subject = `[BĐS Quản trị] Yêu cầu nâng cấp gói: ${request.planName} từ ${request.userPhone}`;
     const summary = `Người dùng ${request.userName || request.userPhone} (SĐT: ${request.userPhone}) vừa gửi yêu cầu nâng cấp gói "${request.planName}" (Trị giá: ${formattedPrice}). Ghi chú: ${request.paymentNote || 'Không có'}. Vui lòng kiểm tra sao kê ngân hàng và bấm duyệt trên Admin portal.`;
     const html = `
@@ -246,10 +317,10 @@ Content: ${textSummary}
         <h2 style="color: #0d9488;">💳 Yêu cầu nâng cấp gói thành viên mới (#${request.id})</h2>
         <p>Hệ thống vừa nhận được yêu cầu đăng ký/nâng cấp gói từ người dùng:</p>
         <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 16px 0;">
-          <p><strong>Người dùng:</strong> ${request.userName || 'Chưa cập nhật tên'} (SĐT: <strong>${request.userPhone}</strong>)</p>
-          <p><strong>Gói đăng ký:</strong> <span style="color: #0d9488; font-weight: bold;">${request.planName}</span></p>
+          <p><strong>Người dùng:</strong> ${safeUser} (SĐT: <strong>${safePhone}</strong>)</p>
+          <p><strong>Gói đăng ký:</strong> <span style="color: #0d9488; font-weight: bold;">${safePlan}</span></p>
           <p><strong>Số tiền cần thu:</strong> <strong style="color: #e11d48; font-size: 16px;">${formattedPrice}</strong></p>
-          <p><strong>Ghi chú thanh toán:</strong> ${request.paymentNote || 'Không có'}</p>
+          <p><strong>Ghi chú thanh toán:</strong> ${safeNote}</p>
         </div>
         <p>Vui lòng kiểm tra tài khoản ngân hàng và kích hoạt gói tại trang <strong>Quản trị &gt; Duyệt gói thành viên</strong>.</p>
       </div>
@@ -268,17 +339,25 @@ Content: ${textSummary}
     maxActiveListings: number;
     expiresAt?: Date | null;
   }, userEmail?: string) {
-    const targetEmail = userEmail || `thanhvien-${membership.userPhone}@batdongsan.vn`;
+    if (!isValidEmail(userEmail)) {
+      if (!this.isMock) {
+        this.logger.log(`[EmailService] Người dùng ${membership.userPhone} chưa cấu hình email thật. Bỏ qua gửi email kích hoạt gói.`);
+        return false;
+      }
+    }
+    const targetEmail = isValidEmail(userEmail) ? userEmail! : `member-${membership.userPhone}@mock.batdongsan.local`;
     const expiryStr = membership.expiresAt ? new Intl.DateTimeFormat('vi-VN').format(membership.expiresAt) : '30 ngày';
+    const safePlan = escapeHtml(membership.planName);
+    const safeUser = escapeHtml(membership.userName || membership.userPhone);
     const subject = `[BĐS Cho Thuê] Gói ${membership.planName} của bạn đã được kích hoạt thành công!`;
     const summary = `Chúc mừng bạn! Gói thành viên "${membership.planName}" đã được kích hoạt. Hạn mức đăng tin mới: tối đa ${membership.maxActiveListings} tin hiển thị đồng thời. Hạn dùng đến ngày ${expiryStr}.`;
     const html = `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #0d9488;">🎉 Kích hoạt gói thành viên thành công!</h2>
-        <p>Xin chào <strong>${membership.userName || membership.userPhone}</strong>,</p>
+        <p>Xin chào <strong>${safeUser}</strong>,</p>
         <p>Ban quản trị đã xác nhận thanh toán và chính thức kích hoạt gói thành viên cho tài khoản của bạn:</p>
         <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border: 1px solid #bbf7d0; margin: 16px 0;">
-          <p><strong>Gói thành viên:</strong> <span style="color: #15803d; font-weight: bold;">${membership.planName}</span></p>
+          <p><strong>Gói thành viên:</strong> <span style="color: #15803d; font-weight: bold;">${safePlan}</span></p>
           <p><strong>Hạn mức hiển thị đồng thời:</strong> <strong>${membership.maxActiveListings} tin đăng</strong></p>
           <p><strong>Thời hạn sử dụng:</strong> Đến hết ngày <strong>${expiryStr}</strong></p>
         </div>
@@ -291,4 +370,3 @@ Content: ${textSummary}
     return this.sendEmail(targetEmail, subject, html, summary);
   }
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ContactBrokerModalProps {
   isOpen: boolean;
@@ -122,13 +122,34 @@ export function ContactBrokerModal({
     onClose();
   }
 
+  // Hỗ trợ phím Escape để đóng modal trợ năng (FE-11)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        handleCloseModal();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="contact-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleCloseModal();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-in"
+    >
       <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div>
-            <h2 className="text-lg font-medium text-slate-800">Liên hệ môi giới / Chủ trọ</h2>
+            <h2 id="contact-modal-title" className="text-lg font-medium text-slate-800">
+              Liên hệ môi giới / Chủ trọ
+            </h2>
             {listingTitle && (
               <p className="text-xs text-slate-500 truncate max-w-sm mt-0.5">{listingTitle}</p>
             )}
@@ -136,6 +157,7 @@ export function ContactBrokerModal({
           <button
             type="button"
             onClick={handleCloseModal}
+            aria-label="Đóng hộp thoại liên hệ"
             className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors text-lg"
           >
             ✕

@@ -35,7 +35,7 @@ export default function LienHePage() {
               </h2>
               <div className="space-y-3 text-sm">
                 <div>
-                  <p className="text-xs text-text-muted">Hotline / Zalo hỗ trợ 24/7:</p>
+                  <p className="text-xs text-text-muted">Hotline / Zalo hỗ trợ (08:00 - 21:30):</p>
                   <a href="tel:0981753082" className="text-base font-bold text-brand hover:underline">
                     0981 753 082
                   </a>
