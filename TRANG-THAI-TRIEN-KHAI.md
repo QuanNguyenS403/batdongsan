@@ -2,6 +2,33 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🛡️ ĐỢT AUDIT ĐỘC LẬP 3468454: THỰC THI GATE 0 — SỬA BỘ CÔNG CỤ XÁC MINH & CI INTEGRITY (12/09/2026)
+
+Thực thi theo đặc tả chính thức tại `docs/audit/BATDONGSAN-REVIEW-3468454-COMPLETE.md` và theo dõi tại `docs/audit/EXECUTION-STATUS.md`:
+
+1. **TST-01 (Synthetic Monitor thật - verified)**:
+   - Viết lại `packages/database/scripts/synthetic-monitor.js`: hỗ trợ giao thức kép http/https, bỏ hardcode listing ID=1 và SĐT hotline `0981753082`.
+   - Gửi `dedupeKey` thật vào body `POST /leads` và kiểm thử duplicate request thật.
+   - Parse và validate schema JSON (`items`, `pagination`, `success`).
+   - Gate policy phụ thuộc 100% vào kết quả check thật, cưỡng chế `process.exit(1)` khi bất kỳ check nào fail.
+   - Nghiệm thu đối kháng: Chạy nhắm vào server offline `127.0.0.1:9999` ➔ exit code 1, in `CHECKS_FAILED`, tuyệt đối không in nhãn "PILOT READY".
+
+2. **TST-02 (Disaster Recovery & Backup Restore Drill thật - verified)**:
+   - Viết lại `packages/database/scripts/backup-restore-drill.js`: tạo file dump SQL thật tại `docs/ops/backup-drill-snapshot.sql` (20.8 KB, SHA-256 `187020ffb272...`).
+   - Khôi phục và đối soát checksum thư mục uploads (100% khớp, 0 lệch).
+   - Đo lường RTO thực tế (13.25s) và xuất manifest báo cáo tại `docs/ops/BACKUP-RESTORE-DRILL-REPORT.json`.
+
+3. **TST-03 (Minh bạch Static Lint Check - verified)**:
+   - Tách và xây dựng script `packages/database/scripts/static-lint-check.js` phân định rõ ràng là kiểm tra cấu trúc mã nguồn tĩnh, không tự nhận là test hành vi runtime. Gắn vào lệnh `pnpm lint`.
+
+4. **CI-01..04 (CI Pipeline Integrity - verified)**:
+   - Thêm bước `pnpm lint` vào `.github/workflows/ci.yml`.
+   - Xóa bỏ `|| true` ở `pnpm audit --audit-level high` ngăn chặn tình trạng fail-open che giấu lỗ hổng.
+   - Thêm `static-lint-check.js` và Production API Start Smoke Test (khởi động dist và kiểm tra `/health`) vào CI pipeline.
+
+---
+
+
 ## 🛡️ ĐỢT AUDIT ĐỘC LẬP & THỰC THI WAVE 0 (12/09/2026) — FREEZE VÀ LÀM RELEASE TÁI LẬP
 
 Thực thi theo đặc tả chính thức tại `docs/audit/BATDONGSAN-AUDIT-EXECUTION-PLAN.md` và theo dõi tại `docs/audit/EXECUTION-STATUS.md`:

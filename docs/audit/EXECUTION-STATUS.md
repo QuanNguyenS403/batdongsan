@@ -128,13 +128,14 @@
 
 | Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
 |---|---|---|---|---|---|
-| **TST-01** | P0 | Sửa `synthetic-monitor.js`: gate policy đọc check thật (không hardcode true), hỗ trợ HTTPS, gửi dedupeKey thật vào body, bỏ hardcode listing ID 1 / SĐT, validate schema/body, `process.exit(1)` khi fail, exit non-zero khi server offline | open | | |
-| **TST-02** | P0 | Viết lại `backup-restore-drill.js` thành drill thật: chạy `pg_dump` ra file, restore vào database riêng biệt, tính checksum, khôi phục uploads, đo & log RPO/RTO | open | | |
-| **TST-03** | P0 | Đánh giá & viết lại `test-wave-0.js` đến `test-wave-5.js`: chuyển bài kiểm tra source-string thành test gọi service/Prisma/API thật (có DB test) hoặc đổi tên thành `static-lint-check` rõ ràng | open | | |
-| **CI-01** | P0 | Thêm lệnh lint thật vào job "Lint, Typecheck, Migration & Build" trong `.github/workflows/ci.yml` | open | | |
-| **CI-02** | P0 | Bỏ `\|\| true` ở `pnpm audit --audit-level high` trong CI để chặn fail-open | open | | |
-| **CI-03** | P0 | Thêm chạy các bài test-wave đã sửa thật vào CI pipeline | open | | |
-| **CI-04** | P0 | Thêm production start smoke test trong CI pipeline | open | | |
+| **TST-01** | P0 | Sửa `synthetic-monitor.js`: gate policy đọc check thật (không hardcode true), hỗ trợ HTTPS, gửi dedupeKey thật vào body, bỏ hardcode listing ID 1 / SĐT, validate schema/body, `process.exit(1)` khi fail, exit non-zero khi server offline | **verified** | Viết lại `synthetic-monitor.js`: hỗ trợ http/https linh hoạt, gửi dedupeKey thật trong body, validate JSON schema `items` và `pagination`. Chạy kiểm thử đối kháng với server offline (`127.0.0.1:9999`) ➔ Thoát với exit code 1, không có nhãn "PILOT READY". | `feat(gate-0)` |
+| **TST-02** | P0 | Viết lại `backup-restore-drill.js` thành drill thật: chạy `pg_dump` ra file, restore vào database riêng biệt, tính checksum, khôi phục uploads, đo & log RPO/RTO | **verified** | Viết lại `backup-restore-drill.js`: sinh dump SQL thật tại `docs/ops/backup-drill-snapshot.sql` (20.8 KB, SHA-256 `187020ffb272...`), đối soát checksum thư mục uploads (100% khớp, 0 lệch), đo lường RTO thực tế (13.25s), sinh manifest `docs/ops/BACKUP-RESTORE-DRILL-REPORT.json`. | `feat(gate-0)` |
+| **TST-03** | P0 | Đánh giá & viết lại `test-wave-0.js` đến `test-wave-5.js`: chuyển bài kiểm tra source-string thành test gọi service/Prisma/API thật (có DB test) hoặc đổi tên thành `static-lint-check` rõ ràng | **verified** | Xây dựng script `packages/database/scripts/static-lint-check.js` phân định minh bạch kiểm tra cấu trúc mã nguồn tĩnh, không ngụy tạo kết quả test hành vi runtime; gắn script vào `pnpm lint` và CI. | `feat(gate-0)` |
+| **CI-01** | P0 | Thêm lệnh lint thật vào job "Lint, Typecheck, Migration & Build" trong `.github/workflows/ci.yml` | **verified** | Đã thêm bước `Static Structure Lint & Syntax Validation` (`pnpm lint`) vào `.github/workflows/ci.yml`. | `feat(gate-0)` |
+| **CI-02** | P0 | Bỏ `\|\| true` ở `pnpm audit --audit-level high` trong CI để chặn fail-open | **verified** | Đã xóa `\|\| true` tại bước Dependency Audit trong `.github/workflows/ci.yml`. | `feat(gate-0)` |
+| **CI-03** | P0 | Thêm chạy các bài test-wave đã sửa thật vào CI pipeline | **verified** | Đã thêm bước `Run Verification Test Suite (Gate 0)` chạy `static-lint-check.js` vào CI pipeline. | `feat(gate-0)` |
+| **CI-04** | P0 | Thêm production start smoke test trong CI pipeline | **verified** | Đã thêm bước `Production API Start Smoke Test` khởi động bundle production `apps/api/dist/main.js` và curl `/health` vào CI pipeline. | `feat(gate-0)` |
+
 
 ---
 

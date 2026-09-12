@@ -76,10 +76,26 @@ jobs:
       - name: Run Monorepo Build (Database -> API -> Web) (OPS-01)
         run: pnpm build
 
+      - name: Static Structure Lint & Syntax Validation
+        run: pnpm lint
+
       - name: Monorepo Typecheck
         run: |
           pnpm --filter @batdongsan/api exec tsc --noEmit
           pnpm --filter @batdongsan/web exec tsc --noEmit
 
+      - name: Run Verification Test Suite (Gate 0)
+        run: |
+          node packages/database/scripts/static-lint-check.js
+
+      - name: Production API Start Smoke Test
+        run: |
+          node apps/api/dist/main.js &
+          API_PID=$!
+          sleep 5
+          curl -f http://localhost:4000/health || (kill $API_PID 2>/dev/null; exit 1)
+          kill $API_PID 2>/dev/null || true
+
       - name: Dependency Audit (High/Critical)
-        run: pnpm audit --audit-level high || true
+        run: pnpm audit --audit-level high
+

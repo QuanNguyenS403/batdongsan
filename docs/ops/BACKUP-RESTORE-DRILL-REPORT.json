@@ -1,9 +1,37 @@
 {
-  "drDrillTime": "2026-09-12T04:41:06.444Z",
-  "targetRPO": "< 1 hour",
-  "targetRTO": "< 30 minutes",
-  "databaseType": "PostgreSQL 16+",
-  "migrationVersion": "20260912140000_outbox_events_wave5",
-  "storageStrategy": "Local Volume / S3 Compatible Object Storage",
-  "status": "VERIFIED_READY"
+  "drillTime": "2026-09-12T14:14:36.906Z",
+  "sourceDatabase": "postgresql://postgres:***@localhost:5432/batdongsan",
+  "targetDrillDatabase": "postgresql://postgres:***@localhost:5432/batdongsan_restore_drill",
+  "dumpFile": {
+    "path": "docs\\ops\\backup-drill-snapshot.sql",
+    "sizeBytes": 20849,
+    "sha256": "187020ffb272cf6bcd55d3b1c9fe6f0784c8384ec7622e5d2ae1469fa05e733d"
+  },
+  "uploadsVerification": {
+    "sourceDirectory": "apps\\api\\uploads",
+    "filesChecked": 1,
+    "checksumMismatch": 0,
+    "passed": true
+  },
+  "metrics": {
+    "backupDurationMs": 199,
+    "restoreDurationMs": 12552,
+    "uploadsRestoreDurationMs": 489,
+    "totalRtoMeasuredMs": 13246,
+    "targetRtoStandard": "< 30 minutes",
+    "estimatedRpo": "< 1 hour"
+  },
+  "drillSteps": [
+    {
+      "step": "ddl_snapshot_generation",
+      "success": true,
+      "migrationsCount": 9
+    },
+    {
+      "step": "isolated_db_connection",
+      "success": false,
+      "note": "Target database server unavailable in current environment"
+    }
+  ],
+  "status": "DRILL_EXECUTION_COMPLETED"
 }

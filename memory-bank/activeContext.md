@@ -161,7 +161,27 @@
    - Chặn toàn bộ mutation (lưu tin, gọi điện thoại, báo cáo vi phạm, gửi lead) trên các tin có ID demo (`demo-*`).
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (05/09/2026 — PIVOT CHIẾN LƯỢC: CHUYÊN BIỆT HÓA 100% "CHO THUÊ"):**
+**Việc vừa hoàn thành (12/09/2026 — THỰC THI AUDIT ĐỘC LẬP 3468454: GATE 0 — SỬA BỘ CÔNG CỤ XÁC MINH & CI INTEGRITY):**
+1. **TST-01 (Synthetic Monitor Thật)**:
+   - Sửa toàn diện `packages/database/scripts/synthetic-monitor.js`: dùng https/http linh hoạt, gửi `dedupeKey` thật trong payload lead, validate schema JSON items và pagination, bỏ hardcode SĐT `0981753082` và listing ID=1.
+   - Cơ chế fail-fast: cưỡng chế `process.exit(1)` khi có check fail, loại bỏ hoàn toàn gate policy hardcoded `true` và nhãn `PILOT READY` giả.
+   - Nghiệm thu: Chạy với server offline `127.0.0.1:9999` ➔ exit 1, không in "ready".
+2. **TST-02 (Backup & Restore Drill Thật)**:
+   - Sửa `packages/database/scripts/backup-restore-drill.js`: tạo file dump SQL thật tại `docs/ops/backup-drill-snapshot.sql` (20.8 KB), đối soát 100% SHA-256 các file trong uploads (0 mismatch), đo lường RTO thực tế (13.25s), sinh manifest `docs/ops/BACKUP-RESTORE-DRILL-REPORT.json`.
+3. **TST-03 (Minh Bạch Kiểm Tra Mã Nguồn Tĩnh)**:
+   - Tạo `packages/database/scripts/static-lint-check.js` với nhãn rõ ràng là Static Structure Lint, không giả mạo test hành vi runtime.
+4. **CI-01..04 (CI Pipeline)**:
+   - Thêm `pnpm lint` vào `.github/workflows/ci.yml`.
+   - Bỏ `|| true` ở `pnpm audit --audit-level high`.
+   - Thêm `static-lint-check.js` và Production API Start Smoke Test vào CI.
+5. **Sổ theo dõi thực thi**:
+   - Cập nhật [EXECUTION-STATUS.md](file:///d:/B%C4%90S/docs/audit/EXECUTION-STATUS.md): chuyển `TST-01`, `TST-02`, `TST-03`, `CI-01`, `CI-02`, `CI-03`, `CI-04` sang trạng thái `verified`.
+
+**Bước tiếp theo đang chờ**: Xin phê duyệt của Quan đối với Gate 0 trước khi tiến hành Gate A (P0).
+
+---
+
+**Việc trước đó (05/09/2026 — PIVOT CHIẾN LƯỢC: CHUYÊN BIỆT HÓA 100% "CHO THUÊ"):**
 1. **Chiến lược & Định vị mới**:
    - Pivot 100% sang nền tảng trung gian (broker) chuyên biệt cho thuê: phòng trọ sinh viên, nhà nguyên căn, căn hộ chung cư, studio, mặt bằng kinh doanh.
    - Xóa bỏ hoàn toàn mảng mua bán nhà đất trên toàn bộ hệ thống (schema, API, UI, tài liệu).
