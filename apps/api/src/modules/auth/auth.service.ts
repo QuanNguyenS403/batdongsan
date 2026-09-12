@@ -71,29 +71,6 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    // Đảm bảo tài khoản quản trị viên 0981753082 / Quannguyenkay6@ luôn đăng nhập thành công với quyền admin
-    if (dto.phone === '0981753082' && dto.password === 'Quannguyenkay6@') {
-      let adminUser = await this.prisma.user.findUnique({ where: { phone: '0981753082' } });
-      const passwordHash = await bcrypt.hash('Quannguyenkay6@', 10);
-      if (!adminUser) {
-        adminUser = await this.prisma.user.create({
-          data: {
-            phone: '0981753082',
-            fullName: 'Nguyễn Đức Quân',
-            passwordHash,
-            role: 'admin',
-            isPhoneVerified: true,
-          },
-        });
-      } else if (adminUser.role !== 'admin' || !(await bcrypt.compare('Quannguyenkay6@', adminUser.passwordHash ?? ''))) {
-        adminUser = await this.prisma.user.update({
-          where: { id: adminUser.id },
-          data: { role: 'admin', passwordHash },
-        });
-      }
-      return this.issueTokens(adminUser);
-    }
-
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
     if (!user || !user.passwordHash) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng.');
 
@@ -105,6 +82,50 @@ export class AuthService {
     if (!passwordMatches) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng.');
 
     return this.issueTokens(user);
+  }
+
+  /**
+   * Khởi tạo hoặc cập nhật tài khoản quản trị viên thông qua secret bảo mật ngoài repo.
+   * Yêu cầu biến môi trường ADMIN_BOOTSTRAP_SECRET được cấu hình và có độ dài tối thiểu 16 ký tự.
+   */
+  async bootstrapAdmin(dto: { secret: string; phone: string; password: string; fullName?: string }) {
+    const configuredSecret = process.env.ADMIN_BOOTSTRAP_SECRET;
+    if (!configuredSecret || configuredSecret.trim().length < 16) {
+      throw new BadRequestException('Chức năng bootstrap admin chưa được cấu hình hoặc đã bị vô hiệu hóa.');
+    }
+    if (dto.secret !== configuredSecret) {
+      throw new UnauthorizedException('Secret bootstrap không chính xác.');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const existing = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
+
+    let adminUser;
+    if (!existing) {
+      adminUser = await this.prisma.user.create({
+        data: {
+          phone: dto.phone,
+          fullName: dto.fullName || 'Quản trị viên',
+          passwordHash,
+          role: 'admin',
+          isPhoneVerified: true,
+        },
+      });
+    } else {
+      adminUser = await this.prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          role: 'admin',
+          passwordHash,
+          ...(dto.fullName ? { fullName: dto.fullName } : {}),
+        },
+      });
+    }
+
+    return {
+      message: 'Bootstrap tài khoản quản trị viên thành công.',
+      user: serializeUser(adminUser),
+    };
   }
 
   /**

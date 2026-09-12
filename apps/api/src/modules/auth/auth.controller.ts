@@ -8,6 +8,7 @@ import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CheckPhoneDto } from './dto/check-phone.dto';
+import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -15,6 +16,13 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 3_600_000 } }) // bảo vệ chống brute force bootstrap secret
+  @Post('bootstrap-admin')
+  bootstrapAdmin(@Body() dto: BootstrapAdminDto) {
+    return this.authService.bootstrapAdmin(dto);
+  }
 
   @Public()
   @Get('check-phone')

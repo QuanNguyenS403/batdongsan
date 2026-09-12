@@ -56,18 +56,20 @@ async function main() {
   });
 
   // ---------- 2. Tài khoản demo ----------
-  const passwordHash = await bcrypt.hash('Quannguyenkay6@', 10);
+  const defaultPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'Demo@123';
+  const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
+  const adminPhone = process.env.ADMIN_BOOTSTRAP_PHONE || '0900000001';
   const admin = await prisma.user.upsert({
-    where: { phone: '0981753082' },
+    where: { phone: adminPhone },
     update: {
-      fullName: 'Nguyễn Đức Quân',
+      fullName: 'Quản trị viên Demo',
       role: 'admin',
       passwordHash,
     },
     create: {
-      phone: '0981753082',
-      fullName: 'Nguyễn Đức Quân',
+      phone: adminPhone,
+      fullName: 'Quản trị viên Demo',
       passwordHash,
       role: 'admin',
       isPhoneVerified: true,
