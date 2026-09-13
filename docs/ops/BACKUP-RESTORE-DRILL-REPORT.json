@@ -1,11 +1,11 @@
 {
-  "drillTime": "2026-09-12T14:14:36.906Z",
+  "drillTime": "2026-09-12T17:00:49.374Z",
   "sourceDatabase": "postgresql://postgres:***@localhost:5432/batdongsan",
   "targetDrillDatabase": "postgresql://postgres:***@localhost:5432/batdongsan_restore_drill",
   "dumpFile": {
     "path": "docs\\ops\\backup-drill-snapshot.sql",
     "sizeBytes": 20849,
-    "sha256": "187020ffb272cf6bcd55d3b1c9fe6f0784c8384ec7622e5d2ae1469fa05e733d"
+    "sha256": "3a807121763ef6cefacd436ce10677f4a12259a689da7eb779c025b02b842e21"
   },
   "uploadsVerification": {
     "sourceDirectory": "apps\\api\\uploads",
@@ -14,10 +14,10 @@
     "passed": true
   },
   "metrics": {
-    "backupDurationMs": 199,
-    "restoreDurationMs": 12552,
-    "uploadsRestoreDurationMs": 489,
-    "totalRtoMeasuredMs": 13246,
+    "backupDurationMs": 138,
+    "restoreDurationMs": 3649,
+    "uploadsRestoreDurationMs": 11,
+    "totalRtoMeasuredMs": 3801,
     "targetRtoStandard": "< 30 minutes",
     "estimatedRpo": "< 1 hour"
   },
@@ -28,9 +28,8 @@
       "migrationsCount": 9
     },
     {
-      "step": "isolated_db_connection",
-      "success": false,
-      "note": "Target database server unavailable in current environment"
+      "step": "prisma_migrate_deploy_restore",
+      "success": true
     }
   ],
   "status": "DRILL_EXECUTION_COMPLETED"

@@ -73,16 +73,10 @@ export default async function ChoThueTroPage({ searchParams }: Props) {
     };
   });
 
-  const isUsingDemo = !isProduction && isApiError;
   const month = new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
 
   return (
     <div className="min-h-screen bg-surface-muted">
-      {isUsingDemo && (
-        <div className="bg-amber-500 text-white px-4 py-2 text-center text-xs font-medium">
-          ⚠️ CHẾ ĐỘ THỬ NGHIỆM: Đang hiển thị dữ liệu mẫu cục bộ. Dữ liệu này tự động tắt trên Production.
-        </div>
-      )}
       <div className="container-max py-8">
         {isApiError && isProduction && (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">

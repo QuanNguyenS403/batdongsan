@@ -10,46 +10,37 @@ import {
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'QNS.vn — Nền tảng tìm căn hộ, studio & phòng trọ số 1',
+  title: "QNS'bds.vn — Tìm chỗ ở cho thuê, xem chi phí trước khi liên hệ",
   description:
-    'Tìm căn hộ, studio, phòng trọ sinh viên và nhà cho thuê giá tốt nhất trên QNS.vn. Minh bạch chi phí điện nước, tìm kiếm phòng gần nhất theo địa chỉ, liên hệ trực tiếp chính chủ.',
+    "Tìm phòng trọ, studio, căn hộ và nhà cho thuê trên QNS'bds.vn — lọc theo trường học gần nhất, xem giá điện nước trên từng tin đăng, liên hệ trực tiếp người cho thuê.",
 };
-
-const QUICK_CATEGORIES = [
-  { href: '/', icon: '🏠', label: 'Trang chủ' },
-  { href: '/thue?categoryGroup=thue_can_ho', icon: '🏢', label: 'Căn hộ' },
-  { href: '/thue?categoryGroup=thue_studio', icon: '🛋️', label: 'Studio' },
-  { href: '/cho-thue-tro', icon: '🛏️', label: 'Phòng trọ sinh viên' },
-  { href: '/thue?propertyType=nha_rieng', icon: '🏠', label: 'Nhà nguyên căn' },
-  { href: '/cho-thue-mat-bang', icon: '🏪', label: 'Mặt bằng kinh doanh' },
-];
 
 const VALUE_PROPOSITIONS = [
   {
-    icon: '⚡💧',
-    title: 'Minh bạch chi phí ẩn',
-    desc: 'Đơn giá điện đ/kWh, nước đ/m3 hoặc gói bao điện nước hiển thị rõ ràng, không lo chi phí phát sinh.',
+    icon: '📋',
+    title: 'Tin đăng xác thực, rõ ràng',
+    desc: 'Hình ảnh thực tế, thông tin mô tả chi tiết, giá thuê và các chi phí dịch vụ được công khai minh bạch.',
     color: 'from-teal-500/10 to-teal-500/5',
     border: 'border-teal-200',
   },
   {
-    icon: '🎓',
-    title: 'Lọc theo Trường Đại học',
-    desc: 'Tìm phòng trọ, ký túc xá theo từng trường ĐH, hiển thị khoảng cách mét và thời gian di chuyển thực tế.',
+    icon: '🔍',
+    title: 'Tìm kiếm nhanh chóng, tiện lợi',
+    desc: 'Dễ dàng lọc theo khu vực, mức giá, diện tích và loại hình phòng phù hợp với mọi nhu cầu sinh hoạt và ngân sách.',
     color: 'from-blue-500/10 to-blue-500/5',
     border: 'border-blue-200',
   },
   {
     icon: '📞',
-    title: 'Liên hệ chính chủ trực tiếp',
-    desc: 'Bấm xem số điện thoại và kết nối Zalo trực tiếp với chủ trọ/môi giới. Sàn không thu phí cọc hay phí môi giới.',
+    title: 'Kết nối trực tiếp người cho thuê',
+    desc: 'Xem số điện thoại và liên hệ trực tiếp qua Zalo hoặc cuộc gọi để trao đổi thông tin, hẹn lịch xem phòng nhanh chóng.',
     color: 'from-amber-500/10 to-amber-500/5',
     border: 'border-amber-200',
   },
   {
-    icon: '💰',
-    title: 'Dự trù chi phí dọn vào',
-    desc: 'Công cụ tính tổng tiền cọc + tháng đầu + phí dịch vụ giúp sinh viên và người thuê chủ động tài chính.',
+    icon: '🛡️',
+    title: '100% Miễn phí cho người thuê',
+    desc: 'Tìm kiếm và kết nối hoàn toàn miễn phí. Nền tảng cam kết không thu phí môi giới, không phát sinh phụ phí ẩn.',
     color: 'from-emerald-500/10 to-emerald-500/5',
     border: 'border-emerald-200',
   },
@@ -90,38 +81,25 @@ export default async function HomePage() {
     ? spaceListings!.items
     : (isProduction ? [] : DEMO_SPACE_RENT_LISTINGS);
 
-  const isUsingDemo = !isProduction && (
-    (roomListings?.items?.length ?? 0) === 0 ||
-    (apartmentListings?.items?.length ?? 0) === 0 ||
-    (studioListings?.items?.length ?? 0) === 0 ||
-    (spaceListings?.items?.length ?? 0) === 0
-  );
-
   return (
     <div>
-      {/* Cảnh báo khi dùng dữ liệu mẫu ở môi trường dev/staging */}
-      {isUsingDemo && (
-        <div className="bg-amber-500 text-white px-4 py-2 text-center text-xs font-medium">
-          ⚠️ CHẾ ĐỘ THỬ NGHIỆM: Đang hiển thị dữ liệu mẫu cục bộ. Dữ liệu này sẽ tự động tắt trên Production.
-        </div>
-      )}
       {/* ── Hero Section ── */}
       <section className="hero-pattern">
         <div className="container-max py-14 lg:py-20">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/20">
-              🔑 Sàn trung gian Cho thuê BĐS QNS.vn — Kết nối trực tiếp Chủ trọ & Sinh viên
+              QNS&apos;bds.vn — Kênh trung gian giữa chủ nhà và người thuê
             </div>
             <h1 className="text-4xl font-bold leading-tight text-text-primary md:text-5xl lg:text-[3.25rem]">
-              Tìm phòng trọ & nhà cho thuê{' '}
+              Tìm chỗ ở cho thuê,{' '}
               <span className="bg-gradient-to-r from-brand to-brand-700 bg-clip-text text-transparent">
-                Minh bạch chi phí
+                xem chi phí trước khi liên hệ
               </span>
             </h1>
             <p className="mt-4 text-base text-text-secondary md:text-lg">
-              Giải pháp tìm phòng trọ sinh viên, studio và căn hộ có cấu trúc, lọc theo trường đại học,
+              Lọc theo khu vực và trường học gần nhất, xem giá điện nước ngay trên từng tin đăng,
               <br className="hidden md:block" />
-              công khai giá điện nước và liên hệ trực tiếp chủ nhà — 100% miễn phí người thuê.
+              liên hệ trực tiếp người cho thuê — không qua trung gian thu phí người tìm chỗ ở.
             </p>
 
             {/* Search bar & Tabs */}
@@ -182,20 +160,6 @@ export default async function HomePage() {
                   Tìm phòng ngay
                 </button>
               </form>
-            </div>
-
-            {/* Quick category pills */}
-            <div className="mt-3 flex flex-wrap justify-center gap-2">
-              {QUICK_CATEGORIES.map((cat) => (
-                <Link
-                  key={cat.href}
-                  href={cat.href}
-                  className="flex items-center gap-1.5 rounded-full bg-white/80 px-3.5 py-1.5 text-xs font-medium text-text-secondary shadow-card ring-1 ring-surface-border hover:ring-brand hover:text-brand transition-all"
-                >
-                  <span>{cat.icon}</span>
-                  {cat.label}
-                </Link>
-              ))}
             </div>
           </div>
         </div>

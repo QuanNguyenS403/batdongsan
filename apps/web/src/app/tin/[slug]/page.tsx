@@ -7,7 +7,6 @@ import { ALL_DEMO_LISTINGS } from '@/lib/demo-data';
 import { PropertyGallery } from './PropertyGallery';
 import { ReportListingModal } from '@/components/ReportListingModal';
 import { OwnerContactBox } from './OwnerContactBox';
-import { MoveInCostEstimator } from '@/components/MoveInCostEstimator';
 import { MobileStickyContactBar } from './MobileStickyContactBar';
 
 interface Props {
@@ -263,16 +262,6 @@ export default async function ListingDetailPage({ params }: Props) {
                 {listing.bathrooms != null && <InfoRow label="Phòng tắm / WC" value={`${listing.bathrooms} phòng`} />}
               </div>
             </div>
-
-            {/* Bộ ước tính chi phí dọn vào ở (FE-05) */}
-            <MoveInCostEstimator
-              initialRentPrice={Number(listing.price)}
-              depositAmount={listing.depositAmount ? Number(listing.depositAmount) : undefined}
-              electricityPricePerKwh={listing.electricityPricePerKwh}
-              waterPricePerM3={listing.waterPricePerM3}
-              waterPriceFlat={listing.waterPriceFlat}
-              utilitiesIncluded={listing.utilitiesIncluded}
-            />
 
             {/* Khối Giới thiệu (Chuẩn mẫu Mogi) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-4">

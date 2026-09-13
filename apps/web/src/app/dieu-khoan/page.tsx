@@ -32,7 +32,7 @@ export default function DieuKhoanPage() {
             <section>
               <h2 className="text-base font-bold text-text-primary mb-2">1. Định vị và Vai trò của Nền tảng</h2>
               <p>
-                BĐS Cho Thuê (BDS.vn) là nền tảng công nghệ trung gian kết nối Người có nhu cầu thuê phòng trọ, căn hộ, nhà ở với Chủ nhà trọ và Người môi giới được ủy quyền.
+                QNS&apos;bds.vn là nền tảng công nghệ trung gian kết nối Người có nhu cầu thuê phòng trọ, căn hộ, nhà ở với Chủ nhà trọ và Người môi giới được ủy quyền.
               </p>
               <p className="mt-2 text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs">
                 ⚠️ <strong>Lưu ý quan trọng:</strong> Nền tảng <strong>KHÔNG</strong> trực tiếp thực hiện hay bảo lãnh bất kỳ giao dịch đặt cọc, thanh toán tiền thuê hoặc ký kết hợp đồng dân sự nào. Mọi thỏa thuận tài chính diễn ra trực tiếp giữa người thuê và chủ phòng.
@@ -52,7 +52,7 @@ export default function DieuKhoanPage() {
             <section>
               <h2 className="text-base font-bold text-text-primary mb-2">3. Quyền lợi và Lưu ý đối với Người đi thuê (Sinh viên / Khách thuê)</h2>
               <ul className="list-disc pl-5 space-y-1.5">
-                <li>Được tra cứu thông tin phòng, tiện ích và ước tính chi phí dọn vào hoàn toàn miễn phí.</li>
+                <li>Được tra cứu thông tin phòng, tiện ích và các biểu phí liên quan hoàn toàn miễn phí.</li>
                 <li>Được xem số điện thoại và liên hệ trực tiếp chủ trọ sau khi xác thực tài khoản.</li>
                 <li>Có quyền báo cáo vi phạm (report) khi phát hiện phòng ảo, chênh lệch giá, hoặc có dấu hiệu gian dối.</li>
                 <li><strong>Khuyến cáo:</strong> Tuyệt đối không chuyển tiền cọc giữ phòng qua mạng khi chưa trực tiếp đến xem phòng và xác minh hợp đồng, giấy tờ chủ sở hữu.</li>

@@ -14,13 +14,13 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'QNS.vn — Nền tảng tìm căn hộ, studio & phòng trọ minh bạch số 1',
-    template: '%s | QNS.vn',
+    default: "QNS'bds.vn — Nền tảng tìm căn hộ, studio & phòng trọ minh bạch số 1",
+    template: "%s | QNS'bds.vn",
   },
   description:
-    'Nền tảng kết nối tìm phòng trọ sinh viên, căn hộ dịch vụ, studio và nhà nguyên căn chính chủ QNS.vn. Biểu phí điện nước minh bạch, kiểm định phòng thực tế.',
+    "Nền tảng kết nối tìm phòng trọ sinh viên, căn hộ dịch vụ, studio và nhà nguyên căn chính chủ QNS'bds.vn. Biểu phí điện nước minh bạch, kiểm định phòng thực tế.",
   keywords: [
-    'QNS.vn',
+    "QNS'bds.vn",
     'thuê phòng trọ',
     'phòng trọ sinh viên',
     'căn hộ dịch vụ',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'vi_VN',
-    siteName: 'QNS.vn',
+    siteName: "QNS'bds.vn",
   },
   robots: { index: true, follow: true },
 };

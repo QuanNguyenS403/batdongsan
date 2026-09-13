@@ -36,7 +36,7 @@ export function Footer() {
                 Q
               </span>
               <span className="text-lg font-bold tracking-tight">
-                QNS<span className="font-normal opacity-70">.vn</span>
+                QNS&apos;bds<span className="font-normal opacity-70">.vn</span>
               </span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-white/60">
@@ -82,7 +82,7 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="container-max flex flex-col items-center justify-between gap-2 py-5 sm:flex-row">
           <p className="text-xs text-white/40">
-            © {new Date().getFullYear()} QNS.vn — Nền tảng Cho thuê Bất Động Sản hàng đầu.
+            © {new Date().getFullYear()} QNS&apos;bds.vn — Nền tảng Cho thuê Bất Động Sản hàng đầu.
           </p>
           <div className="flex items-center gap-4 text-xs text-white/60">
             <Link href="/dieu-khoan" className="hover:text-white transition-colors">

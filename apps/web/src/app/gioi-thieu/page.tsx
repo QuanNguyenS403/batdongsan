@@ -28,7 +28,7 @@ export default function GioiThieuPage() {
             Nền tảng Bất động sản Chuyên biệt Cho thuê
           </h1>
           <p className="text-sm text-text-secondary leading-relaxed mb-8 border-b border-surface-border pb-6">
-            QNS.vn ra đời với định hướng chuyên biệt 100% vào phân khúc <strong>cho thuê nhà ở, phòng trọ, studio và mặt bằng</strong>. Chúng tôi giải quyết triệt để nỗi lo "chi phí ẩn" và giúp các bạn sinh viên, người đi làm nhanh chóng tìm được chốn an cư ưng ý.
+            QNS&apos;bds.vn ra đời với định hướng chuyên biệt 100% vào phân khúc <strong>cho thuê nhà ở, phòng trọ, studio và mặt bằng</strong>. Chúng tôi giải quyết triệt để nỗi lo &quot;chi phí ẩn&quot; và giúp các bạn sinh viên, người đi làm nhanh chóng tìm được chốn an cư ưng ý.
           </p>
 
           <div className="space-y-8">
@@ -37,7 +37,7 @@ export default function GioiThieuPage() {
                 <span className="text-2xl">⚡💧</span>
                 <h2 className="text-base font-bold text-text-primary mt-2 mb-1">Minh bạch biểu giá dịch vụ</h2>
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  Bắt buộc niêm yết đơn giá điện theo kWh, nước theo m³ hoặc gói bao điện nước. Kèm công cụ ước tính chi phí dọn vào tháng đầu giúp bạn luôn chủ động ngân sách.
+                  Bắt buộc niêm yết đơn giá điện theo kWh, nước theo m³ hoặc gói bao điện nước, giúp bạn luôn chủ động ngân sách mà không lo các khoản chi phí phát sinh.
                 </p>
               </div>
 

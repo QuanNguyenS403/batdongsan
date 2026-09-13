@@ -32,6 +32,12 @@ async function main() {
     create: { level: 'district', name: 'Quận 1', slug: 'ho-chi-minh-quan-1', parentId: hcm.id },
   });
 
+  const binhthanh = await prisma.location.upsert({
+    where: { slug: 'ho-chi-minh-binh-thanh' },
+    update: {},
+    create: { level: 'district', name: 'Bình Thạnh', slug: 'ho-chi-minh-binh-thanh', parentId: hcm.id },
+  });
+
   const phuongTanPhong = await prisma.location.upsert({
     where: { slug: 'ho-chi-minh-quan-7-phuong-tan-phong' },
     update: {},
@@ -53,6 +59,12 @@ async function main() {
     where: { slug: 'ha-noi-cau-giay' },
     update: {},
     create: { level: 'district', name: 'Cầu Giấy', slug: 'ha-noi-cau-giay', parentId: hanoi.id },
+  });
+
+  const danang = await prisma.location.upsert({
+    where: { slug: 'da-nang' },
+    update: {},
+    create: { level: 'province', name: 'Đà Nẵng', slug: 'da-nang' },
   });
 
   // ---------- 2. Tài khoản demo ----------
@@ -89,7 +101,7 @@ async function main() {
   });
 
   console.log('✅ Seed địa danh + tài khoản demo xong.');
-  console.log('   Đăng nhập quản trị: SĐT 0981753082 / mật khẩu: Quannguyenkay6@');
+  console.log(`   Đăng nhập quản trị: SĐT ${adminPhone} / mật khẩu: ${defaultPassword}`);
 
   // ---------- 3. Danh mục các Trường Đại học trọng điểm toàn quốc ----------
   const ALL_UNIVERSITIES_DATA = [
@@ -202,6 +214,10 @@ async function main() {
   }
 
   console.log(`✅ Seed danh sách ${ALL_UNIVERSITIES_DATA.length} trường Đại học toàn quốc xong.`);
+
+  const uniTonDucThang = await prisma.university.findUniqueOrThrow({ where: { slug: 'dh-ton-duc-thang' } });
+  const uniUeh = await prisma.university.findUniqueOrThrow({ where: { slug: 'dh-kinh-te-tphcm' } });
+  const uniBachKhoaHcm = await prisma.university.findUniqueOrThrow({ where: { slug: 'dh-bach-khoa-tphcm' } });
 
   // ---------- 4. Tin đăng MẪU Cho Thuê (chỉ để kiểm tra giao diện) ----------
   // Xoá tin demo cũ nếu có (kèm toàn bộ bản ghi phụ thuộc)

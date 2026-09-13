@@ -91,18 +91,18 @@ export function Header() {
     >
       {/* Tầng trên: teal — brand identity */}
       <div className="bg-brand">
-        <div className="container-max flex h-9 items-center justify-between">
+        <div className="container-max flex h-14 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-1.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded bg-white/20 text-sm font-bold text-white">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-base font-bold text-white">
               Q
             </span>
-            <span className="text-sm font-bold tracking-tight text-white">
-              QNS<span className="font-normal opacity-80">.vn</span>
+            <span className="text-base font-bold tracking-tight text-white">
+              QNS&apos;bds<span className="font-normal opacity-80">.vn</span>
             </span>
           </Link>
 
-          <div className="flex items-center gap-4 text-xs text-white/80">
+          <div className="flex items-center gap-5 text-sm text-white/90">
             <a
               href="tel:0981753082"
               className="hidden sm:inline-flex items-center gap-1.5 hover:text-white transition-colors"
@@ -111,7 +111,7 @@ export function Header() {
               <span>Hotline/Zalo: <strong className="text-white">0981 753 082</strong></span>
             </a>
             {!checked ? (
-              <div className="h-4 w-16 skeleton rounded" />
+              <div className="h-5 w-20 skeleton rounded" />
             ) : user ? (
               <span className="font-medium text-white">Xin chào, {user.fullName?.split(' ').pop() ?? user.phone}</span>
             ) : (

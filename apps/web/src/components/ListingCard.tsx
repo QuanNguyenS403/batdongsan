@@ -97,10 +97,6 @@ export function ListingCard({ listing }: { listing: Listing }) {
             </span>
           </div>
 
-          {/* Badge giao dịch */}
-          <div className="absolute right-3 top-3">
-            <span className="transaction-badge-rent">Cho thuê</span>
-          </div>
 
           {/* Badge Đã kiểm tra thực tế (Trust-as-a-Service) */}
           {listing.verificationStatus === 'da_xac_thuc' && (
