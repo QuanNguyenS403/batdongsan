@@ -88,18 +88,16 @@ export default async function HomePage() {
         <div className="container-max py-14 lg:py-20">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/20">
-              QNS&apos;bds.vn — Kênh trung gian giữa chủ nhà và người thuê
+              Cho thuê BĐS QNS.vn — Kết nối trực tiếp Chủ và Bên Thuê
             </div>
             <h1 className="text-4xl font-bold leading-tight text-text-primary md:text-5xl lg:text-[3.25rem]">
-              Tìm chỗ ở cho thuê,{' '}
+              Tìm phòng cho thuê{' '}
               <span className="bg-gradient-to-r from-brand to-brand-700 bg-clip-text text-transparent">
-                xem chi phí trước khi liên hệ
+                Minh bạch
               </span>
             </h1>
             <p className="mt-4 text-base text-text-secondary md:text-lg">
-              Lọc theo khu vực và trường học gần nhất, xem giá điện nước ngay trên từng tin đăng,
-              <br className="hidden md:block" />
-              liên hệ trực tiếp người cho thuê — không qua trung gian thu phí người tìm chỗ ở.
+              Giải quyết nhu cầu tìm phòng trọ sinh viên, chỗ ở tiện ích, nghỉ ngơi khi đi du lịch
             </p>
 
             {/* Search bar & Tabs */}

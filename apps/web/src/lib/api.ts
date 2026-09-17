@@ -70,22 +70,46 @@ export interface ListingListResponse {
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
 }
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  // Chống treo SSR nếu backend phản hồi chậm hoặc đang cold start (timeout 3.5s an toàn)
-  const signal = init?.signal ?? AbortSignal.timeout(3500);
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    signal,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    // Trang danh sách/chi tiết cần dữ liệu tương đối mới — cache ngắn 60s (ISR-style) thay vì always dynamic hoàn toàn.
-    next: { revalidate: 60 },
-  });
+// Circuit breaker: bảo vệ SSR và giảm thời gian tải trang từ 4s xuống 0ms khi DB/API ngoại tuyến
+let isCircuitOpen = false;
+let lastFailureTimestamp = 0;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 20000; // 20 giây thăm dò lại 1 lần nếu backend lỗi
 
-  if (!res.ok) {
-    if (res.status === 404) throw new Error('NOT_FOUND');
-    throw new Error(`API lỗi (${res.status})`);
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const now = Date.now();
+  if (isCircuitOpen && now - lastFailureTimestamp < CIRCUIT_BREAKER_COOLDOWN_MS) {
+    throw new Error('API_CIRCUIT_OPEN: Backend tạm thời ngoại tuyến');
   }
-  return res.json() as Promise<T>;
+
+  // Chống treo SSR nếu backend phản hồi chậm (timeout 1.2s tối đa thay vì 3.5s)
+  const signal = init?.signal ?? AbortSignal.timeout(1200);
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      signal,
+      headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+      // Trang danh sách/chi tiết cần dữ liệu tương đối mới — cache ngắn 60s (ISR-style) thay vì always dynamic hoàn toàn.
+      next: { revalidate: 60 },
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) throw new Error('NOT_FOUND');
+      if (res.status >= 500) {
+        isCircuitOpen = true;
+        lastFailureTimestamp = Date.now();
+      }
+      throw new Error(`API lỗi (${res.status})`);
+    }
+
+    isCircuitOpen = false;
+    return (await res.json()) as T;
+  } catch (err: any) {
+    if (err?.message !== 'NOT_FOUND') {
+      isCircuitOpen = true;
+      lastFailureTimestamp = Date.now();
+    }
+    throw err;
+  }
 }
 
 export function fetchListings(searchParams: Record<string, string | undefined>) {

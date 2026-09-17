@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma, ListingStatus, TransactionType } from '@batdongsan/database';
 import slugify from 'slugify';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -84,6 +84,10 @@ export class ListingsService {
   }
 
   async findAll(query: QueryListingsDto) {
+    if (!this.prisma.isConnected) {
+      throw new ServiceUnavailableException('Cơ sở dữ liệu đang ngoại tuyến');
+    }
+
     const where: Prisma.ListingWhereInput = {
       status: ListingStatus.active,
       owner: { isBlocked: false },
@@ -611,6 +615,10 @@ export class ListingsService {
    * xem tin của chính mình (dù đang pending/rejected) dùng `findOneForOwner` hoặc `findMine`.
    */
   async findOne(idOrSlug: string) {
+    if (!this.prisma.isConnected) {
+      throw new ServiceUnavailableException('Cơ sở dữ liệu đang ngoại tuyến');
+    }
+
     const match = idOrSlug.match(/-id(\d+)$/) ?? idOrSlug.match(/^(\d+)$/);
     if (!match) throw new NotFoundException('Đường dẫn tin đăng không hợp lệ.');
     const id = BigInt(match[1]);
