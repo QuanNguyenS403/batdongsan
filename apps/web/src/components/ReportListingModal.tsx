@@ -5,9 +5,11 @@ import { useState, useEffect } from 'react';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 const REPORT_REASONS = [
-  { value: 'sai_thong_tin', label: 'Sai thông tin (giá, diện tích, vị trí...)' },
+  { value: 'da_het_phong', label: 'Đã hết phòng / đã cho thuê' },
+  { value: 'gia_thuc_te_khac', label: 'Giá hoặc chi phí thực tế khác so với tin đăng' },
+  { value: 'khong_phai_chinh_chu', label: 'Không phải bên có quyền cho thuê (môi giới không ủy quyền)' },
+  { value: 'sai_thong_tin', label: 'Sai thông tin phòng (diện tích, tiện ích, vị trí...)' },
   { value: 'tin_gia', label: 'Tin rác, tin đăng trùng lặp hoặc giả mạo' },
-  { value: 'da_ban_cho_thue', label: 'Bất động sản đã bán hoặc đã cho thuê' },
   { value: 'lua_dao', label: 'Dấu hiệu lừa đảo, chiếm đoạt tiền cọc' },
   { value: 'khac', label: 'Lý do vi phạm khác' },
 ];

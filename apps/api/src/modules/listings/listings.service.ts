@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma, ListingStatus, TransactionType } from '@batdongsan/database';
 import slugify from 'slugify';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -37,6 +37,7 @@ const PUBLIC_LISTING_SELECT = {
   verifiedAt: true,
   publishedAt: true,
   expiresAt: true,
+  refreshedAt: true,
   viewCount: true,
   createdAt: true,
   images: { select: { imageUrl: true, sortOrder: true }, orderBy: { sortOrder: 'asc' as const } },
@@ -908,6 +909,42 @@ export class ListingsService {
     const listing = await this.assertOwnership(id, requester);
     await this.prisma.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.rented } });
     return { message: 'Đã đánh dấu phòng cho thuê thành công.' };
+  }
+
+  /**
+   * Xác nhận phòng vẫn còn trống — chu kỳ 7 ngày thử nghiệm (§7, Gate E).
+   * Cập nhật refreshedAt = now() và ghi AuditEvent.
+   */
+  async confirmAvailability(id: bigint, requester: { id: bigint; role: string }) {
+    const listing = await this.assertOwnership(id, requester);
+    if (listing.status !== ListingStatus.active) {
+      throw new BadRequestException('Chỉ có thể xác nhận tình trạng còn phòng đối với tin đăng đang hoạt động (active).');
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.listing.update({
+        where: { id: listing.id },
+        data: { refreshedAt: now },
+      });
+
+      await tx.auditEvent.create({
+        data: {
+          action: 'listing.confirm_availability',
+          actorId: requester.id,
+          entityType: 'listing',
+          entityId: listing.id.toString(),
+          beforeState: { refreshedAt: listing.refreshedAt },
+          afterState: { refreshedAt: now },
+        },
+      });
+    });
+
+    return {
+      success: true,
+      refreshedAt: now,
+      message: 'Đã xác nhận phòng vẫn còn trống thành công.',
+    };
   }
 
   async getImageCount(listingId: bigint): Promise<number> {

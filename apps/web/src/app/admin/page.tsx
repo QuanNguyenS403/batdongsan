@@ -69,11 +69,26 @@ interface RiskStats {
   disclaimer: string;
 }
 
+interface PilotStats {
+  verifiedSupplyCount: number;
+  verifiedSupplyRatio: string;
+  targetVerifiedSupplyRatio: string;
+  isVerifiedSupplyMet: boolean;
+  leadResponseRate: string;
+  targetLeadResponseRate: string;
+  isLeadResponseMet: boolean;
+  violationRate: string;
+  targetViolationRate: string;
+  isViolationRateMet: boolean;
+  disclaimer: string;
+}
+
 interface DashboardData {
   stats?: Stats;
   money?: MoneyStats;
   growth?: GrowthStats;
   risk?: RiskStats;
+  pilot?: PilotStats;
   serviceDrivers?: ServiceDrivers;
   recentPendingListings?: any[];
   recentReports?: any[];
@@ -459,6 +474,72 @@ export default function AdminDashboardPage() {
               💡 {growth.disclaimer}
             </p>
           </div>
+
+          {/* 🎯 Chỉ số KPI Pilot Nguồn cung thực tế (§4.5 & §7) */}
+          {data?.pilot && (
+            <div className="bg-slate-50/90 rounded-xl p-4 border border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🎯 CHỈ SỐ VẬN HÀNH THỬ NGHIỆM PILOT (§4.5 & §7)</span>
+                </h3>
+                <span className="text-[11px] text-slate-500 italic">
+                  Địa bàn tập trung • Chu kỳ xác nhận 7 ngày
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* KPI 1: Xác nhận còn phòng */}
+                <div className="p-3 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-500">Xác nhận còn phòng (7 ngày)</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      data.pilot.isVerifiedSupplyMet ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {data.pilot.isVerifiedSupplyMet ? 'ĐẠT' : 'CẦN TĂNG'}
+                    </span>
+                  </div>
+                  <p className="text-xl font-extrabold text-slate-900 mt-1">{data.pilot.verifiedSupplyRatio}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Mục tiêu: {data.pilot.targetVerifiedSupplyRatio} ({data.pilot.verifiedSupplyCount} tin)
+                  </p>
+                </div>
+
+                {/* KPI 2: Phản hồi lead */}
+                <div className="p-3 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-500">Tỷ lệ phản hồi lead</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      data.pilot.isLeadResponseMet ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {data.pilot.isLeadResponseMet ? 'ĐẠT' : 'CẦN TĂNG'}
+                    </span>
+                  </div>
+                  <p className="text-xl font-extrabold text-slate-900 mt-1">{data.pilot.leadResponseRate}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Mục tiêu phản hồi trong 24h: {data.pilot.targetLeadResponseRate}
+                  </p>
+                </div>
+
+                {/* KPI 3: Tỷ lệ vi phạm */}
+                <div className="p-3 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-500">Tỷ lệ tin vi phạm</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      data.pilot.isViolationRateMet ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                    }`}>
+                      {data.pilot.isViolationRateMet ? 'ĐẠT' : 'CẦN XỬ LÝ'}
+                    </span>
+                  </div>
+                  <p className="text-xl font-extrabold text-slate-900 mt-1">{data.pilot.violationRate}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Ngưỡng vi phạm nghiêm trọng: {data.pilot.targetViolationRate}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-2 text-center italic">
+                {data.pilot.disclaimer}
+              </p>
+            </div>
+          )}
         </div>
       )}
 

@@ -27,6 +27,7 @@ export class AdminService {
 
   /** Thống kê số liệu trang Dashboard quản trị (3 bảng MONEY / GROWTH / RISK theo §8.1) */
   async getDashboard() {
+    const now = new Date();
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     const [
@@ -53,6 +54,7 @@ export class AdminService {
       contactedLeadsCount,
       paidMembershipsCount,
       phoneRevealsCount,
+      verifiedSupplyLast7DaysCount,
 
       // RISK §8.1
       expiredListingsCount,
@@ -137,6 +139,17 @@ export class AdminService {
         where: { status: 'active' },
       }),
       this.prisma.phoneRevealLog.count(),
+      this.prisma.listing.count({
+        where: {
+          status: ListingStatus.active,
+          expiresAt: { gt: now },
+          owner: { isBlocked: false },
+          OR: [
+            { refreshedAt: { gte: sevenDaysAgo } },
+            { AND: [{ refreshedAt: null }, { publishedAt: { gte: sevenDaysAgo } }] },
+          ],
+        },
+      }),
 
       // RISK §8.1
       this.prisma.listing.count({ where: { status: ListingStatus.expired } }),
@@ -179,6 +192,7 @@ export class AdminService {
       growth: {
         totalActiveListings: activeListingsCount,
         verifiedActiveListings,
+        verifiedSupplyLast7DaysCount,
         newListingsLast7Days,
         activeLandlordsCount,
         totalLeadsCount,
@@ -192,6 +206,24 @@ export class AdminService {
           leadsContacted: contactedLeadsCount,
         },
         disclaimer: 'Lead ≠ Hợp đồng; Bấm xem SĐT ≠ Khách đủ điều kiện.',
+      },
+
+      // PILOT KPI §4.5 & §8.1
+      pilot: {
+        verifiedSupplyCount: verifiedSupplyLast7DaysCount,
+        verifiedSupplyRatio: (activeListingsCount > 0 ? ((verifiedSupplyLast7DaysCount / activeListingsCount) * 100).toFixed(1) : '100.0') + '%',
+        targetVerifiedSupplyRatio: '≥ 90%',
+        isVerifiedSupplyMet: activeListingsCount === 0 || (verifiedSupplyLast7DaysCount / activeListingsCount) >= 0.9,
+
+        leadResponseRate: (totalLeadsCount > 0 ? ((contactedLeadsCount / totalLeadsCount) * 100).toFixed(1) : '100.0') + '%',
+        targetLeadResponseRate: '≥ 80%',
+        isLeadResponseMet: totalLeadsCount === 0 || (contactedLeadsCount / totalLeadsCount) >= 0.8,
+
+        violationRate: (activeListingsCount > 0 ? ((newReportsCount / activeListingsCount) * 100).toFixed(1) : '0.0') + '%',
+        targetViolationRate: '< 2%',
+        isViolationRateMet: activeListingsCount === 0 || (newReportsCount / activeListingsCount) < 0.02,
+
+        disclaimer: 'Chỉ số đo lường thực tế giai đoạn Pilot theo §4.5 & §8.1. Không dùng số liệu giả định.',
       },
 
       // 3. BẢNG RỦI RO & BẢO VỆ (RISK) — Có vấn đề gì cần xử lý ngay?

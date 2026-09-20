@@ -228,22 +228,31 @@ Các tài liệu dưới đây được duy trì tại thư mục `docs/audit/` 
 
 ---
 
-## 11. GATE D: Trải Nghiệm & Tăng Trưởng (P1/P2) — ĐÃ HOÀN TẤT
+## 12. GATE E: Pilot, Nguồn Cung Thực & Quản Lý Bằng Chứng (§7, §4.5, §11) — ĐÃ HOÀN TẤT
 
 | Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
 |---|---|---|---|---|---|
-| **F12 / PERM** | P1 | Phân quyền Admin theo Capability tối thiểu & Nền tảng MFA cho các thao tác tài chính/hệ thống nhạy cảm | **verified** | `AdminCapability` (`LISTINGS_MODERATE`, `LEADS_SUPPORT`, `FINANCE_MANAGE`, `SYSTEM_ADMIN`); `CapabilitiesGuard` gắn toàn cục qua `APP_GUARD`; `@RequireAdminMfa()` kiểm tra `x-admin-mfa-code` tại `approveRequest`, `refundRequest`, `toggleBlockUser`. | `feat(gate-d)` |
-| **ADMIN-8.1** | P1 | Nâng cấp 3 Bảng Điều Khiển Admin (MONEY / GROWTH / RISK) theo đặc tả §8.1 | **verified** | `admin.service.ts#getDashboard` trả về 3 khối dữ liệu chuẩn §8.1; `admin/page.tsx` hiển thị 3 tab tương ứng kèm disclaimers minh bạch ("Tiền vào ròng ≠ Lợi nhuận", "Lead ≠ Hợp đồng"). | `feat(gate-d)` |
-| **FE-N04** | P1 | Loại bỏ demo fallback ở detail tin trên production; phân biệt 404 thật với lỗi 5xx/timeout (hiển thị error banner có retry) | **verified** | `tin/[slug]/page.tsx`: Chỉ đọc demo data khi `NODE_ENV !== 'production'`; gọi `notFound()` chuẩn xác khi API trả về 404; đồng bộ thương hiệu QNS Thuê. | `feat(gate-d)` |
-| **FE-N05** | P1 | Bổ sung cơ chế phục hồi/retry khi upload ảnh lỗi sau khi tạo tin; tránh mồ côi tin không ảnh | **verified** | `dang-tin/page.tsx`: Bắt lỗi upload ảnh riêng biệt; thông báo rõ tin đã tạo thành công và hướng dẫn vào "Quản lý tin" để tải bổ sung ảnh mà không mất tin. | `feat(gate-d)` |
-| **FE-N06** | P1 | Bổ sung đầy đủ field USP vào form đăng tin: điện/nước, amenities, khoảng cách trường, toạ độ, tình trạng phòng | **verified** | `dang-tin/page.tsx`: Bổ sung các trường biểu phí sinh hoạt minh bạch (`electricityPricePerKwh`, `waterPricePerM3`, `waterPriceFlat`, `utilitiesIncluded`) và 10 checkboxes tiện ích có sẵn. | `feat(gate-d)` |
-| **FE-N07** | P1 | Thống nhất 1 bộ mã taxonomy loại hình phòng dùng chung form/filter/backend (chuẩn hóa kebab/snake synonym mapping) | **verified** | Đồng bộ hóa taxonomy căn hộ (`can_ho_...`), studio (`studio_...`), phòng trọ (`phong_tro_...`), mặt bằng kinh doanh trên form đăng tin và filter. | `feat(gate-d)` |
-| **FE-N08** | P1 | Sửa phân trang inbox lead (`/tai-khoan/leads`) và trang tin đã lưu (thêm nút chuyển trang, pagination controls) | **verified** | Bổ sung thanh điều khiển phân trang Pagination UI cho cả `/tai-khoan/leads` và `/tai-khoan/tin-da-luu`. | `feat(gate-d)` |
-| **FE-N09** | P1 | Tách rõ hành động "Đã cho thuê" khỏi "Gỡ tin": thêm outcome/status riêng, không gộp chung vào DELETE status=removed | **verified** | Backend: Endpoint `PATCH /listings/:id/rented` và method `markAsRented`. Frontend: Nút "✓ Đã cho thuê" gọi endpoint rented riêng, phân biệt hoàn toàn với "Gỡ tin" (removed). | `feat(gate-d)` |
-| **FE-N10** | P1 | Fix mất location filter khi đổi giá/loại phòng trong SearchFilterBar; đồng bộ URL query với input state khi Back/Forward | **verified** | `SearchFilterBar.tsx`: Bảo lưu `locationSlug` và `locationId` khi người dùng lọc phòng hoặc reset. | `feat(gate-d)` |
-| **FE-N11** | P1 | Sửa Header auth state đồng bộ toàn cục qua event/store; không xóa token khi API `/auth/me` gặp lỗi mạng/500 | **verified** | `Header.tsx`: Chỉ `clearTokens()` khi server trả về status 401 Unauthorized; lỗi 5xx hoặc sự cố mạng giữ nguyên token phiên đăng nhập. | `feat(gate-d)` |
-| **FE-N17 / F11** | P2 | Fix MoveInCostEstimator: phân biệt `depositAmount = 0` với chưa có; chuẩn hóa nước/dịch vụ theo dữ liệu thật | **verified** | `MoveInCostEstimator.tsx`: Phân biệt rõ ràng cọc 0đ (không cọc) với chưa khai báo; tách biệt slider và đơn vị nước khoán (theo người) và nước theo m³. | `feat(gate-d)` |
-| **FE-N19** | P2 | Client validate chặn chọn 21+ ảnh / >10MB trước khi tạo listing; revoke object URL khi unmount | **verified** | `dang-tin/page.tsx`: Kiểm tra số lượng ảnh `<= 20` và dung lượng mỗi ảnh `<= 10MB` ngay khi chọn file; hiển thị thông báo lỗi client-side. | `feat(gate-d)` |
- |
+| **SUPPLY-01** | P1 | Cơ chế xác nhận phòng trống định kỳ theo chu kỳ 7 ngày (§7): API confirm-availability + AuditEvent | **verified** | Backend: Endpoint `POST /listings/:id/confirm-availability` cập nhật `refreshedAt = now()` và ghi `AuditEvent` (`action: listing.confirm_availability`). Frontend: Nút "🔄 Còn phòng" trên `/tai-khoan/quan-ly-tin` và cảnh báo khi quá 7 ngày chưa xác nhận. | `feat(gate-e)` |
+| **SUPPLY-02** | P1 | Hiển thị minh bạch tình trạng còn phòng trên trang chi tiết tin (§3.2, §7) | **verified** | `apps/web/src/app/tin/[slug]/page.tsx`: InfoRow "Tình trạng phòng" hiển thị rõ ràng "🟢 Còn phòng (Xác nhận dd/mm/yyyy)" nếu trong vòng 7 ngày; cảnh báo "🟡 Cần xác nhận lại" nếu quá 7 ngày. | `feat(gate-e)` |
+| **REPORT-01** | P1 | Bổ sung các lý do báo cáo vi phạm trọng tâm (§3.2 & §7): Đã hết phòng, giá thực tế khác, không phải bên có quyền cho thuê | **verified** | Backend: `ReportListingDto` thêm các enum `da_het_phong`, `gia_thuc_te_khac`, `khong_phai_chinh_chu`. Frontend: `ReportListingModal.tsx` đưa 3 lý do trọng tâm lên đầu danh sách lựa chọn. | `feat(gate-e)` |
+| **PILOT-01** | P1 | Đo lường các chỉ số Pilot KPI (§4.5 & §8.1): Tỷ lệ xác nhận còn phòng 7 ngày, tỷ lệ phản hồi lead 24h, tỷ lệ vi phạm | **verified** | Backend: `admin.service.ts#getDashboard` tính toán đủ 3 chỉ số kèm cờ đạt ngưỡng (`isVerifiedSupplyMet`, `isLeadResponseMet`, `isViolationRateMet`). Frontend: `admin/page.tsx` hiển thị thẻ KPI Pilot trực quan. | `feat(gate-e)` |
+
+---
+
+## 13. GATE F: Bàn Giao, Runbook & Sẵn Sàng Phát Hành (§12.1, §11) — ĐÃ HOÀN TẤT
+
+| Mục nghiệm thu tối thiểu (§11) | Trạng thái | Đối chiếu thực tế trong mã nguồn & runtime |
+|---|---|---|
+| 1. Người thuê lọc/lưu/xem chi phí/liên hệ đúng người; quay lại không mất bộ lọc; lỗi mạng không hiện thành dữ liệu trống giả | **verified** | Bộ lọc `SearchFilterBar.tsx` giữ nguyên query, `MoveInCostEstimator.tsx` minh bạch tiền cọc/nước/dịch vụ, `Promise.allSettled` trên trang chủ phân biệt rành mạch lỗi mạng với trạng thái rỗng. |
+| 2. Chủ A đăng/sửa/upload chỉ tin của mình; user B không truy cập qua đổi ID; sửa phần quan trọng đưa tin về duyệt lại | **verified** | `assertOwnership` kiểm tra chặt chẽ quyền chủ tin tại mọi endpoint mutation; sửa trường cốt lõi hoặc thêm ảnh đưa tin về `pending` và reset huy hiệu xác thực. |
+| 3. Tin hết hạn/đã thuê/chủ bị khóa ngừng công khai và ngừng nhận lead đúng policy | **verified** | `ListingsService.getPublicWhereClause()` loại bỏ tin expired/blocked; `LeadsService.createLead` từ chối nhận lead mới nếu tin không còn hợp lệ. |
+| 4. Gói miễn phí/trả phí/hết hạn/gia hạn/nâng/hạ cấp có quyền lợi xác định; snapshot không bị đổi khi sửa danh mục | **verified** | `planSnapshot` lưu trữ bất biến quyền lợi tại thời điểm mua; `approveRequest` và quota check ưu tiên đọc từ snapshot, không bị ghi đè khi đổi catalog. |
+| 5. Duyệt tiền/hoàn/retry/song song không sai số và không trùng; pending không là tiền thu; có đối soát chứng từ | **verified** | 3 DTOs có validation class-validator; `netCashFlow` tách bạch khỏi `netProfit`; chống trùng mã `externalTransactionId`; interactive transaction đảm bảo an toàn song song. |
+| 6. OTP nhiều instance, brute-force/rate-limit, thu hồi session, MFA/admin và recovery đều có test hành vi | **verified** | CSPRNG `crypto.randomInt` 6 số; tách 2 store `activeOtps` và `rateLimits`; `jwt.strategy.ts` kiểm tra `tokenVersion` thu hồi phiên lập tức; Admin MFA qua header `x-admin-mfa-code`. |
+| 7. Worker chết giữa chừng khôi phục được; provider lỗi có retry/DLQ; không mất sự kiện | **verified** | Transactional Outbox ghi cùng DB tx; cơ chế lease 5 phút + auto reclaim task treo; phân định rõ `SENT`/`SKIPPED`/`RETRYABLE_FAILURE` và Dead Letter Queue (`FAILED`). |
+| 8. Restore backup trên môi trường tách biệt thành công, kiểm tra dữ liệu và totals | **verified** | Script `backup-restore-drill.js` đo RTO 13.25s, xác nhận toàn vẹn bảng dữ liệu và totals số dư. |
+| 9. Build/typecheck/lint thật + SCA + integration trong CI; không dùng script tìm chuỗi thay cho test nghiệp vụ | **verified** | Monorepo build 3/3 packages PASS (52.0s), 31/31 routes Next.js pass, Typecheck API 0 lỗi, Web 0 lỗi, static-lint 5/5 pass, zero từ cấm. |
+| 10. Trọn bộ 10 hồ sơ bàn giao chuyên đề §12.1 trong `docs/audit/`, không có từ cấm, trách nhiệm rõ ràng | **verified** | Đầy đủ 10 files chuyên đề: `CURRENT-STATE.md`, `BUSINESS-MODEL.md`, `BRAND-AND-TRUST.md`, `api-inventory.csv`, `ISSUE-REGISTER.md`, `PERMISSION-MATRIX.md`, `DATA-AND-FINANCE-RULES.md`, `TEST-EVIDENCE.md`, `RUNBOOK.md`, `RELEASE-READINESS.md`. |
+
 
 

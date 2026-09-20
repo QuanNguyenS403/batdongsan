@@ -108,6 +108,15 @@ export class ListingsController {
     return this.listingsService.markAsRented(id, user);
   }
 
+  /**
+   * Xác nhận phòng vẫn còn trống theo chu kỳ 7 ngày (§7, Gate E).
+   */
+  @ApiBearerAuth()
+  @Post(':id/confirm-availability')
+  confirmAvailability(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.listingsService.confirmAvailability(id, user);
+  }
+
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @Post(':id/images')

@@ -1,43 +1,18 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 4: ADMIN, PHÂN QUYỀN CAPABILITY & TRẢI NGHIỆM / GATE D):**
-1. **F12 / PERM: Admin Capability & MFA Protection**:
-   - Tạo enum `AdminCapability` (`LISTINGS_MODERATE`, `LEADS_SUPPORT`, `FINANCE_MANAGE`, `SYSTEM_ADMIN`) và decorator `@RequireCapabilities(...)`, `@RequireAdminMfa()`.
-   - Tạo `CapabilitiesGuard` và đăng ký toàn cục làm `APP_GUARD` trong `AuthModule`.
-   - Bổ sung xác thực Admin MFA qua header `x-admin-mfa-code` cho các hành động tài chính và quản trị nhạy cảm (`approveRequest`, `refundRequest`, `toggleBlockUser`).
-2. **Admin 3 Bảng Điều Khiển §8.1 (MONEY / GROWTH / RISK)**:
-   - Backend `admin.service.ts#getDashboard`: Cung cấp đủ 3 khối dữ liệu chuẩn §8.1:
-     - Khối `money`: Dòng tiền ròng thực thu (`netCashFlow = cashIn - refund`), tổng thu thực tế, tổng hoàn tiền, pending quoted amount, và các khoản chưa đối soát.
-     - Khối `growth`: Tin công khai đang hoạt động, tin đã qua kiểm tra, số chủ tin hoạt động, tổng leads tiếp nhận, và phễu 4 bước (View -> Detail -> Lead -> Connect).
-     - Khối `risk`: Báo cáo vi phạm chờ xử lý, tin hết hạn, tin bị từ chối, hàng đợi lỗi Outbox DLQ (`FAILED`), người dùng bị khóa, và nhật ký kiểm toán hệ thống `auditEvents`.
-   - Frontend `apps/web/src/app/admin/page.tsx`: Giao diện 3 tab chuyên biệt kèm các disclaimer minh bạch theo định nghĩa chỉ số §8.1.
-3. **FE-N04**: `apps/web/src/app/tin/[slug]/page.tsx` tắt hoàn toàn fallback demo data trên môi trường production. Ném `notFound()` nếu 404 thật; chuẩn hóa brand "QNS Thuê".
-4. **FE-N05 & FE-N19**: `apps/web/src/app/dang-tin/page.tsx` validate client tối đa 20 ảnh và mỗi ảnh <= 10MB; cơ chế banner cảnh báo phục hồi nếu tạo tin thành công nhưng upload ảnh gặp lỗi.
-5. **FE-N06 & FE-N07**: Bổ sung biểu phí điện nước chi tiết và 10 tiện ích tiêu chuẩn vào form đăng tin; chuẩn hóa taxonomy.
-6. **FE-N08 & FE-N09**: Phân trang Pagination UI cho `/tai-khoan/leads` và `/tai-khoan/tin-da-luu`; Backend endpoint `PATCH /listings/:id/rented` và nút "✓ Đã cho thuê" (status: `rented`) tách biệt khỏi "Gỡ tin".
-7. **FE-N10 & FE-N11**: `SearchFilterBar.tsx` giữ nguyên `locationSlug` và `locationId`; `Header.tsx` chỉ clear token khi nhận 401 Unauthorized thật.
-8. **FE-N17 / F11**: `MoveInCostEstimator.tsx` phân biệt cọc 0đ với chưa rõ; tách biệt đơn vị nước khoán theo người và nước theo m³.
-9. **Kiểm thử & Build**:
-   - Static lint check: 5/5 PASS.
-   - Typecheck API & Web: PASS 100% (0 errors).
-   - Rà soát từ cấm: 0 kết quả trên toàn bộ mã nguồn.
-   - Monorepo production build: PASS 3/3 packages (44.8s).
-
-**Kế hoạch tiếp theo (ĐỢT 5 & ĐỢT 6: PILOT, ĐO LƯỜNG NGUỒN CUNG THỰC & BÀN GIAO / GATES E & F):**
-- **Đợt 5: Pilot, Nguồn Cung Thực & Quản Lý Bằng Chứng (§7, §4.5, §11 - Gate E)**:
-  - Triển khai cơ chế xác nhận phòng trống định kỳ (chu kỳ 7 ngày thử nghiệm):
-    - Thêm `lastAvailabilityConfirmedAt` cho `Listing` (hoặc trường quản lý chu kỳ kiểm chứng).
-    - Endpoint cho chủ tin bấm "Xác nhận còn phòng trống" nhanh chóng.
-    - Cơ chế cảnh báo/hạ ưu tiên tin không cập nhật tình trạng còn phòng.
-  - Xử lý khiếu nại báo cáo vi phạm nâng cao:
-    - Bổ sung lý do `"đã hết phòng"`, `"giá thực tế khác"`, `"không phải bên có quyền cho thuê"`.
-  - Đo lường chỉ số pilot (§4.5):
-    - Tỷ lệ tin xác nhận còn phòng trong 7 ngày.
-    - Tỷ lệ phản hồi lead trong 24h.
-- **Đợt 6: Bàn Giao, Runbook & Sẵn Sàng Phát Hành (§12.1, §11 - Gate F)**:
-  - Hoàn thiện trọn bộ 10 tài liệu bàn giao chuyên đề `docs/audit/`.
-  - Kiểm tra đối chiếu 10/10 mục "Bộ nghiệm thu tối thiểu" (§11).
-  - Production build cuối cùng, đối chiếu không có breaking change.
+**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH TOÀN BỘ 6 ĐỢT LỘ TRÌNH §11 / GATE A -> GATE F):**
+1. **Đợt 5: Pilot, Nguồn Cung Thực & Quản Lý Bằng Chứng (§7, §4.5, §11 - Gate E)**:
+   - **SUPPLY-01**: Endpoint `POST /listings/:id/confirm-availability` cập nhật `refreshedAt = now()`, ghi `AuditEvent` bất biến.
+   - **SUPPLY-02**: Frontend `/tai-khoan/quan-ly-tin` hiển thị ngày xác nhận, cảnh báo quá 7 ngày, nút "🔄 Còn phòng". Trang chi tiết `/tin/[slug]` hiển thị trạng thái "🟢 Còn phòng (Xác nhận dd/mm/yyyy)" trong 7 ngày hoặc cảnh báo "🟡 Cần xác nhận lại".
+   - **REPORT-01**: Bổ sung các lý do báo cáo vi phạm trọng tâm (§3.2): `da_het_phong`, `gia_thuc_te_khac`, `khong_phai_chinh_chu` vào cả DTO backend và modal frontend.
+   - **PILOT-01**: Đo lường 3 chỉ số Pilot KPI trên `AdminDashboard` (`verifiedSupplyRatio >= 90%`, `leadResponseRate >= 80%`, `violationRate < 2%`) kèm cờ đạt ngưỡng tự động.
+2. **Đợt 6: Bàn Giao, Runbook & Sẵn Sàng Phát Hành (§12.1, §11 - Gate F)**:
+   - **10 Hồ sơ bàn giao chuyên đề §12.1**: Hoàn thiện đồng bộ 100% trong `docs/audit/` (`CURRENT-STATE.md`, `BUSINESS-MODEL.md`, `BRAND-AND-TRUST.md`, `api-inventory.csv`, `ISSUE-REGISTER.md`, `PERMISSION-MATRIX.md`, `DATA-AND-FINANCE-RULES.md`, `TEST-EVIDENCE.md`, `RUNBOOK.md`, `RELEASE-READINESS.md`).
+   - **10/10 Cổng nghiệm thu tối thiểu (§11)**: Đạt trạng thái `VERIFIED` 100%.
+   - **Rà soát Zero từ cấm**: 0 kết quả đối với các cụm: `"100% chính chủ"`, `"không lừa đảo"`, `"an toàn tuyệt đối"`, `"chắc chắn có khách"`.
+   - **Monorepo Build**: PASS 3/3 packages (52.0s), 31/31 routes Next.js pass, Typecheck API & Web 0 lỗi.
+3. **Trạng thái hệ thống**:
+   - Sẵn sàng 100% về mặt kỹ thuật và vận hành cho giai đoạn thử nghiệm Pilot tại địa bàn tập trung theo chỉ thị của Quan.
 
 ---
 

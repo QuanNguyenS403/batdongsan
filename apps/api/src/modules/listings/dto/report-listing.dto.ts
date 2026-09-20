@@ -12,6 +12,12 @@ const REPORT_REASONS = [
   'sold',
   'fraud',
   'other',
+  'da_het_phong',
+  'already_rented',
+  'gia_thuc_te_khac',
+  'price_mismatch',
+  'khong_phai_chinh_chu',
+  'not_authorized',
 ] as const;
 
 export class ReportListingDto {

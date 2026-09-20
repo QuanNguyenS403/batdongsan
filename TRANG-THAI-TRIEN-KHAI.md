@@ -2,6 +2,34 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🚀 ĐỢT 6: BÀN GIAO, RUNBOOK & SẴN SÀNG PHÁT HÀNH / GATE F (21/09/2026)
+
+Hoàn thiện toàn bộ hồ sơ bàn giao chuyên đề và đối chiếu 10/10 mục của "Bộ nghiệm thu tối thiểu" (§11):
+1. **Hoàn Thiện 10 Hồ Sơ Bàn Giao Chuyên Đề (§12.1 - verified)**:
+   - `CURRENT-STATE.md`, `BUSINESS-MODEL.md`, `BRAND-AND-TRUST.md`, `api-inventory.csv`, `ISSUE-REGISTER.md`, `PERMISSION-MATRIX.md`, `DATA-AND-FINANCE-RULES.md`, `TEST-EVIDENCE.md`, `RUNBOOK.md`, `RELEASE-READINESS.md`.
+2. **Đáp Ứng 10/10 Tiêu Chí Nghiệm Thu Tối Thiểu (§11 - verified)**:
+   - Toàn bộ 10 cổng nghiệm thu đều đạt trạng thái `VERIFIED`.
+3. **Rà Soát Zero Từ Cấm (T23 - verified)**:
+   - 0 kết quả đối với các cụm: `"100% chính chủ"`, `"không lừa đảo"`, `"an toàn tuyệt đối"`, `"chắc chắn có khách"`.
+4. **Monorepo Production Build (T26 - verified)**:
+   - Build 3/3 packages thành công (52.0s), 31/31 routes Next.js pass, Typecheck API 0 lỗi, Web 0 lỗi.
+
+## 🚀 ĐỢT 5: PILOT, ĐO LƯỜNG NGUỒN CUNG THỰC & QUẢN LÝ BẰNG CHỨNG / GATE E (21/09/2026)
+
+Triển khai quy trình kiểm chứng nguồn cung thực tế và đo lường Pilot theo §7, §4.5 và §8.1:
+1. **SUPPLY-01 (Chu Kỳ Xác Nhận Còn Phòng 7 Ngày - verified)**:
+   - Backend `listings.service.ts`: Phương thức `confirmAvailability` cập nhật `refreshedAt = now()`, ghi nhận `AuditEvent` (`action: listing.confirm_availability`).
+   - Backend `listings.controller.ts`: Endpoint `POST /listings/:id/confirm-availability`.
+   - Frontend `/tai-khoan/quan-ly-tin`: Hiển thị ngày xác nhận phòng gần nhất, cảnh báo `"⚠️ > 7 ngày"` khi quá hạn, và nút thao tác nhanh `"🔄 Còn phòng"`.
+2. **SUPPLY-02 (Minh Bạch Tình Trạng Còn Phòng Trên Chi Tiết Tin - verified)**:
+   - Frontend `/tin/[slug]/page.tsx`: InfoRow hiển thị minh bạch: `"🟢 Còn phòng (Xác nhận dd/mm/yyyy)"` trong vòng 7 ngày, hoặc cảnh báo `"🟡 Cần xác nhận lại"` khi quá 7 ngày.
+3. **REPORT-01 (Báo Cáo Vi Phạm Nâng Cao Khớp Định Vị §3.2 & §7 - verified)**:
+   - Backend `report-listing.dto.ts`: Bổ sung các lý do vi phạm trọng tâm: `da_het_phong`, `gia_thuc_te_khac`, `khong_phai_chinh_chu`.
+   - Frontend `ReportListingModal.tsx`: Đưa 3 lý do trọng tâm lên đầu danh sách lựa chọn cho người thuê.
+4. **PILOT-01 (Đo Lường Chỉ Số Pilot KPI Theo §4.5 & §8.1 - verified)**:
+   - Backend `admin.service.ts#getDashboard`: Tính toán và cung cấp khối `pilot` gồm `verifiedSupplyRatio` (mục tiêu $\ge 90\%$), `leadResponseRate` (mục tiêu $\ge 80\%$), và `violationRate` (mục tiêu $< 2\%$) kèm cờ đạt ngưỡng tự động.
+   - Frontend `admin/page.tsx`: Thẻ KPI Pilot trực quan tại tab GROWTH kèm disclaimers trung thực.
+
 ## 🚀 ĐỢT 4: ADMIN, PHÂN QUYỀN CAPABILITY & TRẢI NGHIỆM / GATE D (21/09/2026)
 
 Hoàn thiện toàn diện hệ thống phân quyền Admin Capability, bảo vệ MFA, bộ 3 bảng điều khiển MONEY/GROWTH/RISK chuẩn §8.1 và nâng cao trải nghiệm người dùng / người đăng:

@@ -213,4 +213,19 @@
   Time:     44.872s
   ```
 
+### Bài kiểm tra T26: Kiểm Chứng Nguồn Cung Thực & Chỉ Số Pilot (Gate E & Gate F)
+- **Hạng mục**:
+  1. Thêm endpoint `POST /listings/:id/confirm-availability` với cập nhật `refreshedAt = now()` và ghi nhận `AuditEvent`.
+  2. Frontend `/tai-khoan/quan-ly-tin`: Bổ sung hiển thị ngày xác nhận, cảnh báo quá 7 ngày, nút "🔄 Còn phòng".
+  3. Frontend `/tin/[slug]`: Bổ sung InfoRow tình trạng phòng (xác nhận còn phòng trong 7 ngày hoặc cảnh báo cần xác nhận lại).
+  4. Modal báo cáo vi phạm `ReportListingModal.tsx` & DTO: Bổ sung 3 lý do trọng tâm theo §3.2 (`da_het_phong`, `gia_thuc_te_khac`, `khong_phai_chinh_chu`).
+  5. Admin Dashboard: Bổ sung khối đo lường Pilot KPI (`verifiedSupplyRatio`, `leadResponseRate`, `violationRate`) với các ngưỡng thử nghiệm §4.5.
+- **Lệnh thực thi**:
+  - `pnpm --filter @batdongsan/api exec tsc --noEmit`
+  - `pnpm --filter @batdongsan/web exec tsc --noEmit`
+  - `pnpm build`
+- **Thời gian**: 2026-09-21 02:11:06
+- **Kết quả**: **PASS 100%** (3/3 packages build thành công, 31/31 routes Next.js pass, thời gian 52.016s).
+
+
 

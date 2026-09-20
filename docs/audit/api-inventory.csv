@@ -58,3 +58,5 @@ GET,/universities,universities.controller.ts,none,guest,none,none,universities l
 GET,/users/me,users.controller.ts,JWT,user,yes (own),none,user profile,none,none,yes,structural-only
 PATCH,/users/me,users.controller.ts,JWT,user,yes (own),UpdateUserDto,updated user,none,none,no,structural-only
 POST,/users/me/change-password,users.controller.ts,JWT,user,yes (own),ChangePasswordDto,success,none,changes password + increments tokenVersion,no,structural-only
+PATCH,/listings/:id/rented,listings.controller.ts,JWT,user/admin,yes (owner or admin),none,success,none,marks listing as rented,yes,FE-N09 / Gate D
+POST,/listings/:id/confirm-availability,listings.controller.ts,JWT,user/admin,yes (owner or admin),none,success,none,updates refreshedAt + audit event,yes,Gate E / Supply Verification

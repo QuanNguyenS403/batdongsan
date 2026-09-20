@@ -227,6 +227,16 @@ export default async function ListingDetailPage({ params }: Props) {
                   value={listing.publishedAt ? new Date(listing.publishedAt).toLocaleDateString('vi-VN') : 'Mới cập nhật'}
                 />
                 <InfoRow
+                  label="Tình trạng phòng"
+                  value={(() => {
+                    const lastConfirmed = (listing as any).refreshedAt || listing.publishedAt || listing.createdAt;
+                    if (!lastConfirmed) return 'Còn phòng trống';
+                    const days = Math.floor((Date.now() - new Date(lastConfirmed).getTime()) / 86_400_000);
+                    if (days <= 7) return `🟢 Còn phòng (Xác nhận ${new Date(lastConfirmed).toLocaleDateString('vi-VN')})`;
+                    return `🟡 Cần xác nhận lại (cập nhật ${days} ngày trước)`;
+                  })()}
+                />
+                <InfoRow
                   label="Pháp lý"
                   value={listing.legalStatus ? (LEGAL_STATUS_LABEL[listing.legalStatus] ?? listing.legalStatus) : 'Không xác định'}
                 />

@@ -98,6 +98,19 @@ export default function QuanLyTinPage() {
     }
   }
 
+  /** Xác nhận còn phòng trống — chu kỳ 7 ngày (§7, Gate E) */
+  async function handleConfirmAvailability(listingId: string) {
+    try {
+      const res = await authFetch(`/listings/${listingId}/confirm-availability`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Không thể xác nhận tình trạng còn phòng.');
+      alert('✓ ' + (data.message || 'Đã xác nhận phòng vẫn còn trống thành công!'));
+      load(statusFilter, page);
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  }
+
   async function handleRemove(listingId: string) {
     if (!confirm('Bạn có chắc chắn muốn gỡ tin đăng này? Tin sau khi gỡ sẽ không hiển thị công khai.')) {
       return;
@@ -182,6 +195,8 @@ export default function QuanLyTinPage() {
               <div className="mt-4 divide-y divide-surface-border rounded-2xl border border-surface-border bg-white shadow-card overflow-hidden">
                 {listings.map((listing) => {
                   const status = STATUS_LABEL[listing.status] ?? { label: listing.status, className: 'bg-gray-100 text-gray-600' };
+                  const lastConfirmed = (listing as any).refreshedAt || listing.publishedAt || listing.createdAt;
+                  const daysSinceConfirm = lastConfirmed ? Math.floor((Date.now() - new Date(lastConfirmed).getTime()) / (1000 * 60 * 60 * 24)) : 0;
                   return (
                     <div key={listing.id} className="flex items-center gap-4 p-4 hover:bg-surface-muted/50 transition-colors">
                       <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
@@ -197,7 +212,19 @@ export default function QuanLyTinPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-text-primary">{listing.title}</p>
                         <p className="text-sm text-text-muted">{listing.addressDetail ?? listing.location.name}</p>
-                        <p className="text-sm font-bold text-brand">{formatPrice(listing.price)}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-sm font-bold text-brand">{formatPrice(listing.price)}</p>
+                          {listing.status === 'active' && (
+                            <span className="text-xs text-text-muted">
+                              • Còn phòng: {lastConfirmed ? new Date(lastConfirmed).toLocaleDateString('vi-VN') : 'Mới đăng'}
+                              {daysSinceConfirm >= 7 && (
+                                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">
+                                  ⚠️ &gt; 7 ngày
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
                         {listing.status === 'rejected' && listing.rejectionReason && (
                           <p className="mt-1 text-xs text-rose-600 font-medium">
                             Lý do từ chối: {listing.rejectionReason}
@@ -207,7 +234,7 @@ export default function QuanLyTinPage() {
                       <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
                         {status.label}
                       </span>
-                      <div className="flex shrink-0 items-center gap-3">
+                      <div className="flex shrink-0 items-center gap-2">
                         {listing.status === 'active' && (
                           <>
                             <Link
@@ -218,11 +245,23 @@ export default function QuanLyTinPage() {
                             </Link>
                             <button
                               type="button"
+                              onClick={() => handleConfirmAvailability(listing.id)}
+                              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors border ${
+                                daysSinceConfirm >= 7
+                                  ? 'bg-amber-500 text-white hover:bg-amber-600 border-amber-600'
+                                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-200'
+                              }`}
+                              title="Xác nhận phòng vẫn còn trống trong chu kỳ 7 ngày (§7)"
+                            >
+                              🔄 Còn phòng
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleMarkRented(listing.id)}
                               className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
                               title="Đánh dấu phòng đã cho thuê thành công"
                             >
-                              ✓ Đã cho thuê
+                              ✓ Đã thuê
                             </button>
                           </>
                         )}
