@@ -2,7 +2,22 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
-## 🛡️ ĐỢT AUDIT ĐỘC LẬP 3468454: THỰC THI GATE 0 — SỬA BỘ CÔNG CỤ XÁC MINH & CI INTEGRITY (12/09/2026)
+## 🚀 ĐỢT 0: CHỤP HIỆN TRẠNG & TẠO HỒ SƠ BÀN GIAO BỔ SUNG CHUYÊN ĐỀ §12.1 (21/09/2026)
+
+Thực thi theo chỉ thị tại `docs/audit/Ban-thu-hoach-va-chi-thi-AI-agent-batdongsan.md` (19/09/2026):
+1. **Xác lập Baseline Kỹ thuật**:
+   - Nhánh: `audit/qns-rental-implementation` từ commit gốc `eb99862d8a6887dae0241d8e7302005d699ea40b`.
+   - Toolchain: Node.js `v24.19.0`, pnpm `9.15.9`.
+   - Kết quả Typecheck: `@batdongsan/api` 0 lỗi, `@batdongsan/web` 0 lỗi.
+   - Kết quả Static structure lint: 5/5 cấu trúc khớp (`node packages/database/scripts/static-lint-check.js`).
+   - Rà soát từ ngữ cấm: Phát hiện từ "chính chủ" tại 7 file (`demo-data.ts`, `thue/page.tsx`, `tin/[slug]/page.tsx`, `layout.tsx`, `AuthModal.tsx`, `cho-thue-tro/page.tsx`, `cho-thue-mat-bang/page.tsx`). Đưa vào backlog Gate A giải quyết triệt để.
+2. **Khởi tạo 10 tài liệu bàn giao chuyên đề §12.1 trong `docs/audit/`**:
+   - `CURRENT-STATE.md`, `BUSINESS-MODEL.md`, `BRAND-AND-TRUST.md`, `api-inventory.csv`, `ISSUE-REGISTER.md`, `PERMISSION-MATRIX.md`, `DATA-AND-FINANCE-RULES.md`, `TEST-EVIDENCE.md`, `RUNBOOK.md`, `RELEASE-READINESS.md`.
+3. **Hợp nhất Sổ theo dõi trung tâm `EXECUTION-STATUS.md`**:
+   - Tích hợp và đối chiếu toàn bộ phát hiện F01–F16 từ báo cáo 19/09/2026 với mã finding hiện có.
+   - Thêm liên kết chéo tới 10 tài liệu chuyên đề.
+
+---
 
 Thực thi theo đặc tả chính thức tại `docs/audit/BATDONGSAN-REVIEW-3468454-COMPLETE.md` và theo dõi tại `docs/audit/EXECUTION-STATUS.md`:
 

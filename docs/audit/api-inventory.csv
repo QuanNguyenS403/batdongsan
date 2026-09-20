@@ -1,0 +1,60 @@
+Method,Path,Controller,Auth,Role_Capability,Ownership_Check,DTO_Validation,Response_Data,Rate_Limit,Side_Effects,Idempotency,Test_Coverage
+POST,/auth/otp/send,auth.controller.ts,none,guest,none,SendOtpDto,success message,5 req/min,generates OTP code + dispatches SMS,no,structural-only
+POST,/auth/register,auth.controller.ts,none,guest,none,RegisterDto,tokens + user profile,none,creates user + increments tokenVersion,no,structural-only
+POST,/auth/login,auth.controller.ts,none,guest,none,LoginDto,tokens + user profile,10 req/min,verifies password/OTP + issues JWT,no,structural-only
+POST,/auth/refresh,auth.controller.ts,none,guest,none,RefreshTokenDto,new tokens,none,verifies refresh token + tokenVersion,no,structural-only
+POST,/auth/logout,auth.controller.ts,JWT,user,yes (own),none,success message,none,increments tokenVersion,yes,structural-only
+POST,/auth/forgot-password/reset,auth.controller.ts,none,guest,none,ResetPasswordDto,success message,none,updates password + increments tokenVersion,no,structural-only
+POST,/auth/bootstrap-admin,auth.controller.ts,Secret,provisioning,none,BootstrapAdminDto,admin tokens,5 req/hour,promotes/creates admin + audit log,yes,test-wave-0.js
+GET,/auth/me,auth.controller.ts,JWT,user,yes (own),none,user profile,none,none,yes,structural-only
+GET,/listings,listings.controller.ts,none,guest,none,QueryListingsDto,listings items + pagination,none,none,yes,structural-only
+GET,/listings/:idOrSlug,listings.controller.ts,none,guest,none,none,listing detail,none,increments viewCount (atomic),no,structural-only
+POST,/listings,listings.controller.ts,JWT,user,none,CreateListingDto,created listing,none,creates listing pending + outbox event,no,structural-only
+PATCH,/listings/:id,listings.controller.ts,JWT,user/admin,yes (owner or admin),UpdateListingDto,updated listing,none,updates listing + resets verification if core changed,no,structural-only
+DELETE,/listings/:id,listings.controller.ts,JWT,user/admin,yes (owner or admin),none,success,none,marks listing as removed,yes,structural-only
+POST,/listings/:id/images,listings.controller.ts,JWT,user/admin,yes (owner or admin),none,uploaded images,none,writes images to disk/CDN + resets verification,no,structural-only
+DELETE,/listings/:id/images/:imageId,listings.controller.ts,JWT,user/admin,yes (owner or admin),none,success,none,deletes image record,yes,structural-only
+POST,/listings/:id/reveal-phone,listings.controller.ts,JWT,user,none,none,full phone number,30 req/hour,creates PhoneRevealLog + atomic increment,yes (composite unique),structural-only
+POST,/listings/:id/report,listings.controller.ts,none,guest/user,none,CreateListingReportDto,report status,5 req/min,creates report + outbox event,no,structural-only
+GET,/listings/saved,listings.controller.ts,JWT,user,yes (own),QuerySavedListingsDto,saved listings list,none,none,yes,structural-only
+POST,/listings/:id/save,listings.controller.ts,JWT,user,none,none,success,none,creates SavedListing record,yes (upsert/unique),structural-only
+DELETE,/listings/:id/save,listings.controller.ts,JWT,user,yes (own),none,success,none,deletes SavedListing record,yes,structural-only
+GET,/listings/saved-searches,listings.controller.ts,JWT,user,yes (own),none,saved searches list,none,none,yes,structural-only
+POST,/listings/saved-searches,listings.controller.ts,JWT,user,none,CreateSavedSearchDto,saved search,none,saves search query,no,structural-only
+DELETE,/listings/saved-searches/:id,listings.controller.ts,JWT,user,yes (own),none,success,none,deletes saved search,yes,structural-only
+POST,/leads,leads.controller.ts,none,guest/user,none,CreateLeadDto,success message,10 req/min,dedupes sha256 + creates lead + outbox,yes (composite dedupeKey),test-wave-1.js
+GET,/leads/mine,leads.controller.ts,JWT,user,yes (own listings),none,seller leads list,none,none,yes,structural-only
+GET,/memberships/plans,membership.controller.ts,none,guest,none,none,active plans list,none,none,yes,test-membership-logic.ts
+GET,/memberships/my-membership,membership.controller.ts,JWT,user,yes (own),none,membership quota + expiry,none,none,yes,test-membership-logic.ts
+POST,/memberships/request,membership.controller.ts,JWT,user,none,RequestMembershipDto,pending request + bank details,none,snapshots plan + pending UserMembership,no,test-membership-logic.ts
+GET,/admin/dashboard,admin.controller.ts,JWT,admin,none,none,system dashboard metrics,none,none,yes,structural-only
+GET,/admin/listings/pending,admin.controller.ts,JWT,admin,none,none,pending listings,none,none,yes,structural-only
+POST,/admin/listings/:id/approve,admin.controller.ts,JWT,admin,none,none,success,none,CAS update to active + outbox event,yes,structural-only
+POST,/admin/listings/:id/reject,admin.controller.ts,JWT,admin,none,RejectListingDto,success,none,sets rejected + audit event,yes,structural-only
+POST,/admin/listings/:id/verify,admin.controller.ts,JWT,admin,none,none,success,none,sets verificationStatus=da_xac_thuc,yes,structural-only
+POST,/admin/listings/:id/unverify,admin.controller.ts,JWT,admin,none,none,success,none,resets verificationStatus,yes,structural-only
+GET,/admin/reports,admin.controller.ts,JWT,admin,none,none,reports + pagination,none,none,yes,structural-only
+POST,/admin/reports/:id/resolve,admin.controller.ts,JWT,admin,none,ResolveReportDto,success,none,resolves report,yes,structural-only
+GET,/admin/users,admin.controller.ts,JWT,admin,none,none,users + pagination,none,none,yes,structural-only
+POST,/admin/users/:id/toggle-block,admin.controller.ts,JWT,admin,none,none,success,none,toggles isBlocked + increments tokenVersion,yes,structural-only
+GET,/admin/leads,admin.controller.ts,JWT,admin,none,none,all leads,none,none,yes,structural-only
+GET,/admin/audit-events,admin.controller.ts,JWT,admin,none,none,audit events,none,none,yes,structural-only
+GET,/admin/finance/summary,admin.controller.ts,JWT,admin,none,none,finance summary,none,none,yes,structural-only
+GET,/admin/tasks/status,admin.controller.ts,JWT,admin,none,none,task status,none,none,yes,structural-only
+POST,/admin/tasks/run-sweep,admin.controller.ts,JWT,admin,none,none,sweep result,none,expires listings + cleans OTPs,yes,structural-only
+GET,/admin/membership-plans,admin-membership.controller.ts,JWT,admin,none,none,plans list,none,none,yes,structural-only
+POST,/admin/membership-plans,admin-membership.controller.ts,JWT,admin,none,CreateMembershipPlanDto,created plan,none,creates plan,no,structural-only
+PATCH,/admin/membership-plans/:id,admin-membership.controller.ts,JWT,admin,none,UpdateMembershipPlanDto,updated plan,none,updates plan (no retroactive effect),no,structural-only
+GET,/admin/membership-requests,admin-membership.controller.ts,JWT,admin,none,none,requests + pagination + filters,none,none,yes,structural-only
+POST,/admin/membership-requests/:id/approve,admin-membership.controller.ts,JWT,admin,none,ApproveMembershipRequestDto,success,none,CAS update to active + writes FinanceLedger + outbox event,yes (idempotency key),FIN-01 / Gate A
+POST,/admin/membership-requests/:id/reject,admin-membership.controller.ts,JWT,admin,none,RejectMembershipRequestDto,success,none,sets rejected + outbox event,yes,FIN-01 / Gate A
+POST,/admin/membership-requests/:id/refund,admin-membership.controller.ts,JWT,admin,none,RefundMembershipRequestDto,success,none,records refund in FinanceLedger + expires membership,yes,FIN-03 / Gate A
+GET,/admin/pricing-seasons,admin-membership.controller.ts,JWT,admin,none,none,seasons list,none,none,yes,structural-only
+POST,/admin/pricing-seasons,admin-membership.controller.ts,JWT,admin,none,CreatePricingSeasonDto,created season,none,creates season,no,structural-only
+PATCH,/admin/pricing-seasons/:id,admin-membership.controller.ts,JWT,admin,none,UpdatePricingSeasonDto,updated season,none,updates season,no,structural-only
+GET,/locations,locations.controller.ts,none,guest,none,none,locations tree,none,none,yes,structural-only
+GET,/locations/:slug/children,locations.controller.ts,none,guest,none,none,child locations,none,none,yes,structural-only
+GET,/universities,universities.controller.ts,none,guest,none,none,universities list,none,none,yes,structural-only
+GET,/users/me,users.controller.ts,JWT,user,yes (own),none,user profile,none,none,yes,structural-only
+PATCH,/users/me,users.controller.ts,JWT,user,yes (own),UpdateUserDto,updated user,none,none,no,structural-only
+POST,/users/me/change-password,users.controller.ts,JWT,user,yes (own),ChangePasswordDto,success,none,changes password + increments tokenVersion,no,structural-only

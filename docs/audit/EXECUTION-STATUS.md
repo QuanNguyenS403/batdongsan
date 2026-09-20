@@ -8,6 +8,45 @@
 
 ---
 
+## 📁 HỒ SƠ BÀN GIAO BỔ SUNG CHUYÊN ĐỀ (§12.1)
+
+Các tài liệu dưới đây được duy trì tại thư mục `docs/audit/` như tài liệu bổ sung chuyên đề, được liên kết chéo từ sổ theo dõi này:
+1. [CURRENT-STATE.md](file:///d:/BĐS/docs/audit/CURRENT-STATE.md): Hiện trạng commit, kiến trúc monorepo, manifest, 31 routes, prisma schema, biến môi trường.
+2. [BUSINESS-MODEL.md](file:///d:/BĐS/docs/audit/BUSINESS-MODEL.md): Đối tượng, 3 luồng người dùng, mô hình doanh thu, bảng giá thử nghiệm, unit economics.
+3. [BRAND-AND-TRUST.md](file:///d:/BĐS/docs/audit/BRAND-AND-TRUST.md): Tên làm việc QNS Thuê, slogan, bảng thông tin thuê minh bạch, cơ chế tin cậy 3 lớp.
+4. [api-inventory.csv](file:///d:/BĐS/docs/audit/api-inventory.csv): Toàn bộ 58 endpoints API thật và các cơ chế kiểm soát tương ứng.
+5. [ISSUE-REGISTER.md](file:///d:/BĐS/docs/audit/ISSUE-REGISTER.md): Sổ theo dõi lỗi chuẩn mẫu 12 trường của §12.1 (hợp nhất F01–F16).
+6. [PERMISSION-MATRIX.md](file:///d:/BĐS/docs/audit/PERMISSION-MATRIX.md): Ma trận phân quyền theo capability (8 vai trò × 19 hành động).
+7. [DATA-AND-FINANCE-RULES.md](file:///d:/BĐS/docs/audit/DATA-AND-FINANCE-RULES.md): Quy tắc tiền nguyên VNĐ BigInt, snapshot, sổ cái bất biến, concurrency, migration.
+8. [TEST-EVIDENCE.md](file:///d:/BĐS/docs/audit/TEST-EVIDENCE.md): Nhật ký bằng chứng kiểm thử tự động, build, lint, grep từ cấm.
+9. [RUNBOOK.md](file:///d:/BĐS/docs/audit/RUNBOOK.md): Sổ tay triển khai, rollback, backup/restore drill, ứng phó sự cố tích hợp, đối soát.
+10. [RELEASE-READINESS.md](file:///d:/BĐS/docs/audit/RELEASE-READINESS.md): Báo cáo đối chiếu 10 mục nghiệm thu tối thiểu (§11), rủi ro và điều kiện phát hành.
+
+---
+
+## 🔗 MA TRẬN HỢP NHẤT FINDINGS F01–F16 (BẢN BÁO CÁO 19/09/2026)
+
+| Mã mới (19/09) | Mức độ | Mã tương đương trong Sổ theo dõi | Ghi chú hợp nhất |
+|---|---|---|---|
+| **F01** | P0 | **OPS-08** | = OPS-08, xem thêm góc nhìn bổ sung trong bản 19/09 (CVE RSC DoS Next.js 14.x) |
+| **F02** | P0 (Tiền) | **FIN-01 / AF-01** | = FIN-01, bắt buộc DTO ApproveMembershipRequestDto có externalTransactionId & confirmedAmount > 0 |
+| **F03** | P0 (Tiền) | **FIN-01 / AF-01** | = FIN-01, bắt buộc DTO RefundMembershipRequestDto kiểm tra refundAmount <= confirmedPaymentAmount |
+| **F04** | P1 | **FIN-04 / FIN-05 / AF-05** | = FIN-04, bảo toàn snapshot planSnapshot bất biến khi duyệt gói và kiểm tra quota |
+| **F05** | P1 | **RB-05 / RB-10 / BE-08** | = RB-05/RB-10, race condition quota và upload ảnh đồng thời |
+| **F06** | P1 | **RB-02 / P0-06 / BE-01** | = RB-02, OtpService chuyển từ in-memory Map sang Redis store, dùng crypto.randomInt |
+| **F07** | P1 | **RB-01 / BE-02** | = RB-01, JwtStrategy bắt buộc claim tokenVersion, revoke session khi đổi mật khẩu/khóa user |
+| **F08** | P1 | **RB-04 / P0-01** | = RB-04, regex SĐT bootstrap admin ^0[35789], khóa HTTP bootstrap ở production |
+| **F09** | P1 | **RB-06 / RB-07 / RB-15** | = RB-06, gắn outbox vào toàn bộ mutation chính; lease/reclaim 5 phút chống worker chết |
+| **F10** | P1 | **RB-11 / BE-04** | = RB-11, LeadsService.createLead kiểm tra getPublicWhereClause (expiresAt > now & owner active) |
+| **F11** | P1 | **FE-N17 / FE-05** | = FE-N17, MoveInCostEstimator phân biệt cọc 0đ với chưa khai báo, đơn vị nước bắt buộc |
+| **F12** | P1 | **MỚI (RBAC / Capabilities)**| Phát hiện mới bản 19/09: Tách quyền admin theo capability (kiểm duyệt, hỗ trợ, tài chính, quản trị), MFA admin |
+| **F13** | P1 | **FIN-08 / AF-10** | = FIN-08, tính bất biến sổ cái FinanceLedger, onDelete: Restrict giữa User và FinanceLedger |
+| **F14** | P1/P2 | **RB-09** | = RB-09, upload an toàn và siết remotePatterns loại bỏ wildcard ** trong next.config.mjs |
+| **F15** | P2 | **BRAND-SYNC / BR-01 / BR-02**| = BRAND-SYNC, xóa 100% từ cấm "chính chủ", chuẩn hóa slogan "Rõ chi phí. Đúng người cho thuê." |
+| **F16** | P2 | **FE-N22** | = FE-N22, chuyển Promise.all ở Homepage sang Promise.allSettled, phân biệt lỗi mạng với empty state |
+
+---
+
 ## 1. Danh sách P0 (Chặn Release / Luồng tiền / Niềm tin cốt lõi)
 
 | Mã Finding | Wave | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Ghi chú nghiệm thu | Commit |

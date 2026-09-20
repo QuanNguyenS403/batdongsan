@@ -1,20 +1,26 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (12/09/2026 — NÂNG CẤP THƯƠNG HIỆU QNS.VN, BỘ LỌC ĐH TOÀN QUỐC & THUẬT TOÁN TÌM PHÒNG GẦN NHẤT THEO ĐỊA CHỈ):**
-1. **Thương hiệu & Giao diện (Rebrand QNS.vn)**:
-   - Đổi toàn bộ thương hiệu từ `BĐS.vn` thành `QNS.vn` (Header logo 'Q' + 'QNS.vn', Footer, layout metadata, OpenGraph siteName, trang giới thiệu, điều khoản, liên hệ `contact@qns.vn`).
-   - Thêm mục "🏠 Trang chủ" cạnh mục "🏢 Căn hộ" trên thanh tab danh mục Hero, thanh Header Navigation và hàng Quick Categories.
-   - Loại bỏ hàng nút trường ĐH hardcode thừa thãi (`🎓 Gần trường ĐH: ...`) dưới thanh tìm kiếm Hero.
-2. **Danh mục các trường Đại học toàn quốc (`vietnam-universities.ts`)**:
-   - Xây dựng dataset chuẩn hóa hơn 80 trường Đại học lớn tại Việt Nam, phân nhóm 5 vùng miền (TP.HCM, Hà Nội, Đà Nẵng & Miền Trung, Cần Thơ & Miền Tây, Miền Bắc khác).
-   - Tích hợp vào `SearchFilterBar.tsx` với giao diện phân nhóm `<optgroup>` trực quan.
-   - Cập nhật seed database với toạ độ thực tế của toàn bộ các trường ĐH.
-3. **Thuật toán tìm phòng gần nhất theo địa chỉ (`ListingsService`)**:
-   - Geocoding & Coordinate Resolution: Nhận diện tọa độ địa chỉ từ từ khóa hoặc tọa độ gửi lên (qua database các trường, các tuyến đường/quận huyện trọng điểm và Nominatim geocode fallback).
-   - Tính toán khoảng cách (Haversine formula) và sắp xếp phòng gần nhất lên đầu (`distanceMeters ASC`).
-   - Hiển thị badge khoảng cách trực quan (`📍 Cách địa chỉ ~350m`) trên `ListingCard.tsx`.
-4. **Kiểm thử**:
-   - `tsc --noEmit` cho cả `@batdongsan/web` và `@batdongsan/api`: Đạt 100% không lỗi.
+**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 0: CHỤP HIỆN TRẠNG & TẠO HỒ SƠ BÀN GIAO §12.1):**
+1. **Kiểm kê Baseline Kỹ Thuật**:
+   - Xác lập nhánh làm việc `audit/qns-rental-implementation` từ commit tham chiếu `eb99862d8a6887dae0241d8e7302005d699ea40b`.
+   - Toolchain: Node `v24.19.0`, pnpm `9.15.9`.
+   - Chạy `static-lint-check.js`: 5/5 cấu trúc khớp.
+   - Typecheck `@batdongsan/api` & `@batdongsan/web`: PASS 100% (0 lỗi).
+   - Rà soát từ cấm: Phát hiện 7 tệp còn chứa "chính chủ" (Finding BR-01/F15) cần dọn trong Đợt 1.
+2. **Khởi tạo Bộ Hồ Sơ Bàn Giao Bổ Sung Chuyên Đề §12.1 (10 file trong `docs/audit/`)**:
+   - `CURRENT-STATE.md`: Commit, kiến trúc monorepo, 31 routes, prisma schema, bảng biến môi trường.
+   - `BUSINESS-MODEL.md`: Mô hình marketplace kết nối trực tiếp, bảng giá thử nghiệm, unit economics.
+   - `BRAND-AND-TRUST.md`: Tên QNS Thuê, slogan "Rõ chi phí. Đúng người cho thuê.", bảng thông tin thuê minh bạch, cơ chế tin cậy 3 lớp.
+   - `api-inventory.csv`: Toàn bộ 58 endpoints API thật và ma trận kiểm soát tương ứng.
+   - `ISSUE-REGISTER.md`: Sổ theo dõi lỗi chuẩn mẫu 12 trường của §12.1 (hợp nhất F01–F16).
+   - `PERMISSION-MATRIX.md`: Ma trận phân quyền theo capability (8 vai trò × 19 hành động).
+   - `DATA-AND-FINANCE-RULES.md`: Quy tắc tiền nguyên VNĐ BigInt, snapshot, sổ cái bất biến, concurrency, migration.
+   - `TEST-EVIDENCE.md`: Nhật ký bằng chứng kiểm thử tự động, build, lint, grep từ cấm.
+   - `RUNBOOK.md`: Sổ tay triển khai, rollback, backup/restore drill, ứng phó sự cố tích hợp, đối soát.
+   - `RELEASE-READINESS.md`: Báo cáo đối chiếu 10 mục nghiệm thu tối thiểu (§11), rủi ro và điều kiện phát hành.
+3. **Cập nhật & Hợp nhất Sổ theo dõi trung tâm**:
+   - Cập nhật `docs/audit/EXECUTION-STATUS.md`: Thêm liên kết chéo tới 10 tài liệu chuyên đề; bổ sung ma trận đối chiếu hợp nhất F01–F16 với mã hiện có.
+4. **Kế hoạch tiếp theo**: Tiến hành ĐỢT 1: Chặn rủi ro trọng yếu (Gate A) — sửa FE-N01 (Rules of Hooks), FE-N02 (tắt fallback production bảng giá), F16 (Promise.allSettled trang chủ), BR-01/BR-02 (xóa 100% từ "chính chủ", viết lại hero minh bạch chi phí), F02/F03 (DTO duyệt tiền và hoàn tiền), SEC-HOTLINE, RB-14.
 
 ---
 
