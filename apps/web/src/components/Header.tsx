@@ -65,13 +65,24 @@ export function Header() {
       setChecked(true);
       return;
     }
+    // FE-N11: Đồng bộ auth state, chỉ xóa token khi server trả về 401 Unauthorized thật, không xóa khi lỗi mạng tạm thời
     authFetch('/auth/me')
       .then((res) => {
-        if (!res.ok) throw new Error('unauthorized');
+        if (res.status === 401) {
+          clearTokens();
+          setUser(null);
+          return null;
+        }
+        if (!res.ok) return null; // Lỗi 5xx hoặc timeout tạm thời: giữ token
         return res.json();
       })
-      .then((data) => setUser(data))
-      .catch(() => clearTokens())
+      .then((data) => {
+        if (data) setUser(data);
+      })
+      .catch((err) => {
+        // Lỗi mạng hoặc circuit breaker: giữ token, không tự ý đăng xuất người dùng
+        console.warn('Lỗi kết nối /auth/me tạm thời:', err);
+      })
       .finally(() => setChecked(true));
   }, []);
 

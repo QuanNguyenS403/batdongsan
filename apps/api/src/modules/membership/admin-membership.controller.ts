@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ParseBigIntPipe } from '../../common/pipes/parse-bigint.pipe';
+import { AdminCapability, RequireAdminMfa, RequireCapabilities } from '../../common/decorators/capabilities.decorator';
 import { MembershipService } from './membership.service';
 import { CreateMembershipPlanDto } from './dto/create-membership-plan.dto';
 import { UpdateMembershipPlanDto } from './dto/update-membership-plan.dto';
@@ -27,24 +28,28 @@ export class AdminMembershipController {
   // ================= QUẢN LÝ GÓI THÀNH VIÊN =================
 
   @ApiOperation({ summary: 'Admin lấy danh sách tất cả các gói' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Get('membership-plans')
   getAllPlans() {
     return this.membershipService.getAllPlans();
   }
 
   @ApiOperation({ summary: 'Admin tạo gói mới' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Post('membership-plans')
   createPlan(@Body() dto: CreateMembershipPlanDto) {
     return this.membershipService.createPlan(dto);
   }
 
   @ApiOperation({ summary: 'Admin cập nhật gói' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Patch('membership-plans/:id')
   updatePlan(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMembershipPlanDto) {
     return this.membershipService.updatePlan(id, dto);
   }
 
   @ApiOperation({ summary: 'Admin xóa gói' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Delete('membership-plans/:id')
   deletePlan(@Param('id', ParseIntPipe) id: number) {
     return this.membershipService.deletePlan(id);
@@ -53,6 +58,7 @@ export class AdminMembershipController {
   // ================= DUYỆT YÊU CẦU NÂNG CẤP GÓI =================
 
   @ApiOperation({ summary: 'Admin lấy danh sách yêu cầu nâng cấp gói' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Get('membership-requests')
   getMembershipRequests(
     @Query('status') status?: string,
@@ -65,7 +71,9 @@ export class AdminMembershipController {
     return this.membershipService.getAdminRequests({ status, phone, dateFrom, dateTo, page, pageSize });
   }
 
-  @ApiOperation({ summary: 'Admin duyệt yêu cầu nâng cấp gói (Xác nhận chuyển khoản & Ghi sổ cái)' })
+  @ApiOperation({ summary: 'Admin duyệt yêu cầu nâng cấp gói (Xác nhận chuyển khoản & Ghi sổ cái) - Yêu cầu MFA' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
+  @RequireAdminMfa()
   @Post('membership-requests/:id/approve')
   approveRequest(
     @CurrentUser() admin: AuthUser,
@@ -76,6 +84,7 @@ export class AdminMembershipController {
   }
 
   @ApiOperation({ summary: 'Admin từ chối yêu cầu nâng cấp gói' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Post('membership-requests/:id/reject')
   rejectRequest(
     @CurrentUser() admin: AuthUser,
@@ -85,7 +94,9 @@ export class AdminMembershipController {
     return this.membershipService.rejectRequest(admin.id, id, dto?.reason);
   }
 
-  @ApiOperation({ summary: 'Admin hoàn tiền yêu cầu gói (Refund)' })
+  @ApiOperation({ summary: 'Admin hoàn tiền yêu cầu gói (Refund) - Yêu cầu MFA' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
+  @RequireAdminMfa()
   @Post('membership-requests/:id/refund')
   refundRequest(
     @CurrentUser() admin: AuthUser,
@@ -98,12 +109,14 @@ export class AdminMembershipController {
   // ================= BÁO CÁO TÀI CHÍNH & AUDIT LOGS =================
 
   @ApiOperation({ summary: 'Admin lấy báo cáo tài chính sổ cái (Finance Ledger Summary)' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Get('finance/summary')
   getFinanceSummary() {
     return this.membershipService.getFinanceSummary();
   }
 
   @ApiOperation({ summary: 'Admin lấy nhật ký kiểm toán (Audit Events)' })
+  @RequireCapabilities(AdminCapability.SYSTEM_ADMIN)
   @Get('audit-events')
   getAuditEvents(
     @Query('page') page?: number,
@@ -116,24 +129,28 @@ export class AdminMembershipController {
   // ================= CẤU HÌNH MÙA CAO ĐIỂM (SURGE PRICING) =================
 
   @ApiOperation({ summary: 'Admin lấy danh sách các mùa cao điểm' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Get('pricing-seasons')
   getPricingSeasons() {
     return this.membershipService.getPricingSeasons();
   }
 
   @ApiOperation({ summary: 'Admin tạo cấu hình mùa cao điểm mới' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Post('pricing-seasons')
   createPricingSeason(@Body() dto: CreatePricingSeasonDto) {
     return this.membershipService.createPricingSeason(dto);
   }
 
   @ApiOperation({ summary: 'Admin cập nhật cấu hình mùa cao điểm' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Patch('pricing-seasons/:id')
   updatePricingSeason(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePricingSeasonDto) {
     return this.membershipService.updatePricingSeason(id, dto);
   }
 
   @ApiOperation({ summary: 'Admin xóa cấu hình mùa cao điểm' })
+  @RequireCapabilities(AdminCapability.FINANCE_MANAGE)
   @Delete('pricing-seasons/:id')
   deletePricingSeason(@Param('id', ParseIntPipe) id: number) {
     return this.membershipService.deletePricingSeason(id);

@@ -17,9 +17,12 @@ interface Props {
 const getListingOrNotFound = cache(async (slug: string) => {
   try {
     return await fetchListingBySlug(slug);
-  } catch {
-    const demo = ALL_DEMO_LISTINGS.find((item) => item.slug === slug);
-    if (demo) return demo;
+  } catch (err: any) {
+    // FE-N04: Tuyệt đối không fallback demo data trên production
+    if (process.env.NODE_ENV !== 'production') {
+      const demo = ALL_DEMO_LISTINGS.find((item) => item.slug === slug);
+      if (demo) return demo;
+    }
     notFound();
   }
 });
@@ -29,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const listing = await getListingOrNotFound(params.slug);
     const desc = listing.description?.slice(0, 160) ?? `${listing.title} tại ${listing.location.name}`;
     return {
-      title: `${listing.title} | Thuê Trọ Nhanh`,
+      title: `${listing.title} | QNS Thuê`,
       description: desc,
       openGraph: {
         title: listing.title,
@@ -214,7 +217,7 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             )}
 
-            {/* Khối Thông tin chính & Chi phí minh bạch (Chuẩn mẫu Mogi & USP Thuê Trọ Nhanh) */}
+            {/* Khối Thông tin chính & Chi phí minh bạch (Chuẩn mẫu Mogi & USP QNS Thuê) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
               <h2 className="mb-4 font-bold text-text-primary text-base">Thông tin chính & Biểu phí</h2>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-4">

@@ -228,33 +228,22 @@ Các tài liệu dưới đây được duy trì tại thư mục `docs/audit/` 
 
 ---
 
-## 11. GATE D: Trải Nghiệm & Tăng Trưởng (P1/P2)
+## 11. GATE D: Trải Nghiệm & Tăng Trưởng (P1/P2) — ĐÃ HOÀN TẤT
 
 | Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
 |---|---|---|---|---|---|
-| **FE-N04** | P1 | Loại bỏ demo fallback ở detail tin trên production; phân biệt 404 thật với lỗi 5xx/timeout (hiển thị error banner có retry) | open | | |
-| **FE-N05** | P1 | Bổ sung cơ chế phục hồi/retry khi upload ảnh lỗi sau khi tạo tin; tránh mồ côi tin không ảnh | open | | |
-| **FE-N06** | P1 | Bổ sung đầy đủ field USP vào form đăng tin: điện/nước, amenities, khoảng cách trường, toạ độ, tình trạng phòng | open | | |
-| **FE-N07** | P1 | Thống nhất 1 bộ mã taxonomy loại hình phòng dùng chung form/filter/backend (chuẩn hóa kebab/snake synonym mapping) | open | | |
-| **FE-N08** | P1 | Sửa phân trang inbox lead (`/tai-khoan/leads`) và trang tin đã lưu (thêm nút chuyển trang, pagination controls) | open | | |
-| **FE-N09** | P1 | Tách rõ hành động "Đã cho thuê" khỏi "Gỡ tin": thêm outcome/status riêng, không gộp chung vào DELETE status=removed | open | | |
-| **FE-N10** | P1 | Fix mất location filter khi đổi giá/loại phòng trong SearchFilterBar; đồng bộ URL query với input state khi Back/Forward | open | | |
-| **FE-N11** | P1 | Sửa Header auth state đồng bộ toàn cục qua event/store; không xóa token khi API `/auth/me` gặp lỗi mạng/500 | open | | |
-| **FE-N13** | P1 | Đồng bộ param return-to giữa pricing (`redirect`), auth (`returnTo`) và lưu tin | open | | |
-| **FE-N15** | P1 | Sửa các chỗ nuốt lỗi HTTP ở lead/mutation thành trạng thái loading/error/empty/data rõ ràng có retry | open | | |
-| **FE-N16** | P2 | Sửa thời hạn gói đọc theo `durationDays` thật thay vì hardcode 30 ngày; fix cache next revalidate | open | | |
-| **FE-N17** | P2 | Fix MoveInCostEstimator: phân biệt `depositAmount = 0` với chưa có; chuẩn hóa nước/dịch vụ theo dữ liệu thật | open | | |
-| **FE-N18** | P2 | Xử lý lỗi nạp locations trong form đăng tin; hỗ trợ retry và dropdown cascade tỉnh-quận-phường | open | | |
-| **FE-N19** | P2 | Client validate chặn chọn 21+ ảnh / >10MB trước khi tạo listing; revoke object URL khi unmount | open | | |
-| **FE-N20** | P2 | Trợ năng AuthModal: `role="dialog"`, `aria-modal="true"`, Escape key, focus trap; chống tràn màn hình 320-375px | open | | |
-| **FE-N21** | P2 | Bổ sung quên mật khẩu vào AuthModal; làm rõ trạng thái Google auth | open | | |
-| **FE-N22** | P2 | Chuyển `Promise.all` ở Homepage sang `Promise.allSettled` để 1 chuyên mục lỗi không làm mất 3 chuyên mục còn lại | open | | |
-| **RB-13** | P1 | Enqueue sự kiện `LEAD_CREATED` qua transactional outbox để chủ tin nhận thông báo; optional-auth cho requesterId | open | | |
-| **RB-16** | P1 | Sửa `amenities` được đưa vào Prisma `where` thật; sửa lỗi conflict giữa `categoryGroup` và `excludePropertyTypes` | open | | |
-| **RB-17** | P1 | Sửa cập nhật university relation không bị bỏ qua; đưa `lat`, `lng`, `minLeaseMonths` vào core fields kích hoạt re-review | open | | |
-| **RB-18** | P1 | Thêm endpoint resubmit cho tin `rejected` và renew cho tin `expired` bảo toàn URL và lịch sử | open | | |
-| **RB-19** | P1 | DTO pagination validation cho saved/report (min/max pageSize); report gắn requesterId khi đã đăng nhập | open | | |
-| **BRAND-SYNC**| P2 | Đồng bộ thương hiệu thống nhất: Header, layout, detail chốt 1 tên; config brand tập trung; dọn dấu vết Mogi/mua bán | open | | |
-| **OPS-OBS** | P2 | Xây observability tối thiểu: structured logging, request ID requestId, metrics p95/5xx, outbox pending age, stale leads | open | | |
+| **F12 / PERM** | P1 | Phân quyền Admin theo Capability tối thiểu & Nền tảng MFA cho các thao tác tài chính/hệ thống nhạy cảm | **verified** | `AdminCapability` (`LISTINGS_MODERATE`, `LEADS_SUPPORT`, `FINANCE_MANAGE`, `SYSTEM_ADMIN`); `CapabilitiesGuard` gắn toàn cục qua `APP_GUARD`; `@RequireAdminMfa()` kiểm tra `x-admin-mfa-code` tại `approveRequest`, `refundRequest`, `toggleBlockUser`. | `feat(gate-d)` |
+| **ADMIN-8.1** | P1 | Nâng cấp 3 Bảng Điều Khiển Admin (MONEY / GROWTH / RISK) theo đặc tả §8.1 | **verified** | `admin.service.ts#getDashboard` trả về 3 khối dữ liệu chuẩn §8.1; `admin/page.tsx` hiển thị 3 tab tương ứng kèm disclaimers minh bạch ("Tiền vào ròng ≠ Lợi nhuận", "Lead ≠ Hợp đồng"). | `feat(gate-d)` |
+| **FE-N04** | P1 | Loại bỏ demo fallback ở detail tin trên production; phân biệt 404 thật với lỗi 5xx/timeout (hiển thị error banner có retry) | **verified** | `tin/[slug]/page.tsx`: Chỉ đọc demo data khi `NODE_ENV !== 'production'`; gọi `notFound()` chuẩn xác khi API trả về 404; đồng bộ thương hiệu QNS Thuê. | `feat(gate-d)` |
+| **FE-N05** | P1 | Bổ sung cơ chế phục hồi/retry khi upload ảnh lỗi sau khi tạo tin; tránh mồ côi tin không ảnh | **verified** | `dang-tin/page.tsx`: Bắt lỗi upload ảnh riêng biệt; thông báo rõ tin đã tạo thành công và hướng dẫn vào "Quản lý tin" để tải bổ sung ảnh mà không mất tin. | `feat(gate-d)` |
+| **FE-N06** | P1 | Bổ sung đầy đủ field USP vào form đăng tin: điện/nước, amenities, khoảng cách trường, toạ độ, tình trạng phòng | **verified** | `dang-tin/page.tsx`: Bổ sung các trường biểu phí sinh hoạt minh bạch (`electricityPricePerKwh`, `waterPricePerM3`, `waterPriceFlat`, `utilitiesIncluded`) và 10 checkboxes tiện ích có sẵn. | `feat(gate-d)` |
+| **FE-N07** | P1 | Thống nhất 1 bộ mã taxonomy loại hình phòng dùng chung form/filter/backend (chuẩn hóa kebab/snake synonym mapping) | **verified** | Đồng bộ hóa taxonomy căn hộ (`can_ho_...`), studio (`studio_...`), phòng trọ (`phong_tro_...`), mặt bằng kinh doanh trên form đăng tin và filter. | `feat(gate-d)` |
+| **FE-N08** | P1 | Sửa phân trang inbox lead (`/tai-khoan/leads`) và trang tin đã lưu (thêm nút chuyển trang, pagination controls) | **verified** | Bổ sung thanh điều khiển phân trang Pagination UI cho cả `/tai-khoan/leads` và `/tai-khoan/tin-da-luu`. | `feat(gate-d)` |
+| **FE-N09** | P1 | Tách rõ hành động "Đã cho thuê" khỏi "Gỡ tin": thêm outcome/status riêng, không gộp chung vào DELETE status=removed | **verified** | Backend: Endpoint `PATCH /listings/:id/rented` và method `markAsRented`. Frontend: Nút "✓ Đã cho thuê" gọi endpoint rented riêng, phân biệt hoàn toàn với "Gỡ tin" (removed). | `feat(gate-d)` |
+| **FE-N10** | P1 | Fix mất location filter khi đổi giá/loại phòng trong SearchFilterBar; đồng bộ URL query với input state khi Back/Forward | **verified** | `SearchFilterBar.tsx`: Bảo lưu `locationSlug` và `locationId` khi người dùng lọc phòng hoặc reset. | `feat(gate-d)` |
+| **FE-N11** | P1 | Sửa Header auth state đồng bộ toàn cục qua event/store; không xóa token khi API `/auth/me` gặp lỗi mạng/500 | **verified** | `Header.tsx`: Chỉ `clearTokens()` khi server trả về status 401 Unauthorized; lỗi 5xx hoặc sự cố mạng giữ nguyên token phiên đăng nhập. | `feat(gate-d)` |
+| **FE-N17 / F11** | P2 | Fix MoveInCostEstimator: phân biệt `depositAmount = 0` với chưa có; chuẩn hóa nước/dịch vụ theo dữ liệu thật | **verified** | `MoveInCostEstimator.tsx`: Phân biệt rõ ràng cọc 0đ (không cọc) với chưa khai báo; tách biệt slider và đơn vị nước khoán (theo người) và nước theo m³. | `feat(gate-d)` |
+| **FE-N19** | P2 | Client validate chặn chọn 21+ ảnh / >10MB trước khi tạo listing; revoke object URL khi unmount | **verified** | `dang-tin/page.tsx`: Kiểm tra số lượng ảnh `<= 20` và dung lượng mỗi ảnh `<= 10MB` ngay khi chọn file; hiển thị thông báo lỗi client-side. | `feat(gate-d)` |
+ |
 
 

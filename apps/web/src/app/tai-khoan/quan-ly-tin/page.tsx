@@ -18,6 +18,7 @@ import { formatPrice, Listing, ListingListResponse } from '@/lib/api';
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   pending: { label: 'Chờ duyệt', className: 'bg-amber-100 text-amber-700' },
   active: { label: 'Đang hiển thị', className: 'bg-green-100 text-green-700' },
+  rented: { label: 'Đã cho thuê', className: 'bg-emerald-100 text-emerald-800' },
   rejected: { label: 'Bị từ chối', className: 'bg-red-100 text-red-700' },
   expired: { label: 'Hết hạn', className: 'bg-gray-200 text-gray-600' },
   removed: { label: 'Đã gỡ', className: 'bg-gray-200 text-gray-500' },
@@ -27,6 +28,7 @@ const FILTER_TABS = [
   { value: '', label: 'Tất cả' },
   { value: 'pending', label: 'Chờ duyệt' },
   { value: 'active', label: 'Đang hiển thị' },
+  { value: 'rented', label: 'Đã cho thuê' },
   { value: 'rejected', label: 'Bị từ chối' },
   { value: 'expired', label: 'Hết hạn' },
   { value: 'removed', label: 'Đã gỡ' },
@@ -83,16 +85,26 @@ export default function QuanLyTinPage() {
     }
   }, [checkedAuth, statusFilter]);
 
-  async function handleRemove(listingId: string, isRented = false) {
-    const msg = isRented
-      ? 'Xác nhận phòng này ĐÃ CHO THUÊ THÀNH CÔNG và bạn muốn gỡ tin đăng khỏi sàn?'
-      : 'Bạn có chắc chắn muốn gỡ tin đăng này? Tin sau khi gỡ sẽ không hiển thị công khai.';
-    if (!confirm(msg)) {
+  async function handleMarkRented(listingId: string) {
+    if (!confirm('Xác nhận phòng này ĐÃ CHO THUÊ THÀNH CÔNG? Tin sẽ được chuyển sang trạng thái Đã cho thuê và tạm ẩn khỏi sàn.')) {
+      return;
+    }
+    try {
+      const res = await authFetch(`/listings/${listingId}/rented`, { method: 'PATCH' });
+      if (!res.ok) throw new Error('Không thể cập nhật trạng thái đã cho thuê.');
+      load(statusFilter, page);
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  }
+
+  async function handleRemove(listingId: string) {
+    if (!confirm('Bạn có chắc chắn muốn gỡ tin đăng này? Tin sau khi gỡ sẽ không hiển thị công khai.')) {
       return;
     }
     try {
       const res = await authFetch(`/listings/${listingId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Không thể cập nhật trạng thái tin đăng.');
+      if (!res.ok) throw new Error('Không thể gỡ tin đăng.');
       load(statusFilter, page);
     } catch (err) {
       alert((err as Error).message);
@@ -206,8 +218,9 @@ export default function QuanLyTinPage() {
                             </Link>
                             <button
                               type="button"
-                              onClick={() => handleRemove(listing.id, true)}
+                              onClick={() => handleMarkRented(listing.id)}
                               className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
+                              title="Đánh dấu phòng đã cho thuê thành công"
                             >
                               ✓ Đã cho thuê
                             </button>
@@ -216,7 +229,7 @@ export default function QuanLyTinPage() {
                         {listing.status !== 'removed' && (
                           <button
                             type="button"
-                            onClick={() => handleRemove(listing.id, false)}
+                            onClick={() => handleRemove(listing.id)}
                             className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
                           >
                             Gỡ tin

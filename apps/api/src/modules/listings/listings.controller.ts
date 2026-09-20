@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -99,6 +100,12 @@ export class ListingsController {
   @Delete(':id')
   remove(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
     return this.listingsService.remove(id, user);
+  }
+
+  @ApiBearerAuth()
+  @Patch(':id/rented')
+  markAsRented(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {
+    return this.listingsService.markAsRented(id, user);
   }
 
   @ApiBearerAuth()

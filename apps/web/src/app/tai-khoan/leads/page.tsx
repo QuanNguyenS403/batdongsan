@@ -199,6 +199,33 @@ export default function MyLeadsPage() {
               );
             })
           )}
+
+          {/* Phân trang (FE-N08) */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between rounded-2xl border border-surface-border bg-white px-6 py-4 shadow-sm">
+              <p className="text-xs text-text-muted">
+                Hiển thị trang <strong>{page}</strong> / <strong>{totalPages}</strong> (tổng số {total} khách liên hệ)
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="px-3.5 py-1.5 bg-white border border-surface-border text-text-primary text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-surface-muted transition-colors"
+                >
+                  ← Trang trước
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-3.5 py-1.5 bg-white border border-surface-border text-text-primary text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-surface-muted transition-colors"
+                >
+                  Trang sau →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

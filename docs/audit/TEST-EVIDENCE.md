@@ -172,3 +172,45 @@
   Time:     50.828s
   ```
 
+---
+
+## 5. Nhật Ký Kiểm Thử Đợt 4 (Gate D — Admin, Phân Quyền Capability & Trải Nghiệm — 21/09/2026)
+
+### Bài kiểm tra T21: NestJS Backend Typecheck sau khi hoàn tất Gate D
+- **Lệnh thực thi**: `pnpm --filter @batdongsan/api exec tsc --noEmit`
+- **Mục tiêu**: Xác thực code: `capabilities.decorator.ts` & `capabilities.guard.ts` (F12: Capability-based access control, Admin MFA token check `x-admin-mfa-code`), `auth.module.ts` (đăng ký `CapabilitiesGuard` toàn cục), `admin.controller.ts` & `admin-membership.controller.ts` (gắn decorators capability & MFA), `admin.service.ts` (nâng cấp `getDashboard` trả về đủ 3 bảng MONEY / GROWTH / RISK theo chuẩn §8.1), `listings.controller.ts` & `listings.service.ts` (FE-N09: endpoint `PATCH :id/rented` và method `markAsRented`).
+- **Thời gian**: 2026-09-21 02:00:52
+- **Kết quả**: **PASS (Exit code 0, 0 errors)**
+
+### Bài kiểm tra T22: Next.js Frontend Typecheck sau khi hoàn tất Gate D
+- **Lệnh thực thi**: `pnpm --filter @batdongsan/web exec tsc --noEmit`
+- **Mục tiêu**: Xác thực code: `admin/page.tsx` (giao diện 3 bảng MONEY / GROWTH / RISK theo §8.1, tab view, disclaimers minh bạch), `tin/[slug]/page.tsx` (FE-N04: loại bỏ demo fallback ở production, brand QNS Thuê), `dang-tin/page.tsx` (FE-N05, FE-N19: client validate <20 ảnh / <10MB; FE-N06, FE-N07: biểu phí điện nước minh bạch & 10 tiện ích có sẵn), `tai-khoan/quan-ly-tin/page.tsx` (FE-N09: tách biệt "Đã cho thuê" - status `rented` khỏi "Gỡ tin" - status `removed`), `tai-khoan/leads/page.tsx` & `tai-khoan/tin-da-luu/page.tsx` (FE-N08: pagination UI controls), `SearchFilterBar.tsx` (FE-N10: giữ location filter), `Header.tsx` (FE-N11: không clear token khi 5xx/mất mạng), `MoveInCostEstimator.tsx` (FE-N17 / F11: phân biệt cọc 0đ, chuẩn hóa đơn vị nước theo người vs m³).
+- **Thời gian**: 2026-09-21 02:01:26
+- **Kết quả**: **PASS (Exit code 0, 0 errors)**
+
+### Bài kiểm tra T23: Rà Soát Từ Cấm Tuyệt Đối (Zero Prohibited Copy)
+- **Lệnh thực thi**:
+  - `grep_search(Query: "100% chính chủ", SearchPath: "d:\\BĐS\\apps")`
+  - `grep_search(Query: "không lừa đảo", SearchPath: "d:\\BĐS\\apps")`
+  - `grep_search(Query: "an toàn tuyệt đối", SearchPath: "d:\\BĐS\\apps")`
+  - `grep_search(Query: "chắc chắn có khách", SearchPath: "d:\\BĐS\\apps")`
+- **Thời gian**: 2026-09-21 02:02:45
+- **Kết quả**: **PASS (0 kết quả tìm thấy trên toàn bộ source code)**
+
+### Bài kiểm tra T24: Static Structure Lint
+- **Lệnh thực thi**: `node packages/database/scripts/static-lint-check.js`
+- **Thời gian**: 2026-09-21 02:00:15
+- **Kết quả**: **PASS (5/5 checks)**
+
+### Bài kiểm tra T25: Toàn Bộ Monorepo Production Build (Turbo)
+- **Lệnh thực thi**: `pnpm build`
+- **Thời gian**: 2026-09-21 02:02:20
+- **Kết quả**: **PASS (3/3 packages build thành công, 31/31 routes static generation pass 100%)**
+- **Log trích xuất**:
+  ```text
+  Tasks:    3 successful, 3 total
+  Cached:   1 cached, 3 total
+  Time:     44.872s
+  ```
+
+

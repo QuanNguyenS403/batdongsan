@@ -1,45 +1,43 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 3: OUTBOX, TÀI CHÍNH & VẬN HÀNH / GATE C):**
-1. **RB-06: Nối 100% Transactional Outbox Vào Toàn Bộ Mutation Cốt Lõi**:
-   - `listings.service.ts`: `create` và `report` đều ghi các sự kiện Outbox (`EMAIL_LISTING_SUBMITTED`, `EMAIL_NEW_LISTING_ADMIN`, `SHEETS_PENDING_LISTING`, `EMAIL_NEW_REPORT_ADMIN`, `SHEETS_VIOLATION_REPORT`) bên trong cùng DB transaction `tx`.
-   - `admin.service.ts`: `approveListing` (`EMAIL_LISTING_APPROVED`) và `rejectListing` (`EMAIL_LISTING_REJECTED`) ghi vào Outbox trong CAS transaction.
-   - `membership.service.ts`: `requestUpgrade` (`EMAIL_MEMBERSHIP_UPGRADE_ADMIN`) và `approveRequest` (`EMAIL_MEMBERSHIP_ACTIVATED_USER`) ghi vào Outbox trong transaction.
-   - `leads.service.ts`: `createLead` ghi sự kiện `LEAD_CREATED` (RB-13) vào Outbox trong transaction.
-2. **RB-07 & RB-15: Cơ Chế Lease/Reclaim & Phân Định 3 Trạng Thái Outbox**:
-   - `outbox.service.ts`: Triển khai cơ chế lease 5 phút (`lockedUntil`), gắn `workerId`. Tự động quét claim cả events `PENDING` và `PROCESSING` quá hạn lease để phục hồi task bị treo vĩnh viễn khi worker crash.
-   - Phân định rõ 3 trạng thái `OutboxDispatchResult`: `SENT` / `SKIPPED` / `RETRYABLE_FAILURE`. Chỉ `SENT`/`SKIPPED` mới đánh dấu `COMPLETED`. `RETRYABLE_FAILURE` kích hoạt exponential backoff và chuyển vào DLQ (`FAILED`) sau 5 lần retry.
-3. **RB-08: Chuẩn Hóa Advisory Lock An Toàn Connection Pool**:
-   - `outbox.service.ts` & `tasks.service.ts`: Loại bỏ hoàn toàn fallback in-memory nguy hiểm khi DB query gặp lỗi raw; abort chu kỳ an toàn để bảo vệ tính nhất quán dữ liệu.
-4. **RB-10: Quota Create & Slug Generation Transaction-Safe**:
-   - `listings.service.ts`: Đưa kiểm tra hạn mức gói (đọc từ `planSnapshot`), tạo tin, và sinh final slug `${slug}-id${id}` vào 1 interactive transaction `prisma.$transaction`. Triệt tiêu hoàn toàn race condition `-idtemp` và quota bypass.
-5. **FIN-02: Nâng Cấp Script Kiểm Toán & Backfill Sổ Cái**:
-   - `packages/database/scripts/backfill-finance-ledgers.ts`: Chỉ ghi nhận Sổ cái khi có mã giao dịch ngân hàng thật `externalTransactionId`. Tuyệt đối không tự bịa mã chứng từ giả; tự động gắn flag `UNVERIFIED_PENDING_MANUAL_PROOF` và ghi nhật ký `AuditEvent` cho các trường hợp thiếu chứng từ.
-6. **FIN-03, FIN-04, FIN-05, FIN-08, FIN-09: Hoàn Thiện Nghiệp Vụ Tài Chính**:
-   - `FIN-03`: `approveRequest` chuyển sang interactive transaction, query `currentActivePlan` bên trong transaction để nối tiếp chính xác ngày hết hạn khi gia hạn gói.
-   - `FIN-04 & FIN-05`: Ưu tiên đọc quyền lợi `durationDays`, `maxActiveListings`, `name` từ `planSnapshot` bất biến, bảo toàn quyền lợi đã bán.
-   - `FIN-08`: Khẳng định `ON DELETE RESTRICT` giữa User và FinanceLedger.
-   - `FIN-09`: `RequestMembershipDto` hỗ trợ `idempotencyKey`; `requestUpgrade` xử lý idempotent response; `TasksService.sweepPendingMemberships` tự động hủy đơn pending quá 7 ngày.
-7. **FIN-06 & FIN-07: Sửa Dashboard Tài Chính & Giới Hạn Boundary**:
-   - `getFinanceSummary`: Tách bạch rõ `netCashFlow` (dòng tiền ròng thực thu = cash_in - refund) với `netProfit` ("Chưa đo được - Chi phí đối tác chưa trừ"); cung cấp định dạng chuỗi VNĐ an toàn trước `MAX_SAFE_INTEGER`.
-8. **Kiểm thử & Build**:
+**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 4: ADMIN, PHÂN QUYỀN CAPABILITY & TRẢI NGHIỆM / GATE D):**
+1. **F12 / PERM: Admin Capability & MFA Protection**:
+   - Tạo enum `AdminCapability` (`LISTINGS_MODERATE`, `LEADS_SUPPORT`, `FINANCE_MANAGE`, `SYSTEM_ADMIN`) và decorator `@RequireCapabilities(...)`, `@RequireAdminMfa()`.
+   - Tạo `CapabilitiesGuard` và đăng ký toàn cục làm `APP_GUARD` trong `AuthModule`.
+   - Bổ sung xác thực Admin MFA qua header `x-admin-mfa-code` cho các hành động tài chính và quản trị nhạy cảm (`approveRequest`, `refundRequest`, `toggleBlockUser`).
+2. **Admin 3 Bảng Điều Khiển §8.1 (MONEY / GROWTH / RISK)**:
+   - Backend `admin.service.ts#getDashboard`: Cung cấp đủ 3 khối dữ liệu chuẩn §8.1:
+     - Khối `money`: Dòng tiền ròng thực thu (`netCashFlow = cashIn - refund`), tổng thu thực tế, tổng hoàn tiền, pending quoted amount, và các khoản chưa đối soát.
+     - Khối `growth`: Tin công khai đang hoạt động, tin đã qua kiểm tra, số chủ tin hoạt động, tổng leads tiếp nhận, và phễu 4 bước (View -> Detail -> Lead -> Connect).
+     - Khối `risk`: Báo cáo vi phạm chờ xử lý, tin hết hạn, tin bị từ chối, hàng đợi lỗi Outbox DLQ (`FAILED`), người dùng bị khóa, và nhật ký kiểm toán hệ thống `auditEvents`.
+   - Frontend `apps/web/src/app/admin/page.tsx`: Giao diện 3 tab chuyên biệt kèm các disclaimer minh bạch theo định nghĩa chỉ số §8.1.
+3. **FE-N04**: `apps/web/src/app/tin/[slug]/page.tsx` tắt hoàn toàn fallback demo data trên môi trường production. Ném `notFound()` nếu 404 thật; chuẩn hóa brand "QNS Thuê".
+4. **FE-N05 & FE-N19**: `apps/web/src/app/dang-tin/page.tsx` validate client tối đa 20 ảnh và mỗi ảnh <= 10MB; cơ chế banner cảnh báo phục hồi nếu tạo tin thành công nhưng upload ảnh gặp lỗi.
+5. **FE-N06 & FE-N07**: Bổ sung biểu phí điện nước chi tiết và 10 tiện ích tiêu chuẩn vào form đăng tin; chuẩn hóa taxonomy.
+6. **FE-N08 & FE-N09**: Phân trang Pagination UI cho `/tai-khoan/leads` và `/tai-khoan/tin-da-luu`; Backend endpoint `PATCH /listings/:id/rented` và nút "✓ Đã cho thuê" (status: `rented`) tách biệt khỏi "Gỡ tin".
+7. **FE-N10 & FE-N11**: `SearchFilterBar.tsx` giữ nguyên `locationSlug` và `locationId`; `Header.tsx` chỉ clear token khi nhận 401 Unauthorized thật.
+8. **FE-N17 / F11**: `MoveInCostEstimator.tsx` phân biệt cọc 0đ với chưa rõ; tách biệt đơn vị nước khoán theo người và nước theo m³.
+9. **Kiểm thử & Build**:
+   - Static lint check: 5/5 PASS.
    - Typecheck API & Web: PASS 100% (0 errors).
-   - Static structure lint: 5/5 PASS.
-   - Monorepo production build: PASS 3/3 packages (50.8s).
+   - Rà soát từ cấm: 0 kết quả trên toàn bộ mã nguồn.
+   - Monorepo production build: PASS 3/3 packages (44.8s).
 
-**Kế hoạch tiếp theo (ĐỢT 4: ADMIN, PHÂN QUYỀN CAPABILITY & TRẢI NGHIỆM / GATE D):**
-- **F12 / PERMISSION-MATRIX**: Tách phân quyền Admin thành 4 vai trò cụ thể: Kiểm duyệt (moderator), Hỗ trợ (support), Tài chính (finance), Quản trị tối cao (super_admin).
-- **Admin MFA Foundation**: Bổ sung cờ và logic TOTP secret cho tài khoản quản trị viên.
-- **Admin 3 Bảng Điều Khiển (§8.1)**:
-  - Bảng MONEY: Dòng tiền ròng, hoàn tiền, pending quoted, doanh thu gói.
-  - Bảng GROWTH: Phễu tìm kiếm $\rightarrow$ xem tin $\rightarrow$ gửi lead $\rightarrow$ liên hệ thành công.
-  - Bảng RISK: Báo cáo vi phạm, tỉ lệ reject tin, tin hết hạn, outbox DLQ backlog.
-- **FE-N04**: Loại bỏ fallback demo data trên production tại detail tin; phân biệt 404 với 5xx có nút retry.
-- **FE-N05 & FE-N19**: Phục hồi upload ảnh, validate client < 20 ảnh / 10MB.
-- **FE-N06 & FE-N07**: Chuẩn hóa taxonomy phòng và bổ sung đầy đủ fields USP vào form đăng tin.
-- **FE-N08 & FE-N09**: Phân trang inbox lead, tách rõ trạng thái "Đã cho thuê" khỏi "Gỡ tin".
-- **FE-N10 & FE-N11**: Giữ location filter, Header auth sync toàn cục.
-- **FE-N17 / F11**: MoveInCostEstimator chuẩn hóa dữ liệu cọc, nước, dịch vụ.
+**Kế hoạch tiếp theo (ĐỢT 5 & ĐỢT 6: PILOT, ĐO LƯỜNG NGUỒN CUNG THỰC & BÀN GIAO / GATES E & F):**
+- **Đợt 5: Pilot, Nguồn Cung Thực & Quản Lý Bằng Chứng (§7, §4.5, §11 - Gate E)**:
+  - Triển khai cơ chế xác nhận phòng trống định kỳ (chu kỳ 7 ngày thử nghiệm):
+    - Thêm `lastAvailabilityConfirmedAt` cho `Listing` (hoặc trường quản lý chu kỳ kiểm chứng).
+    - Endpoint cho chủ tin bấm "Xác nhận còn phòng trống" nhanh chóng.
+    - Cơ chế cảnh báo/hạ ưu tiên tin không cập nhật tình trạng còn phòng.
+  - Xử lý khiếu nại báo cáo vi phạm nâng cao:
+    - Bổ sung lý do `"đã hết phòng"`, `"giá thực tế khác"`, `"không phải bên có quyền cho thuê"`.
+  - Đo lường chỉ số pilot (§4.5):
+    - Tỷ lệ tin xác nhận còn phòng trong 7 ngày.
+    - Tỷ lệ phản hồi lead trong 24h.
+- **Đợt 6: Bàn Giao, Runbook & Sẵn Sàng Phát Hành (§12.1, §11 - Gate F)**:
+  - Hoàn thiện trọn bộ 10 tài liệu bàn giao chuyên đề `docs/audit/`.
+  - Kiểm tra đối chiếu 10/10 mục "Bộ nghiệm thu tối thiểu" (§11).
+  - Production build cuối cùng, đối chiếu không có breaking change.
 
 ---
 

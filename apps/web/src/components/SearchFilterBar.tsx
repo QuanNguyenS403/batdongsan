@@ -113,6 +113,9 @@ export function SearchFilterBar({
     e.preventDefault();
     const params = new URLSearchParams();
 
+    // FE-N10: Giữ nguyên location filter khi áp dụng bộ lọc hoặc đổi loại phòng
+    if (initialParams.locationSlug) params.set('locationSlug', initialParams.locationSlug);
+    if (initialParams.locationId) params.set('locationId', initialParams.locationId);
     if (initialParams.categoryGroup) params.set('categoryGroup', initialParams.categoryGroup);
     if (keyword.trim()) params.set('keyword', keyword.trim());
     if (propertyType) params.set('propertyType', propertyType);
@@ -143,7 +146,12 @@ export function SearchFilterBar({
     setPriceIndex(0);
     setAreaIndex(0);
     startTransition(() => {
-      router.push(initialParams.categoryGroup ? `${basePath}?categoryGroup=${initialParams.categoryGroup}` : basePath);
+      const resetParams = new URLSearchParams();
+      if (initialParams.locationSlug) resetParams.set('locationSlug', initialParams.locationSlug);
+      if (initialParams.locationId) resetParams.set('locationId', initialParams.locationId);
+      if (initialParams.categoryGroup) resetParams.set('categoryGroup', initialParams.categoryGroup);
+      const queryStr = resetParams.toString();
+      router.push(queryStr ? `${basePath}?${queryStr}` : basePath);
     });
   }
 

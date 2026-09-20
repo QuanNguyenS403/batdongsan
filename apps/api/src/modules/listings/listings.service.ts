@@ -903,6 +903,13 @@ export class ListingsService {
     return { message: 'Đã gỡ tin đăng.' };
   }
 
+  /** Đánh dấu phòng đã cho thuê thành công (FE-N09) */
+  async markAsRented(id: bigint, requester: { id: bigint; role: string }) {
+    const listing = await this.assertOwnership(id, requester);
+    await this.prisma.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.rented } });
+    return { message: 'Đã đánh dấu phòng cho thuê thành công.' };
+  }
+
   async getImageCount(listingId: bigint): Promise<number> {
     return this.prisma.listingImage.count({ where: { listingId } });
   }

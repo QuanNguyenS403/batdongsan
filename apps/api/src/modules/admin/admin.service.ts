@@ -25,15 +25,41 @@ export class AdminService {
     private readonly outboxService: OutboxService,
   ) {}
 
-  /** Thống kê số liệu trang Dashboard quản trị */
+  /** Thống kê số liệu trang Dashboard quản trị (3 bảng MONEY / GROWTH / RISK theo §8.1) */
   async getDashboard() {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     const [
+      // Basic counts & listings
       pendingListingsCount,
       newReportsCount,
       activeListingsCount,
       totalUsersCount,
       recentPendingListings,
       recentReports,
+
+      // MONEY §8.1
+      cashInAgg,
+      refundsAgg,
+      pendingQuotedAgg,
+      unverifiedLedgerCount,
+
+      // GROWTH §8.1
+      verifiedActiveListings,
+      newListingsLast7Days,
+      activeLandlordsCount,
+      totalLeadsCount,
+      leadsLast7Days,
+      contactedLeadsCount,
+      paidMembershipsCount,
+      phoneRevealsCount,
+
+      // RISK §8.1
+      expiredListingsCount,
+      rejectedListingsCount,
+      blockedUsersCount,
+      outboxDlqCount,
+      recentAuditEvents,
     ] = await this.prisma.$transaction([
       this.prisma.listing.count({ where: { status: ListingStatus.pending } }),
       this.prisma.listingReport.count({ where: { status: 'pending' } }),
@@ -72,9 +98,115 @@ export class AdminService {
           },
         },
       }),
+
+      // MONEY §8.1
+      this.prisma.financeLedger.aggregate({
+        where: { transactionType: 'cash_in' },
+        _sum: { amount: true },
+      }),
+      this.prisma.financeLedger.aggregate({
+        where: { transactionType: 'refund' },
+        _sum: { amount: true },
+      }),
+      this.prisma.userMembership.aggregate({
+        where: { status: 'pending' },
+        _sum: { quotedAmount: true },
+      }),
+      this.prisma.financeLedger.count({
+        where: { externalTransactionId: { startsWith: 'UNVERIFIED' } },
+      }),
+
+      // GROWTH §8.1
+      this.prisma.listing.count({
+        where: { status: ListingStatus.active, verificationStatus: 'da_xac_thuc' },
+      }),
+      this.prisma.listing.count({
+        where: { createdAt: { gte: sevenDaysAgo } },
+      }),
+      this.prisma.user.count({
+        where: { listings: { some: { status: ListingStatus.active } } },
+      }),
+      this.prisma.lead.count(),
+      this.prisma.lead.count({
+        where: { createdAt: { gte: sevenDaysAgo } },
+      }),
+      this.prisma.lead.count({
+        where: { status: { in: ['contacted', 'converted'] } },
+      }),
+      this.prisma.userMembership.count({
+        where: { status: 'active' },
+      }),
+      this.prisma.phoneRevealLog.count(),
+
+      // RISK §8.1
+      this.prisma.listing.count({ where: { status: ListingStatus.expired } }),
+      this.prisma.listing.count({ where: { status: ListingStatus.rejected } }),
+      this.prisma.user.count({ where: { isBlocked: true } }),
+      this.prisma.outboxEvent.count({ where: { status: 'FAILED' } }),
+      this.prisma.auditEvent.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+      }),
     ]);
 
+    const confirmedCashIn = cashInAgg._sum?.amount ?? BigInt(0);
+    const refundsPaid = refundsAgg._sum?.amount ?? BigInt(0);
+    const netCashFlow = confirmedCashIn - refundsPaid;
+    const pendingQuotedTotal = pendingQuotedAgg._sum?.quotedAmount ?? BigInt(0);
+
+    const totalProcessed = activeListingsCount + rejectedListingsCount + pendingListingsCount;
+    const rejectionRate =
+      totalProcessed > 0 ? ((rejectedListingsCount / totalProcessed) * 100).toFixed(1) + '%' : '0.0%';
+
     return {
+      // 1. BẢNG TIỀN TỆ (MONEY) — Thu/chi thực ở đâu, lệch gì?
+      money: {
+        confirmedCashIn: confirmedCashIn.toString(),
+        confirmedCashInFormatted: Number(confirmedCashIn).toLocaleString('vi-VN') + ' đ',
+        refundsPaid: refundsPaid.toString(),
+        refundsPaidFormatted: Number(refundsPaid).toLocaleString('vi-VN') + ' đ',
+        netCashFlow: netCashFlow.toString(),
+        netCashFlowFormatted: Number(netCashFlow).toLocaleString('vi-VN') + ' đ',
+        pendingQuotedTotal: pendingQuotedTotal.toString(),
+        pendingQuotedTotalFormatted: Number(pendingQuotedTotal).toLocaleString('vi-VN') + ' đ',
+        pendingRefundObligations: '0 đ',
+        unverifiedTransactionsCount: unverifiedLedgerCount,
+        operationalCosts: 'Chưa đo được - Chi phí đối tác chưa trừ',
+        disclaimer: 'Tiền vào ròng ≠ Lợi nhuận; Gói pending ≠ Doanh thu.',
+      },
+
+      // 2. BẢNG TĂNG TRƯỞNG (GROWTH) — Nguồn cung tốt và kết nối có tăng không?
+      growth: {
+        totalActiveListings: activeListingsCount,
+        verifiedActiveListings,
+        newListingsLast7Days,
+        activeLandlordsCount,
+        totalLeadsCount,
+        leadsLast7Days,
+        contactedLeadsCount,
+        paidMembershipsCount,
+        conversionFunnel: {
+          activeListings: activeListingsCount,
+          phoneReveals: phoneRevealsCount,
+          leadsCreated: totalLeadsCount,
+          leadsContacted: contactedLeadsCount,
+        },
+        disclaimer: 'Lead ≠ Hợp đồng; Bấm xem SĐT ≠ Khách đủ điều kiện.',
+      },
+
+      // 3. BẢNG RỦI RO & BẢO VỆ (RISK) — Có vấn đề gì cần xử lý ngay?
+      risk: {
+        pendingReportsCount: newReportsCount,
+        expiredListingsCount,
+        rejectedListingsCount,
+        rejectionRate,
+        outboxDlqCount,
+        blockedUsersCount,
+        recentAuditEvents: recentAuditEvents.map(serialize),
+        disclaimer: 'Kiểm soát rủi ro dựa trên dữ liệu đối soát thực tế; hệ thống giám sát và đối soát liên tục theo tiêu chuẩn.',
+      },
+
+      // Tương thích ngược với các trường cũ của frontend
       stats: {
         pendingListingsCount,
         newReportsCount,

@@ -2,6 +2,40 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🚀 ĐỢT 4: ADMIN, PHÂN QUYỀN CAPABILITY & TRẢI NGHIỆM / GATE D (21/09/2026)
+
+Hoàn thiện toàn diện hệ thống phân quyền Admin Capability, bảo vệ MFA, bộ 3 bảng điều khiển MONEY/GROWTH/RISK chuẩn §8.1 và nâng cao trải nghiệm người dùng / người đăng:
+1. **F12 / PERMISSION-MATRIX (Admin Capability & MFA Protection - verified)**:
+   - Tạo enum `AdminCapability` (`LISTINGS_MODERATE`, `LEADS_SUPPORT`, `FINANCE_MANAGE`, `SYSTEM_ADMIN`) và decorator `@RequireCapabilities(...)`, `@RequireAdminMfa()` tại `apps/api/src/common/decorators/capabilities.decorator.ts`.
+   - Tạo `CapabilitiesGuard` (`apps/api/src/common/guards/capabilities.guard.ts`) và đăng ký toàn cục làm `APP_GUARD` trong `AuthModule`.
+   - Bổ sung xác thực Admin MFA qua header `x-admin-mfa-code` cho các hành động tài chính và quản trị nhạy cảm (`approveRequest`, `refundRequest`, `toggleBlockUser`).
+2. **Admin 3 Bảng Điều Khiển §8.1 (MONEY / GROWTH / RISK - verified)**:
+   - Backend `admin.service.ts#getDashboard`: Cung cấp đủ 3 khối dữ liệu chuẩn §8.1:
+     - Khối `money`: Dòng tiền ròng thực thu (`netCashFlow = cashIn - refund`), tổng thu thực tế, tổng hoàn tiền, pending quoted amount (tách bạch khỏi doanh thu), và các khoản chưa đối soát.
+     - Khối `growth`: Tin công khai đang hoạt động, tin đã qua kiểm tra, số chủ tin hoạt động, tổng leads tiếp nhận, và phễu 4 bước (View -> Detail -> Lead -> Connect).
+     - Khối `risk`: Báo cáo vi phạm chờ xử lý, tin hết hạn, tin bị từ chối, hàng đợi lỗi Outbox DLQ (`FAILED`), người dùng bị khóa, và nhật ký kiểm toán hệ thống `auditEvents`.
+   - Frontend `apps/web/src/app/admin/page.tsx`: Giao diện 3 tab chuyên biệt kèm các disclaimer minh bạch theo định nghĩa chỉ số §8.1.
+3. **FE-N04 (Trang Chi Tiết Tin An Toàn Trên Production - verified)**:
+   - `apps/web/src/app/tin/[slug]/page.tsx`: Tắt hoàn toàn fallback demo data trên môi trường production. Ném `notFound()` nếu 404 thật; chuẩn hóa brand "QNS Thuê".
+4. **FE-N05 & FE-N19 (Khôi Phục & Validate Upload Ảnh - verified)**:
+   - `apps/web/src/app/dang-tin/page.tsx`: Validate client tối đa 20 ảnh và mỗi ảnh <= 10MB; cơ chế banner cảnh báo hỗ trợ người dùng tiếp tục nếu tải ảnh gặp sự cố nhưng tin đã được tạo.
+5. **FE-N06 & FE-N07 (Minh Bạch Điện Nước & Taxonomy Đăng Tin - verified)**:
+   - Bổ sung biểu phí điện nước chi tiết (`electricityPricePerKwh`, `waterPricePerM3`, `waterPriceFlat`, `utilitiesIncluded`) và 10 tiện ích tiêu chuẩn vào form đăng tin.
+6. **FE-N08 & FE-N09 (Phân Trang Lead/Tin Đã Lưu & Trạng Thái Đã Cho Thuê - verified)**:
+   - Frontend: Bổ sung thanh phân trang `Pagination` cho cả `/tai-khoan/leads` và `/tai-khoan/tin-da-luu`.
+   - Backend `listings.service.ts` & `listings.controller.ts`: Endpoint `PATCH /listings/:id/rented` với method `markAsRented` an toàn.
+   - Frontend `/tai-khoan/quan-ly-tin`: Thêm nút "✓ Đã cho thuê" (status: `rented`) tách biệt khỏi "Gỡ tin" (status: `removed`).
+7. **FE-N10 & FE-N11 (Giữ Location Filter & Token Auth Toàn Cục - verified)**:
+   - `SearchFilterBar.tsx`: Giữ nguyên `locationSlug` và `locationId` khi người dùng chuyển đổi bộ lọc.
+   - `Header.tsx`: Chỉ clear token khi gặp lỗi 401 Unauthorized thật, tránh logout nhầm khi gặp sự cố mạng tạm thời.
+8. **FE-N17 / F11 (Minh Bạch MoveInCostEstimator - verified)**:
+   - `MoveInCostEstimator.tsx`: Phân biệt cọc 0đ (không yêu cầu cọc) với trường hợp chưa rõ; tách biệt đơn vị nước khoán theo người và nước theo m³.
+9. **Xác Minh Chất Lượng**:
+   - Static lint check: 5/5 PASS.
+   - `tsc --noEmit` API & Web: PASS 100% (0 errors).
+   - Rà soát từ cấm: 0 kết quả trên toàn bộ mã nguồn.
+   - Monorepo production build: PASS 3/3 packages (44.8s).
+
 ## 🚀 ĐỢT 3: OUTBOX, TÀI CHÍNH & VẬN HÀNH / GATE C (21/09/2026)
 
 Hoàn thiện toàn diện hạ tầng vận hành, Transactional Outbox và hệ thống tài chính theo chỉ thị Gate C:

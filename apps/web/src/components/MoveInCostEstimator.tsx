@@ -20,17 +20,20 @@ export function MoveInCostEstimator({
   utilitiesIncluded = false,
 }: MoveInCostEstimatorProps) {
   const rent = typeof initialRentPrice === 'string' ? Number(initialRentPrice) || 0 : initialRentPrice;
-  const initialDeposit = depositAmount ? Number(depositAmount) : rent; // Mặc định cọc 1 tháng
+  
+  // F11 / FE-N17: Phân biệt rõ cọc 0đ (không cọc) với trường hợp chưa khai báo cọc (null/undefined)
+  const isDepositDeclared = depositAmount !== undefined && depositAmount !== null && depositAmount !== '';
+  const parsedDeposit = isDepositDeclared ? Number(depositAmount) : NaN;
+  const initialDeposit = !isNaN(parsedDeposit) ? Math.max(0, parsedDeposit) : rent;
 
-  const [depositMonths, setDepositMonths] = useState<number>(1);
   const [customDeposit, setCustomDeposit] = useState<number>(initialDeposit);
   const [electricityKwh, setElectricityKwh] = useState<number>(80); // Trung bình phòng trọ dùng 80 kWh/tháng
-  const [waterAmount, setWaterAmount] = useState<number>(4); // Trung bình 4m3 hoặc 1 người
+  const [waterAmount, setWaterAmount] = useState<number>(waterPriceFlat ? 1 : 4); // Nếu tính khoán thì mặc định 1 người, nếu m3 thì 4m3
   const [internetFee, setInternetFee] = useState<number>(100000); // 100k/tháng
 
   // Tính tiền điện
   const elecCost = utilitiesIncluded ? 0 : (electricityPricePerKwh ?? 3500) * electricityKwh;
-  // Tính tiền nước
+  // Tính tiền nước: tách rõ khoán theo người vs theo m3
   const waterCost = utilitiesIncluded
     ? 0
     : waterPriceFlat
@@ -122,17 +125,24 @@ export function MoveInCostEstimator({
                   <span>
                     Ước tính nước ({waterPriceFlat ? `${waterPriceFlat.toLocaleString('vi-VN')} đ/người` : `${waterPricePerM3?.toLocaleString('vi-VN') ?? '18.000'} đ/m³`})
                   </span>
-                  <span className="font-semibold text-text-primary">{waterCost.toLocaleString('vi-VN')} đ</span>
+                  <span className="font-semibold text-text-primary">
+                    {waterPriceFlat ? `${waterAmount} người` : `${waterAmount} m³`} (~{waterCost.toLocaleString('vi-VN')} đ)
+                  </span>
                 </div>
                 <input
                   type="range"
                   min="1"
-                  max="15"
+                  max={waterPriceFlat ? 6 : 20}
                   step="1"
                   value={waterAmount}
                   onChange={(e) => setWaterAmount(Number(e.target.value))}
                   className="w-full accent-brand cursor-pointer"
                 />
+                <div className="flex justify-between text-[11px] text-text-muted">
+                  <span>{waterPriceFlat ? '1 người ở' : 'Tiết kiệm (2-4 m³)'}</span>
+                  <span>{waterPriceFlat ? '2-3 người' : 'Trung bình (6-8 m³)'}</span>
+                  <span>{waterPriceFlat ? '4+ người' : 'Nhiều (15+ m³)'}</span>
+                </div>
               </div>
             </>
           )}
