@@ -1,46 +1,45 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 2: SỬA TÍNH NHẤT QUÁN & BẢO MẬT / GATE B):**
-1. **RB-01: Session Revocation & Token Version Synchronization**:
-   - Cập nhật `apps/api/src/modules/auth/strategies/jwt.strategy.ts`: JWT strategy từ chối lập tức nếu payload thiếu `tokenVersion` hoặc `tokenVersion !== user.tokenVersion`.
-   - Cập nhật `users.service.ts`: tăng `tokenVersion` khi đổi mật khẩu (`changePassword`).
-   - Cập nhật `auth.service.ts`: tăng `tokenVersion` khi refresh token và admin bootstrap.
-2. **RB-02 / F06: OTP CSPRNG & Tách Store Rate Limit**:
-   - `apps/api/src/modules/auth/otp.service.ts`: chuyển sang CSPRNG an toàn `crypto.randomInt(100000, 1000000)`.
-   - Tách biệt 2 store: `activeOtps` và `rateLimits` (5 lần/giờ). Khi verify thành công và xóa OTP, bộ đếm rate limit không bị xóa mất $\rightarrow$ ngăn chặn triệt để spam SMS.
-   - Chuẩn hóa thương hiệu SMS: `[QNS Thue] Ma xac thuc OTP...`.
-3. **RB-03: Assert-env Theo Từng SMS Provider**:
-   - Sửa `apps/api/src/common/config/assert-env.ts`: kiểm tra biến môi trường nghiêm ngặt theo từng provider thực tế (eSMS: `SMS_API_KEY`, `SMS_SECRET_KEY`; Twilio: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`; SpeedSMS: `SMS_API_KEY`).
-4. **RB-04: Admin Bootstrap One-Shot & Chuẩn Hóa SĐT**:
-   - Sửa regex SĐT trong `bootstrap-admin.dto.ts` thành `^0[35789][0-9]{8}$`.
-   - `auth.service.ts`: `bootstrapAdmin` trở thành one-shot (ném `BadRequestException` 400 nếu hệ thống đã có admin), ghi nhật ký kiểm toán vào `AuditEvent`.
-5. **RB-05: CAS DB Atomic Update Cho Listing Approval**:
-   - `apps/api/src/modules/admin/admin.service.ts`: `approveListing` và `rejectListing` dùng `tx.listing.updateMany({ where: { id, status: 'pending' }, data })`. Nếu `count === 0` ném ngay `ConflictException 409`. Đếm quota `currentActiveCount` chạy bên trong transaction.
-6. **RB-09 / F14: Khóa Nguy Cơ SSRF Trong Next.js Images**:
-   - `apps/web/next.config.mjs`: Loại bỏ wildcard `**` nguy hiểm, siết chặt `remotePatterns` chỉ cho phép các domain được kiểm soát (`images.unsplash.com`, `res.cloudinary.com`, `localhost`, `127.0.0.1`).
-7. **RB-11: Kiểm Soát Tính Hợp Lệ Của Lead**:
-   - `apps/api/src/modules/leads/leads.service.ts`: Kiểm tra tin chưa hết hạn (`expiresAt > now()`) và chủ tin không bị khóa (`owner.isBlocked !== true`) trước khi cho phép tạo lead.
-8. **RB-12: Khắc Phục Triệt Để 500 BigInt JSON Serialization**:
-   - Tạo mới `apps/api/src/common/interceptors/bigint.interceptor.ts`.
-   - Monkey-patch `BigInt.prototype.toJSON` và đăng ký interceptor toàn cục trong `main.ts`.
-9. **FE-N12 & FE-N14: Đồng Bộ Token Key & Sửa Sitemap**:
-   - Đồng bộ 100% token key sang `accessToken` xuyên suốt frontend (`auth-client.ts`, `dang-nhap/page.tsx`).
-   - Sửa `apps/web/src/app/sitemap.ts`: đọc đúng field `items` (với fallback `data`), thêm `pageSize=100&status=active`, lọc bỏ tin demo `tin-tham-khao`.
-10. **Kiểm thử & Build**:
-    - Typecheck API & Web: PASS 100% (0 errors).
-    - Static structure lint: 5/5 PASS.
-    - Monorepo production build: PASS 3/3 packages (49.4s).
+**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 3: OUTBOX, TÀI CHÍNH & VẬN HÀNH / GATE C):**
+1. **RB-06: Nối 100% Transactional Outbox Vào Toàn Bộ Mutation Cốt Lõi**:
+   - `listings.service.ts`: `create` và `report` đều ghi các sự kiện Outbox (`EMAIL_LISTING_SUBMITTED`, `EMAIL_NEW_LISTING_ADMIN`, `SHEETS_PENDING_LISTING`, `EMAIL_NEW_REPORT_ADMIN`, `SHEETS_VIOLATION_REPORT`) bên trong cùng DB transaction `tx`.
+   - `admin.service.ts`: `approveListing` (`EMAIL_LISTING_APPROVED`) và `rejectListing` (`EMAIL_LISTING_REJECTED`) ghi vào Outbox trong CAS transaction.
+   - `membership.service.ts`: `requestUpgrade` (`EMAIL_MEMBERSHIP_UPGRADE_ADMIN`) và `approveRequest` (`EMAIL_MEMBERSHIP_ACTIVATED_USER`) ghi vào Outbox trong transaction.
+   - `leads.service.ts`: `createLead` ghi sự kiện `LEAD_CREATED` (RB-13) vào Outbox trong transaction.
+2. **RB-07 & RB-15: Cơ Chế Lease/Reclaim & Phân Định 3 Trạng Thái Outbox**:
+   - `outbox.service.ts`: Triển khai cơ chế lease 5 phút (`lockedUntil`), gắn `workerId`. Tự động quét claim cả events `PENDING` và `PROCESSING` quá hạn lease để phục hồi task bị treo vĩnh viễn khi worker crash.
+   - Phân định rõ 3 trạng thái `OutboxDispatchResult`: `SENT` / `SKIPPED` / `RETRYABLE_FAILURE`. Chỉ `SENT`/`SKIPPED` mới đánh dấu `COMPLETED`. `RETRYABLE_FAILURE` kích hoạt exponential backoff và chuyển vào DLQ (`FAILED`) sau 5 lần retry.
+3. **RB-08: Chuẩn Hóa Advisory Lock An Toàn Connection Pool**:
+   - `outbox.service.ts` & `tasks.service.ts`: Loại bỏ hoàn toàn fallback in-memory nguy hiểm khi DB query gặp lỗi raw; abort chu kỳ an toàn để bảo vệ tính nhất quán dữ liệu.
+4. **RB-10: Quota Create & Slug Generation Transaction-Safe**:
+   - `listings.service.ts`: Đưa kiểm tra hạn mức gói (đọc từ `planSnapshot`), tạo tin, và sinh final slug `${slug}-id${id}` vào 1 interactive transaction `prisma.$transaction`. Triệt tiêu hoàn toàn race condition `-idtemp` và quota bypass.
+5. **FIN-02: Nâng Cấp Script Kiểm Toán & Backfill Sổ Cái**:
+   - `packages/database/scripts/backfill-finance-ledgers.ts`: Chỉ ghi nhận Sổ cái khi có mã giao dịch ngân hàng thật `externalTransactionId`. Tuyệt đối không tự bịa mã chứng từ giả; tự động gắn flag `UNVERIFIED_PENDING_MANUAL_PROOF` và ghi nhật ký `AuditEvent` cho các trường hợp thiếu chứng từ.
+6. **FIN-03, FIN-04, FIN-05, FIN-08, FIN-09: Hoàn Thiện Nghiệp Vụ Tài Chính**:
+   - `FIN-03`: `approveRequest` chuyển sang interactive transaction, query `currentActivePlan` bên trong transaction để nối tiếp chính xác ngày hết hạn khi gia hạn gói.
+   - `FIN-04 & FIN-05`: Ưu tiên đọc quyền lợi `durationDays`, `maxActiveListings`, `name` từ `planSnapshot` bất biến, bảo toàn quyền lợi đã bán.
+   - `FIN-08`: Khẳng định `ON DELETE RESTRICT` giữa User và FinanceLedger.
+   - `FIN-09`: `RequestMembershipDto` hỗ trợ `idempotencyKey`; `requestUpgrade` xử lý idempotent response; `TasksService.sweepPendingMemberships` tự động hủy đơn pending quá 7 ngày.
+7. **FIN-06 & FIN-07: Sửa Dashboard Tài Chính & Giới Hạn Boundary**:
+   - `getFinanceSummary`: Tách bạch rõ `netCashFlow` (dòng tiền ròng thực thu = cash_in - refund) với `netProfit` ("Chưa đo được - Chi phí đối tác chưa trừ"); cung cấp định dạng chuỗi VNĐ an toàn trước `MAX_SAFE_INTEGER`.
+8. **Kiểm thử & Build**:
+   - Typecheck API & Web: PASS 100% (0 errors).
+   - Static structure lint: 5/5 PASS.
+   - Monorepo production build: PASS 3/3 packages (50.8s).
 
-**Kế hoạch tiếp theo (ĐỢT 3: OUTBOX, TÀI CHÍNH & VẬN HÀNH / GATE C):**
-- **RB-06**: Nối Transactional Outbox vào các mutation chính: `listing.create`, `report.create`, `admin.approve/reject`, `membership.request/approve`, `lead.create` trong cùng DB transaction.
-- **RB-07**: Cơ chế lease/reclaim thật cho worker outbox (`lockedUntil`, `workerId`), chống stuck processing vĩnh viễn.
-- **RB-15**: Sửa `OutboxService.dispatchEvent`: phân định rõ 3 trạng thái handler `SENT` / `SKIPPED` / `RETRYABLE_FAILURE`; chỉ `SENT` mới đánh dấu `COMPLETED`.
-- **RB-08**: Sửa advisory lock của `TasksService` dùng đúng connection pool hoặc transaction an toàn.
-- **RB-10**: Quota create và slug generation transaction-safe.
-- **FIN-02**: Script kiểm tra/backfill dữ liệu lịch sử cho membership cũ sang ledger mới.
-- **FIN-03**: Nối tiếp `endDate` khi gia hạn gói chống ghi đè ngày gốc.
-- **FIN-08**: Đổi `onDelete: Cascade` giữa User và FinanceLedger thành `RESTRICT` để bảo toàn tính bất biến của sổ cái tài chính.
-- **FIN-09**: Thêm idempotency key và sweep cho membership pending request.
+**Kế hoạch tiếp theo (ĐỢT 4: ADMIN, PHÂN QUYỀN CAPABILITY & TRẢI NGHIỆM / GATE D):**
+- **F12 / PERMISSION-MATRIX**: Tách phân quyền Admin thành 4 vai trò cụ thể: Kiểm duyệt (moderator), Hỗ trợ (support), Tài chính (finance), Quản trị tối cao (super_admin).
+- **Admin MFA Foundation**: Bổ sung cờ và logic TOTP secret cho tài khoản quản trị viên.
+- **Admin 3 Bảng Điều Khiển (§8.1)**:
+  - Bảng MONEY: Dòng tiền ròng, hoàn tiền, pending quoted, doanh thu gói.
+  - Bảng GROWTH: Phễu tìm kiếm $\rightarrow$ xem tin $\rightarrow$ gửi lead $\rightarrow$ liên hệ thành công.
+  - Bảng RISK: Báo cáo vi phạm, tỉ lệ reject tin, tin hết hạn, outbox DLQ backlog.
+- **FE-N04**: Loại bỏ fallback demo data trên production tại detail tin; phân biệt 404 với 5xx có nút retry.
+- **FE-N05 & FE-N19**: Phục hồi upload ảnh, validate client < 20 ảnh / 10MB.
+- **FE-N06 & FE-N07**: Chuẩn hóa taxonomy phòng và bổ sung đầy đủ fields USP vào form đăng tin.
+- **FE-N08 & FE-N09**: Phân trang inbox lead, tách rõ trạng thái "Đã cho thuê" khỏi "Gỡ tin".
+- **FE-N10 & FE-N11**: Giữ location filter, Header auth sync toàn cục.
+- **FE-N17 / F11**: MoveInCostEstimator chuẩn hóa dữ liệu cọc, nước, dịch vụ.
 
 ---
 

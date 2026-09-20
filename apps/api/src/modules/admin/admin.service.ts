@@ -359,6 +359,20 @@ export class AdminService {
         },
       });
 
+      // RB-06: Ghi nhận sự kiện duyệt tin vào Transactional Outbox trong cùng transaction
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: id.toString(),
+          eventType: 'EMAIL_LISTING_APPROVED',
+          payload: {
+            listing: { id: id.toString(), title: listing.title },
+            landlordPhone: listing.owner.phone,
+          },
+        },
+        tx,
+      );
+
       return tx.listing.findUnique({
         where: { id },
         include: {
@@ -381,20 +395,13 @@ export class AdminService {
       throw new NotFoundException('Không thể tìm thấy tin đăng sau khi cập nhật.');
     }
 
-    // Thông báo email cho chủ tin
-    try {
-      void this.emailService.sendListingApprovedToLandlord(listing, listing.owner.phone);
-    } catch {
-      // Safe-fail
-    }
-
     return {
       message: 'Đã duyệt tin đăng thành công.',
       listing: serialize(updated),
     };
   }
 
-  /** Từ chối tin đăng (RB-05 & BE-13: CAS updateMany where pending + AF-12: AuditEvent) */
+  /** Từ chối tin đăng (RB-05 & BE-13: CAS updateMany where pending + AF-12: AuditEvent + RB-06: Outbox) */
   async rejectListing(id: bigint, reason: string, adminId?: bigint) {
     const listing = await this.prisma.listing.findUnique({
       where: { id },
@@ -443,6 +450,21 @@ export class AdminService {
         },
       });
 
+      // RB-06: Ghi nhận sự kiện từ chối tin vào Transactional Outbox
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: id.toString(),
+          eventType: 'EMAIL_LISTING_REJECTED',
+          payload: {
+            listing: { id: id.toString(), title: listing.title },
+            landlordPhone: listing.owner.phone,
+            reason,
+          },
+        },
+        tx,
+      );
+
       return tx.listing.findUnique({
         where: { id },
         include: {
@@ -456,13 +478,6 @@ export class AdminService {
 
     if (!updated) {
       throw new NotFoundException('Không thể tìm thấy tin đăng sau khi từ chối.');
-    }
-
-    // Thông báo email cho chủ tin kèm lý do
-    try {
-      void this.emailService.sendListingRejectedToLandlord(listing, listing.owner.phone, reason);
-    } catch {
-      // Safe-fail
     }
 
     return {

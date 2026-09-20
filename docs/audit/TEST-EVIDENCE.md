@@ -140,3 +140,35 @@
   Cached:   0 cached, 3 total
   Time:     49.403s
   ```
+
+---
+
+## 4. Nhật Ký Kiểm Thử Đợt 3 (Gate C — Outbox, Tài Chính & Vận Hành — 21/09/2026)
+
+### Bài kiểm tra T17: NestJS Backend Typecheck sau khi hoàn tất Gate C
+- **Lệnh thực thi**: `pnpm --filter @batdongsan/api exec tsc --noEmit`
+- **Mục tiêu**: Xác thực code các modules: `outbox.service.ts` (RB-07: lease/reclaim, RB-15: SENT/SKIPPED/RETRYABLE_FAILURE, RB-08: safe advisory lock), `tasks.service.ts` (RB-08, FIN-09: sweep pending memberships), `listings.service.ts` (RB-06, RB-10: transaction-safe quota, slug, outbox), `admin.service.ts` (RB-06: approve/reject outbox), `membership.service.ts` (FIN-03: chained renewal, FIN-04/05: immutable planSnapshot, FIN-06/07: net cash flow, FIN-09: idempotency), `leads.service.ts` (RB-06, RB-13: transactional lead outbox).
+- **Thời gian**: 2026-09-21 01:47:18
+- **Kết quả**: **PASS (Exit code 0, 0 errors)**
+
+### Bài kiểm tra T18: Next.js Frontend Typecheck
+- **Lệnh thực thi**: `pnpm --filter @batdongsan/web exec tsc --noEmit`
+- **Thời gian**: 2026-09-21 01:47:29
+- **Kết quả**: **PASS (Exit code 0, 0 errors)**
+
+### Bài kiểm tra T19: Static Structure Lint
+- **Lệnh thực thi**: `node packages/database/scripts/static-lint-check.js`
+- **Thời gian**: 2026-09-21 01:47:33
+- **Kết quả**: **PASS (5/5 checks)**
+
+### Bài kiểm tra T20: Toàn Bộ Monorepo Production Build (Turbo)
+- **Lệnh thực thi**: `pnpm build`
+- **Thời gian**: 2026-09-21 01:48:34
+- **Kết quả**: **PASS (3/3 packages build thành công, 31/31 routes static generation pass 100%)**
+- **Log trích xuất**:
+  ```text
+  Tasks:    3 successful, 3 total
+  Cached:   0 cached, 3 total
+  Time:     50.828s
+  ```
+

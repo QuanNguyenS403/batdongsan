@@ -44,7 +44,12 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
   /**
    * Thực thi chuỗi tác vụ định kỳ có Distributed Lock (OPS-04)
    */
-  async runPeriodicTasks(): Promise<{ expiredCount: number; cleanedOtpCount: number; outboxResult?: any }> {
+  async runPeriodicTasks(): Promise<{
+    expiredCount: number;
+    cleanedOtpCount: number;
+    sweptMembershipsCount?: number;
+    outboxResult?: any;
+  }> {
     if (this.isRunning) {
       this.logger.debug('[TasksService] Tác vụ trước vẫn đang chạy, bỏ qua chu kỳ này.');
       return { expiredCount: 0, cleanedOtpCount: 0 };
@@ -54,7 +59,7 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
     let hasAdvisoryLock = false;
 
     try {
-      // PostgreSQL Distributed Lock (OPS-04): Chống race condition khi chạy multi-node/multi-worker
+      // PostgreSQL Distributed Lock (OPS-04 / RB-08): Chống race condition khi chạy multi-node/multi-worker
       try {
         const lockRes: any = await this.prisma.$queryRawUnsafe(
           `SELECT pg_try_advisory_lock(hashtext('tasks_sweep_lock')) as locked;`,
@@ -64,16 +69,18 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
           this.logger.debug('[TasksService] Node khác đang chạy task sweep, bỏ qua.');
           return { expiredCount: 0, cleanedOtpCount: 0 };
         }
-      } catch {
-        // Fallback in-memory lock nếu DB không hỗ trợ advisory lock
-        hasAdvisoryLock = true;
+      } catch (lockErr: any) {
+        // RB-08: Tuyệt đối không fallback in-memory khi DB lỗi raw query; abort an toàn
+        this.logger.warn(`[TasksService] Không thể lấy advisory lock DB: ${lockErr.message}. Bỏ qua chu kỳ quét để bảo vệ tính nhất quán.`);
+        return { expiredCount: 0, cleanedOtpCount: 0 };
       }
 
       const expiredCount = await this.expirePastDueListings();
       const cleanedOtpCount = this.sweepExpiredOtps();
+      const sweptMembershipsCount = await this.sweepPendingMemberships();
       const outboxResult = await this.outboxService.processPendingBatch(50);
 
-      return { expiredCount, cleanedOtpCount, outboxResult };
+      return { expiredCount, cleanedOtpCount, sweptMembershipsCount, outboxResult };
     } catch (err) {
       this.logger.error('Lỗi khi thực thi tác vụ nền định kỳ:', (err as Error).stack);
       return { expiredCount: 0, cleanedOtpCount: 0 };
@@ -89,6 +96,28 @@ export class TasksService implements OnApplicationBootstrap, OnApplicationShutdo
       }
       this.isRunning = false;
     }
+  }
+
+  /**
+   * Quét và tự động hủy các yêu cầu nâng cấp gói pending quá hạn 7 ngày (FIN-09)
+   */
+  async sweepPendingMemberships(): Promise<number> {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const result = await this.prisma.userMembership.updateMany({
+      where: {
+        status: 'pending',
+        createdAt: { lt: sevenDaysAgo },
+      },
+      data: {
+        status: 'expired',
+        paymentNote: 'Tự động hủy do quá hạn thanh toán 7 ngày (FIN-09 sweep)',
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`[TasksService] Đã quét và tự động hủy ${result.count} yêu cầu mua gói pending quá hạn.`);
+    }
+    return result.count;
   }
 
   /**

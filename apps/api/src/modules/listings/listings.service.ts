@@ -7,6 +7,7 @@ import { UpdateListingDto } from './dto/update-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { EmailService } from '../email/email.service';
 import { GoogleSheetsService } from '../google-sheets/google-sheets.service';
+import { OutboxService } from '../outbox/outbox.service';
 
 const PUBLIC_LISTING_SELECT = {
   id: true,
@@ -65,6 +66,7 @@ export class ListingsService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly googleSheetsService: GoogleSheetsService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   /**
@@ -690,120 +692,165 @@ export class ListingsService {
   }
 
   async create(ownerId: bigint, dto: CreateListingDto) {
-    // 1. Kiểm tra hạn mức số tin đăng theo gói thành viên của người dùng
-    const now = new Date();
-    const activeMembership = await this.prisma.userMembership.findFirst({
-      where: {
-        userId: ownerId,
-        status: 'active',
-        endDate: { gt: now },
-      },
-      include: { plan: true },
-      orderBy: { endDate: 'desc' },
-    });
+    // RB-10 & RB-06: Đảm bảo transaction-safe cho quota, slug generation và Transactional Outbox
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // 1. Kiểm tra hạn mức số tin đăng theo gói thành viên của người dùng (RB-10)
+      const now = new Date();
+      const activeMembership = await tx.userMembership.findFirst({
+        where: {
+          userId: ownerId,
+          status: 'active',
+          endDate: { gt: now },
+        },
+        include: { plan: true },
+        orderBy: { endDate: 'desc' },
+      });
 
-    const maxAllowedListings = activeMembership?.plan.maxActiveListings ?? 3;
-    const planName = activeMembership?.plan.name ?? 'Gói Dùng Thử';
+      let maxAllowedListings = activeMembership?.plan.maxActiveListings ?? 3;
+      let planName = activeMembership?.plan.name ?? 'Gói Dùng Thử';
+      if (activeMembership?.planSnapshot && typeof activeMembership.planSnapshot === 'object') {
+        const snap = activeMembership.planSnapshot as any;
+        if (typeof snap.maxActiveListings === 'number') {
+          maxAllowedListings = snap.maxActiveListings;
+        }
+        if (snap.name) {
+          planName = snap.name;
+        }
+      }
 
-    const currentActiveCount = await this.prisma.listing.count({
-      where: {
-        ownerId,
-        status: { in: [ListingStatus.active, ListingStatus.pending] },
-      },
-    });
+      const currentActiveCount = await tx.listing.count({
+        where: {
+          ownerId,
+          status: { in: [ListingStatus.active, ListingStatus.pending] },
+        },
+      });
 
-    if (currentActiveCount >= maxAllowedListings) {
-      throw new ForbiddenException(
-        `Bạn đã đạt giới hạn tối đa ${maxAllowedListings} tin đăng cho ${planName}. Vui lòng nâng cấp gói thành viên tại trang Bảng giá để tiếp tục đăng thêm tin!`,
-      );
-    }
+      if (currentActiveCount >= maxAllowedListings) {
+        throw new ForbiddenException(
+          `Bạn đã đạt giới hạn tối đa ${maxAllowedListings} tin đăng cho ${planName}. Vui lòng nâng cấp gói thành viên tại trang Bảng giá để tiếp tục đăng thêm tin!`,
+        );
+      }
 
-    const created = await this.prisma.listing.create({
-      data: {
-        ownerId,
-        locationId: dto.locationId,
-        // Ép kiểu BigInt cho projectId nếu có giá trị — tránh lỗi runtime của Prisma khi nhận number từ DTO
-        projectId: dto.projectId ? BigInt(dto.projectId) : undefined,
-        transactionType: dto.transactionType ?? TransactionType.rent,
-        propertyType: dto.propertyType,
-        title: dto.title,
-        slug: `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-idtemp`,
-        description: dto.description,
-        price: BigInt(dto.price),
-        depositAmount: dto.depositAmount !== undefined ? BigInt(dto.depositAmount) : undefined,
-        minLeaseMonths: dto.minLeaseMonths,
-        utilitiesIncluded: dto.utilitiesIncluded ?? false,
-        electricityPricePerKwh: dto.electricityPricePerKwh,
-        waterPricePerM3: dto.waterPricePerM3,
-        waterPriceFlat: dto.waterPriceFlat,
-        amenities: dto.amenities as Prisma.InputJsonValue | undefined,
-        areaM2: dto.areaM2,
-        bedrooms: dto.bedrooms,
-        bathrooms: dto.bathrooms,
-        legalStatus: dto.legalStatus,
-        addressDetail: dto.addressDetail,
-        lat: dto.lat,
-        lng: dto.lng,
-        status: ListingStatus.pending, // luôn chờ duyệt, không auto-active (xem skill 11 - admin)
-        ...(dto.universityDistances?.length
-          ? {
-              nearbyUniversities: {
-                create: dto.universityDistances.map((ud) => ({
-                  universityId: ud.universityId,
-                  distanceMeters: ud.distanceMeters,
-                  travelTimeMinutes: ud.travelTimeMinutes,
-                })),
-              },
-            }
-          : dto.nearbyUniversityIds?.length
+      // 2. Tạo bản ghi tin đăng
+      const created = await tx.listing.create({
+        data: {
+          ownerId,
+          locationId: dto.locationId,
+          projectId: dto.projectId ? BigInt(dto.projectId) : undefined,
+          transactionType: dto.transactionType ?? TransactionType.rent,
+          propertyType: dto.propertyType,
+          title: dto.title,
+          slug: `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-idtemp`,
+          description: dto.description,
+          price: BigInt(dto.price),
+          depositAmount: dto.depositAmount !== undefined ? BigInt(dto.depositAmount) : undefined,
+          minLeaseMonths: dto.minLeaseMonths,
+          utilitiesIncluded: dto.utilitiesIncluded ?? false,
+          electricityPricePerKwh: dto.electricityPricePerKwh,
+          waterPricePerM3: dto.waterPricePerM3,
+          waterPriceFlat: dto.waterPriceFlat,
+          amenities: dto.amenities as Prisma.InputJsonValue | undefined,
+          areaM2: dto.areaM2,
+          bedrooms: dto.bedrooms,
+          bathrooms: dto.bathrooms,
+          legalStatus: dto.legalStatus,
+          addressDetail: dto.addressDetail,
+          lat: dto.lat,
+          lng: dto.lng,
+          status: ListingStatus.pending,
+          ...(dto.universityDistances?.length
             ? {
                 nearbyUniversities: {
-                  create: dto.nearbyUniversityIds.map((uid) => ({
-                    universityId: uid,
+                  create: dto.universityDistances.map((ud) => ({
+                    universityId: ud.universityId,
+                    distanceMeters: ud.distanceMeters,
+                    travelTimeMinutes: ud.travelTimeMinutes,
                   })),
                 },
               }
-            : {}),
-      },
-      include: {
-        owner: { select: { phone: true, fullName: true } },
-        location: { select: { name: true } },
-      },
-    });
-
-    const finalSlug = `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-id${created.id}`;
-    const updated = await this.prisma.listing.update({
-      where: { id: created.id },
-      data: { slug: finalSlug },
-      select: PUBLIC_LISTING_SELECT,
-    });
-
-    // Kích hoạt thông báo Email & đồng bộ Google Sheets bất đồng bộ
-    try {
-      void this.emailService.sendListingSubmittedToLandlord(created, created.owner.phone);
-      void this.emailService.sendNewListingToAdmin({
-        id: created.id,
-        title: created.title,
-        propertyType: created.propertyType,
-        price: created.price,
-        ownerPhone: created.owner.phone,
+            : dto.nearbyUniversityIds?.length
+              ? {
+                  nearbyUniversities: {
+                    create: dto.nearbyUniversityIds.map((uid) => ({
+                      universityId: uid,
+                    })),
+                  },
+                }
+              : {}),
+        },
+        include: {
+          owner: { select: { phone: true, fullName: true } },
+          location: { select: { name: true } },
+        },
       });
-      void this.googleSheetsService.appendPendingListing({
-        id: created.id,
-        title: created.title,
-        propertyType: created.propertyType,
-        price: created.price,
-        depositAmount: created.depositAmount,
-        locationName: created.location.name,
-        addressDetail: created.addressDetail,
-        ownerName: created.owner.fullName,
-        ownerPhone: created.owner.phone,
-        createdAt: created.createdAt,
-        slug: finalSlug,
+
+      // 3. Cập nhật finalSlug nguyên tử ngay trong transaction (loại bỏ race idtemp - RB-10)
+      const finalSlug = `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-id${created.id}`;
+      const saved = await tx.listing.update({
+        where: { id: created.id },
+        data: { slug: finalSlug },
+        select: PUBLIC_LISTING_SELECT,
       });
-    } catch {
-      // Background notifications are safe-fail
-    }
+
+      // 4. Ghi nhận các sự kiện thông báo vào Transactional Outbox (RB-06)
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: created.id.toString(),
+          eventType: 'EMAIL_LISTING_SUBMITTED',
+          payload: {
+            listing: { id: created.id.toString(), title: created.title, slug: finalSlug },
+            landlordPhone: created.owner.phone,
+          },
+        },
+        tx,
+      );
+
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: created.id.toString(),
+          eventType: 'EMAIL_NEW_LISTING_ADMIN',
+          payload: {
+            listing: {
+              id: created.id.toString(),
+              title: created.title,
+              propertyType: created.propertyType,
+              price: created.price.toString(),
+              ownerPhone: created.owner.phone,
+              slug: finalSlug,
+            },
+          },
+        },
+        tx,
+      );
+
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: created.id.toString(),
+          eventType: 'SHEETS_PENDING_LISTING',
+          payload: {
+            listing: {
+              id: created.id.toString(),
+              title: created.title,
+              propertyType: created.propertyType,
+              price: created.price.toString(),
+              depositAmount: created.depositAmount ? created.depositAmount.toString() : null,
+              locationName: created.location.name,
+              addressDetail: created.addressDetail,
+              ownerName: created.owner.fullName,
+              ownerPhone: created.owner.phone,
+              createdAt: created.createdAt.toISOString(),
+              slug: finalSlug,
+            },
+          },
+        },
+        tx,
+      );
+
+      return saved;
+    });
 
     return serialize(updated);
   }
@@ -928,37 +975,61 @@ export class ListingsService {
     });
     if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
 
-    const reportRecord = await this.prisma.listingReport.create({
-      data: { listingId: id, reason, note, reporterId },
-      include: {
-        reporter: { select: { phone: true } },
-      },
+    const reportRecord = await this.prisma.$transaction(async (tx) => {
+      const record = await tx.listingReport.create({
+        data: { listingId: id, reason, note, reporterId },
+        include: {
+          reporter: { select: { phone: true } },
+        },
+      });
+
+      // RB-06: Ghi sự kiện thông báo vào Transactional Outbox
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'REPORT',
+          aggregateId: record.id.toString(),
+          eventType: 'EMAIL_NEW_REPORT_ADMIN',
+          payload: {
+            report: {
+              id: record.id.toString(),
+              reason,
+              note,
+              listingId: id.toString(),
+              listingTitle: listing.title,
+              reporterPhone: record.reporter?.phone,
+            },
+          },
+        },
+        tx,
+      );
+
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'REPORT',
+          aggregateId: record.id.toString(),
+          eventType: 'SHEETS_VIOLATION_REPORT',
+          payload: {
+            report: {
+              id: record.id.toString(),
+              listingId: id.toString(),
+              listingTitle: listing.title,
+              reason,
+              note,
+              reporterPhone: record.reporter?.phone,
+              createdAt: record.createdAt.toISOString(),
+            },
+          },
+        },
+        tx,
+      );
+
+      return record;
     });
 
-    // Kích hoạt thông báo email & Google Sheets tới Admin
-    try {
-      void this.emailService.sendNewReportToAdmin({
-        id: reportRecord.id,
-        reason,
-        note,
-        listingId: id,
-        listingTitle: listing.title,
-        reporterPhone: reportRecord.reporter?.phone,
-      });
-      void this.googleSheetsService.appendViolationReport({
-        id: reportRecord.id,
-        listingId: id,
-        listingTitle: listing.title,
-        reason,
-        note,
-        reporterPhone: reportRecord.reporter?.phone,
-        createdAt: reportRecord.createdAt,
-      });
-    } catch {
-      // Safe-fail
-    }
-
-    return { message: 'Cảm ơn bạn đã báo cáo. Đội ngũ kiểm duyệt sẽ xem xét sớm.' };
+    return {
+      message: 'Báo cáo vi phạm đã được tiếp nhận. Đội ngũ kiểm duyệt sẽ xem xét sớm.',
+      reportId: reportRecord.id.toString(),
+    };
   }
 
   /**

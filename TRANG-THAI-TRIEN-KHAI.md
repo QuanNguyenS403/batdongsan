@@ -2,6 +2,35 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🚀 ĐỢT 3: OUTBOX, TÀI CHÍNH & VẬN HÀNH / GATE C (21/09/2026)
+
+Hoàn thiện toàn diện hạ tầng vận hành, Transactional Outbox và hệ thống tài chính theo chỉ thị Gate C:
+1. **RB-06 (Nối 100% Transactional Outbox Vào Mutation Cốt Lõi - verified)**:
+   - `listings.service.ts`: `create` và `report` đều ghi Outbox (`EMAIL_LISTING_SUBMITTED`, `EMAIL_NEW_LISTING_ADMIN`, `SHEETS_PENDING_LISTING`, `EMAIL_NEW_REPORT_ADMIN`, `SHEETS_VIOLATION_REPORT`) bên trong cùng DB transaction `tx`.
+   - `admin.service.ts`: `approveListing` (`EMAIL_LISTING_APPROVED`) và `rejectListing` (`EMAIL_LISTING_REJECTED`) ghi Outbox trong CAS transaction.
+   - `membership.service.ts`: `requestUpgrade` (`EMAIL_MEMBERSHIP_UPGRADE_ADMIN`) và `approveRequest` (`EMAIL_MEMBERSHIP_ACTIVATED_USER`) ghi Outbox trong transaction.
+   - `leads.service.ts`: `createLead` ghi sự kiện `LEAD_CREATED` (RB-13) vào Outbox trong transaction.
+2. **RB-07 & RB-15 (Cơ Chế Lease/Reclaim & Phân Định 3 Trạng Thái Outbox - verified)**:
+   - `outbox.service.ts`: Cơ chế lease 5 phút (`lockedUntil`), gắn `workerId`. Tự động quét claim cả events `PENDING` và `PROCESSING` hết hạn lease để phục hồi tác vụ bị treo vĩnh viễn khi worker gặp sự cố.
+   - Phân định rõ 3 trạng thái `OutboxDispatchResult`: `SENT` / `SKIPPED` / `RETRYABLE_FAILURE`. Chỉ `SENT`/`SKIPPED` mới đánh dấu `COMPLETED`. `RETRYABLE_FAILURE` kích hoạt exponential backoff và chuyển vào DLQ (`FAILED`) sau 5 lần retry. Bổ sung handler `LEAD_CREATED`.
+3. **RB-08 (Advisory Lock An Toàn Connection Pool - verified)**:
+   - `outbox.service.ts` & `tasks.service.ts`: Loại bỏ hoàn toàn fallback in-memory nguy hiểm khi DB query gặp lỗi raw; abort chu kỳ an toàn để bảo vệ tính nhất quán dữ liệu.
+4. **RB-10 (Quota Create & Slug Generation Transaction-Safe - verified)**:
+   - `listings.service.ts`: Đưa kiểm tra hạn mức gói (đọc từ `planSnapshot`), tạo tin, và sinh final slug `${slug}-id${id}` vào 1 interactive transaction `prisma.$transaction`. Triệt tiêu hoàn toàn race condition `-idtemp` và quota bypass.
+5. **FIN-02 (Nâng Cấp Script Kiểm Toán & Backfill Sổ Cái - verified)**:
+   - `packages/database/scripts/backfill-finance-ledgers.ts`: Chỉ ghi nhận Sổ cái khi có mã giao dịch ngân hàng thật `externalTransactionId`. Tuyệt đối không tự bịa mã chứng từ giả; tự động gắn flag `UNVERIFIED_PENDING_MANUAL_PROOF` và ghi nhật ký `AuditEvent` cho các trường hợp thiếu chứng từ.
+6. **FIN-03, FIN-04, FIN-05, FIN-08, FIN-09 (Hoàn Thiện Nghiệp Vụ Tài Chính - verified)**:
+   - `FIN-03`: `approveRequest` chuyển sang interactive transaction, query `currentActivePlan` bên trong transaction để nối tiếp chính xác ngày hết hạn khi gia hạn gói.
+   - `FIN-04 & FIN-05`: Ưu tiên đọc quyền lợi `durationDays`, `maxActiveListings`, `name` từ `planSnapshot` bất biến, bảo toàn quyền lợi đã bán.
+   - `FIN-08`: Khẳng định `ON DELETE RESTRICT` giữa User và FinanceLedger.
+   - `FIN-09`: `RequestMembershipDto` hỗ trợ `idempotencyKey`; `requestUpgrade` xử lý idempotent response; `TasksService.sweepPendingMemberships` tự động hủy đơn pending quá 7 ngày.
+7. **FIN-06 & FIN-07 (Sửa Dashboard Tài Chính & Giới Hạn Boundary - verified)**:
+   - `getFinanceSummary`: Tách bạch rõ `netCashFlow` (dòng tiền ròng thực thu = cash_in - refund) với `netProfit` ("Chưa đo được - Chi phí đối tác chưa trừ"); cung cấp định dạng chuỗi VNĐ an toàn trước `MAX_SAFE_INTEGER`.
+8. **Xác Minh Chất Lượng**:
+   - `tsc --noEmit` API & Web: PASS 100% (0 errors).
+   - Static structure lint: 5/5 PASS.
+   - Monorepo production build: PASS 3/3 packages (50.8s).
+
 ## 🚀 ĐỢT 2: SỬA TÍNH NHẤT QUÁN & BẢO MẬT / GATE B (21/09/2026)
 
 Khắc phục triệt để các bất cập về tính nhất quán, bảo mật và khả năng phục hồi theo chỉ thị Gate B:

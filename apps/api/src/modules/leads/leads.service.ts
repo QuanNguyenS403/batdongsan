@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { OutboxService } from '../outbox/outbox.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { QueryLeadsDto } from './dto/query-leads.dto';
 import { UpdateLeadStatusDto } from './dto/update-lead-status.dto';
@@ -14,7 +15,10 @@ import { UpdateLeadStatusDto } from './dto/update-lead-status.dto';
 export class LeadsService {
   private readonly logger = new Logger(LeadsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outboxService: OutboxService,
+  ) {}
 
   /**
    * Tạo dedupe key chuẩn: sha256("${listingId}:${cleanPhone}:${date}")
@@ -123,21 +127,45 @@ export class LeadsService {
       };
     }
 
-    // 4. Lưu DB thật (bắt lỗi unique race condition nếu 2 request gửi đồng thời)
+    // 4. Lưu DB thật và ghi sự kiện Transactional Outbox (RB-06 & RB-13)
     try {
-      const created = await this.prisma.lead.create({
-        data: {
-          listingId: listingIdBigInt,
-          requesterId: requesterId ?? null,
-          fullName: dto.fullName.trim(),
-          phone: cleanPhone,
-          email: dto.email?.trim() || null,
-          message: dto.message?.trim() || null,
-          channel: dto.channel || 'web_form',
-          consent: true,
-          status: 'new',
-          dedupeKey,
-        },
+      const created = await this.prisma.$transaction(async (tx) => {
+        const lead = await tx.lead.create({
+          data: {
+            listingId: listingIdBigInt,
+            requesterId: requesterId ?? null,
+            fullName: dto.fullName.trim(),
+            phone: cleanPhone,
+            email: dto.email?.trim() || null,
+            message: dto.message?.trim() || null,
+            channel: dto.channel || 'web_form',
+            consent: true,
+            status: 'new',
+            dedupeKey,
+          },
+        });
+
+        // Ghi sự kiện LEAD_CREATED để thông báo cho chủ tin (RB-13)
+        await this.outboxService.recordEvent(
+          {
+            aggregateType: 'LEAD',
+            aggregateId: lead.id.toString(),
+            eventType: 'LEAD_CREATED',
+            payload: {
+              leadId: lead.id.toString(),
+              listingId: listing.id.toString(),
+              listingTitle: listing.title,
+              landlordPhone: listing.owner.phone,
+              tenantName: lead.fullName,
+              tenantPhone: lead.phone,
+              tenantEmail: lead.email,
+              message: lead.message,
+            },
+          },
+          tx,
+        );
+
+        return lead;
       });
 
       this.logger.log(`Created new lead id=${created.id} for listing=${listingIdBigInt}`);
