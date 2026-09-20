@@ -24,7 +24,13 @@ const nextConfig = {
     minimumCacheTTL: 86400,
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
-      { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '127.0.0.1' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: '*.s3.amazonaws.com' },
+      { protocol: 'https', hostname: '*.r2.cloudflarestorage.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: 'qns.vn' },
+      { protocol: 'https', hostname: '*.qns.vn' },
     ],
   },
   async rewrites() {

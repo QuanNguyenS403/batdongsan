@@ -97,6 +97,22 @@ export class AuthService {
       throw new UnauthorizedException('Secret bootstrap không chính xác.');
     }
 
+    const existingAdminCount = await this.prisma.user.count({ where: { role: 'admin' } });
+    if (existingAdminCount > 0) {
+      await this.prisma.auditEvent.create({
+        data: {
+          actorId: null,
+          action: 'auth.bootstrap_admin_rejected',
+          entityType: 'system',
+          entityId: '0',
+          reason: `Từ chối bootstrap admin cho số ${dto.phone} vì hệ thống đã có ${existingAdminCount} tài khoản quản trị viên.`,
+        },
+      });
+      throw new BadRequestException(
+        'Hệ thống đã tồn tại tài khoản Quản trị viên. Chức năng bootstrap chỉ được thực hiện một lần duy nhất (one-shot). Vui lòng đăng nhập bằng tài khoản quản trị hiện có.',
+      );
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const existing = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
 
@@ -109,6 +125,7 @@ export class AuthService {
           passwordHash,
           role: 'admin',
           isPhoneVerified: true,
+          tokenVersion: 1,
         },
       });
     } else {
@@ -117,10 +134,24 @@ export class AuthService {
         data: {
           role: 'admin',
           passwordHash,
+          tokenVersion: { increment: 1 },
           ...(dto.fullName ? { fullName: dto.fullName } : {}),
         },
       });
     }
+
+    // RB-04: Ghi nhận sự kiện bootstrap vào bảng AuditEvent bất biến
+    await this.prisma.auditEvent.create({
+      data: {
+        actorId: adminUser.id,
+        action: 'auth.bootstrap_admin',
+        entityType: 'user',
+        entityId: adminUser.id.toString(),
+        beforeState: { role: existing ? existing.role : null },
+        afterState: { role: 'admin' },
+        reason: 'Bootstrap tài khoản quản trị viên khởi tạo ban đầu (one-shot)',
+      },
+    });
 
     return {
       message: 'Bootstrap tài khoản quản trị viên thành công.',
@@ -149,8 +180,8 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: BigInt(payload.sub) } });
     if (!user || user.isBlocked) throw new UnauthorizedException('Tài khoản không hợp lệ hoặc đã bị khóa.');
 
-    // BE-02: Kiểm tra tokenVersion — thu hồi phiên nếu mật khẩu đã đổi hoặc user đã logout
-    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.tokenVersion) {
+    // RB-01 & BE-02: Bắt buộc tokenVersion phải có và khớp chính xác phiên hiện tại
+    if (payload.tokenVersion === undefined || payload.tokenVersion !== user.tokenVersion) {
       throw new UnauthorizedException('Phiên đăng nhập đã bị thu hồi hoặc mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.');
     }
 

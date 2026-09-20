@@ -23,8 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Cố gắng nạp các tin active để đưa vào sitemap động
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch(`${apiUrl}/listings?pageSize=50`, {
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`${apiUrl}/listings?pageSize=100&status=active`, {
       signal: controller.signal,
       next: { revalidate: 3600 },
     });
@@ -32,8 +32,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     if (res.ok) {
       const data = await res.json();
-      const listingRoutes: MetadataRoute.Sitemap = (data.data || [])
-        .filter((item: any) => item.slug && !item.slug.startsWith('demo-'))
+      const rawItems = Array.isArray(data.items)
+        ? data.items
+        : Array.isArray(data.data)
+        ? data.data
+        : [];
+
+      const listingRoutes: MetadataRoute.Sitemap = rawItems
+        .filter((item: any) => item.slug && !item.slug.startsWith('demo-') && (item.status === 'active' || !item.status))
         .map((item: any) => ({
           url: `${base}/tin/${item.slug}`,
           lastModified: item.updatedAt ? new Date(item.updatedAt) : new Date(),
@@ -44,7 +50,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return [...staticRoutes, ...listingRoutes];
     }
   } catch {
-    // safe-fail fallback
+    // safe-fail fallback sang danh sách trang tĩnh nếu API offline
   }
 
   return staticRoutes;

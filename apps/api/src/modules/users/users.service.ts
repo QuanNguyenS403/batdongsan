@@ -48,9 +48,13 @@ export class UsersService {
     }
 
     const newHash = await bcrypt.hash(dto.newPassword, 10);
+    // RB-01 & BE-02: Tăng tokenVersion để lập tức thu hồi mọi JWT token cũ của user
     await this.prisma.user.update({
       where: { id },
-      data: { passwordHash: newHash },
+      data: {
+        passwordHash: newHash,
+        tokenVersion: { increment: 1 },
+      },
     });
 
     return { message: 'Đổi mật khẩu thành công.' };

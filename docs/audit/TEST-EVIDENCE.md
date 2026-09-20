@@ -108,3 +108,35 @@
   Cached:   0 cached, 3 total
   Time:     1m44.02s
   ```
+
+---
+
+## 3. Nhật Ký Kiểm Thử Đợt 2 (Gate B — Sửa Tính Nhất Quán & Bảo Mật — 21/09/2026)
+
+### Bài kiểm tra T13: NestJS Backend Typecheck sau khi triển khai Gate B
+- **Lệnh thực thi**: `pnpm --filter @batdongsan/api exec tsc --noEmit`
+- **Mục tiêu**: Xác thực code các modules: `jwt.strategy.ts` (RB-01: tokenVersion), `otp.service.ts` (RB-02: CSPRNG + 2 stores), `assert-env.ts` (RB-03: SMS provider check), `bootstrap-admin.dto.ts` + `auth.service.ts` (RB-04: one-shot admin bootstrap + audit), `admin.service.ts` (RB-05: CAS DB atomic updateMany), `leads.service.ts` (RB-11: expired & blocked check), `bigint.interceptor.ts` (RB-12: BigInt JSON serialization).
+- **Thời gian**: 2026-09-21 01:34:55
+- **Kết quả**: **PASS (Exit code 0, 0 errors)**
+
+### Bài kiểm tra T14: Next.js Frontend Typecheck sau khi sửa Gate B
+- **Lệnh thực thi**: `pnpm --filter @batdongsan/web exec tsc --noEmit`
+- **Mục tiêu**: Xác thực đồng nhất token key `accessToken` (FE-N12), siết `next.config.mjs` remotePatterns (RB-09 / F14), sửa sitemap `items` fallback và status active (FE-N14).
+- **Thời gian**: 2026-09-21 01:35:10
+- **Kết quả**: **PASS (Exit code 0, 0 errors)**
+
+### Bài kiểm tra T15: Static Structure Lint
+- **Lệnh thực thi**: `node packages/database/scripts/static-lint-check.js`
+- **Thời gian**: 2026-09-21 01:35:15
+- **Kết quả**: **PASS (5/5 checks)**
+
+### Bài kiểm tra T16: Toàn Bộ Monorepo Production Build (Turbo)
+- **Lệnh thực thi**: `pnpm build`
+- **Thời gian**: 2026-09-21 01:36:20
+- **Kết quả**: **PASS (3/3 packages build thành công, 31/31 routes static generation pass 100%)**
+- **Log trích xuất**:
+  ```text
+  Tasks:    3 successful, 3 total
+  Cached:   0 cached, 3 total
+  Time:     49.403s
+  ```

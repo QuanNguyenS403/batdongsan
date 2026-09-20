@@ -2,7 +2,40 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🚀 ĐỢT 2: SỬA TÍNH NHẤT QUÁN & BẢO MẬT / GATE B (21/09/2026)
+
+Khắc phục triệt để các bất cập về tính nhất quán, bảo mật và khả năng phục hồi theo chỉ thị Gate B:
+1. **RB-01 (Session Revocation & Token Version Sync - verified)**:
+   - `jwt.strategy.ts`: Từ chối lập tức JWT nếu thiếu `tokenVersion` hoặc `tokenVersion !== user.tokenVersion`.
+   - `users.service.ts`: Tăng `tokenVersion` khi người dùng đổi mật khẩu.
+   - `auth.service.ts`: Tăng `tokenVersion` khi refresh token và admin bootstrap.
+2. **RB-02 / F06 (CSPRNG OTP & Tách Store Rate Limit - verified)**:
+   - `otp.service.ts`: Dùng CSPRNG `crypto.randomInt(100000, 1000000)` sinh mã OTP 6 số an toàn.
+   - Tách 2 store bộ nhớ riêng biệt: `activeOtps` (lưu mã xác thực) và `rateLimits` (đếm 5 lần/giờ). Khi verify xong xóa mã OTP nhưng bảo toàn rate limit chống spam.
+   - Chuẩn hóa tin nhắn SMS: `[QNS Thue] Ma xac thuc OTP...`.
+3. **RB-03 (Assert-env Theo SMS Provider Thật - verified)**:
+   - `assert-env.ts`: Validate từng biến bắt buộc tương ứng theo cấu hình `SMS_PROVIDER` (eSMS, Twilio, SpeedSMS).
+4. **RB-04 (Admin Bootstrap One-Shot & Regex SĐT - verified)**:
+   - `bootstrap-admin.dto.ts`: Regex SĐT Việt Nam hợp lệ `^0[35789][0-9]{8}$`.
+   - `auth.service.ts`: `bootstrapAdmin` ném `BadRequestException` 400 nếu hệ thống đã có admin; ghi log vào `AuditEvent`.
+5. **RB-05 (CAS DB Atomic Cho Duyệt Tin - verified)**:
+   - `admin.service.ts`: `approveListing` và `rejectListing` dùng CAS nguyên tử tại tầng DB (`updateMany` với `where: { id, status: 'pending' }`), ném `ConflictException 409` nếu có race condition; đếm quota nằm trong transaction.
+6. **RB-09 / F14 (Khóa SSRF Trong Next.js Images - verified)**:
+   - `next.config.mjs`: Loại bỏ wildcard `**`, siết danh sách domain tin cậy (`images.unsplash.com`, `res.cloudinary.com`, `localhost`, `127.0.0.1`).
+7. **RB-11 (Leads Validation Hợp Lệ - verified)**:
+   - `leads.service.ts`: Từ chối tạo lead nếu tin đã hết hạn (`expiresAt <= now()`) hoặc chủ tin bị khóa (`owner.isBlocked === true`).
+8. **RB-12 (Global BigInt Serializer Interceptor - verified)**:
+   - Tạo `bigint.interceptor.ts`, kết hợp monkey-patch `BigInt.prototype.toJSON`, đăng ký toàn cục trong `main.ts` loại trừ lỗi 500 BigInt serialization.
+9. **FE-N12 & FE-N14 (Đồng Bộ Token Key & Sửa Sitemap - verified)**:
+   - Đồng bộ token key sang `accessToken` xuyên suốt frontend (`auth-client.ts`, `dang-nhap/page.tsx`).
+   - Sửa `sitemap.ts`: đọc field `items` (fallback `data`), query `pageSize=100&status=active`, lọc bỏ tin demo.
+10. **Xác Minh Chất Lượng**:
+    - `tsc --noEmit` API & Web: PASS 100% (0 errors).
+    - Static structure lint: 5/5 PASS.
+    - Monorepo production build: PASS 3/3 packages (49.4s).
+
 ## 🚀 ĐỢT 1: CHẶN RỦI RO TRỌNG YẾU / GATE A (21/09/2026)
+
 
 Khắc phục triệt để các rủi ro P0, tiền bạc và bảo vệ thương hiệu theo chỉ thị §11:
 1. **FE-N01 (Rules of Hooks & Auth Token - verified)**:

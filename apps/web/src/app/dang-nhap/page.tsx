@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { setTokens } from '@/lib/auth-client';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -73,9 +74,7 @@ function DangNhapContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? 'Đăng nhập thất bại.');
 
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('access_token', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
+      setTokens(data.accessToken, data.refreshToken);
       router.push(getSafeReturnUrl(returnToParam));
     } catch (err) {
       setError(formatFriendlyError(err));
@@ -161,9 +160,7 @@ function DangNhapContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? 'Đăng ký thất bại.');
 
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('access_token', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
+      setTokens(data.accessToken, data.refreshToken);
       router.push(getSafeReturnUrl(returnToParam));
     } catch (err) {
       setError(formatFriendlyError(err));

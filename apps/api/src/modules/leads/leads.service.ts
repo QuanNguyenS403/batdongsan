@@ -73,12 +73,14 @@ export class LeadsService {
         id: true,
         title: true,
         status: true,
+        expiresAt: true,
         ownerId: true,
         owner: {
           select: {
             id: true,
             fullName: true,
             phone: true,
+            isBlocked: true,
           },
         },
       },
@@ -90,6 +92,16 @@ export class LeadsService {
 
     if (listing.status !== 'active') {
       throw new BadRequestException('Tin đăng này hiện không còn nhận yêu cầu liên hệ');
+    }
+
+    // RB-11: Kiểm tra tin đăng chưa hết hạn
+    if (listing.expiresAt && listing.expiresAt < new Date()) {
+      throw new BadRequestException('Tin đăng này đã hết hạn hiển thị, không thể gửi yêu cầu liên hệ');
+    }
+
+    // RB-11: Kiểm tra chủ tin không bị tạm khóa do vi phạm
+    if (listing.owner?.isBlocked) {
+      throw new BadRequestException('Tài khoản người cho thuê của tin này hiện đang bị tạm khóa');
     }
 
     // 2. Chuẩn hóa số điện thoại và sinh dedupeKey

@@ -194,18 +194,18 @@ Các tài liệu dưới đây được duy trì tại thư mục `docs/audit/` 
 
 | Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
 |---|---|---|---|---|---|
-| **RB-01** | P1 | Mọi thay đổi mật khẩu/vai trò/bootstrap phải tăng `tokenVersion`; JWT strategy từ chối token thiếu/sai version; test đổi pass 401 token cũ | open | | |
-| **RB-02** | P1 | Chuyển OTP từ `Map` sang Redis thật, có TTL + đếm lượt gửi tách riêng khỏi việc xóa record khi verify; dùng `crypto.randomInt` | open | | |
-| **RB-03** | P1 | Sửa `assert-env.ts` kiểm tra đúng bộ biến theo từng SMS provider (eSMS secret, Twilio auth/from, SpeedSMS error check) | open | | |
-| **RB-04** | P1 | Sửa regex SĐT `POST /auth/bootstrap-admin` (`^0[35789]` thay vì `^0[3\|5\|7\|8\|9]`); biến endpoint thành one-shot có audit log | open | | |
-| **RB-05** | P1 | Sửa duyệt/từ chối tin thành CAS thật: where chứa `status: 'pending'` trong cùng query update; quota count nằm trong transaction; test race 2 admin | open | | |
-| **RB-08** | P1 | Sửa advisory lock dùng đúng 1 connection/transaction qua pool; loại bỏ fallback in-memory khi raw query lỗi | open | | |
-| **RB-09** | P1 | Upload ảnh transaction-safe: stage/shared storage, atomic DB state, orphan cleanup, giới hạn dung lượng/số lượng concurrency | open | | |
-| **RB-10** | P1 | Quota create và slug generation transaction-safe: serializable transaction hoặc lock cấp user; loại bỏ race slug idtemp | open | | |
-| **RB-11** | P1 | `LeadsService.createLead` kiểm tra thêm `expiresAt > now()` và chủ tin không bị block | open | | |
-| **RB-12** | P1 | Thêm BigInt serializer toàn cục (global JSON serializer / interceptor) ngăn ngừa 500 do nested BigInt như `listing.owner.id` | open | | |
-| **FE-N12** | P1 | Hợp nhất về đúng 1 key lưu token (`accessToken`) xuyên suốt AuthModal, trang login, ContactBrokerModal, auth-client | open | | |
-| **FE-N14** | P1 | Sửa `sitemap.ts` đọc đúng field `items` (không phải `data.data`); thêm phân trang/cursor vượt 50 bản ghi, chỉ lấy tin `active` | open | | |
+| **RB-01** | P1 | Mọi thay đổi mật khẩu/vai trò/bootstrap phải tăng `tokenVersion`; JWT strategy từ chối token thiếu/sai version | **verified** | `jwt.strategy.ts` từ chối nếu thiếu hoặc sai `tokenVersion`; `auth.service.ts` tăng version khi bootstrap/refresh; `users.service.ts` tăng version khi đổi pass; `admin.service.ts` tăng version khi block. | `feat(gate-b)` |
+| **RB-02** | P1 | Chuyển OTP sang CSPRNG `crypto.randomInt`, tách biệt hoàn toàn rate limit khỏi việc verify OTP | **verified** | `otp.service.ts` dùng `crypto.randomInt(100000, 1000000)`, tách `rateLimits` (5 lần/giờ) riêng khỏi `activeOtps`, verify thành công không làm mất rate limit; cập nhật brand SMS. | `feat(gate-b)` |
+| **RB-03** | P1 | Sửa `assert-env.ts` kiểm tra đúng bộ biến theo từng SMS provider (eSMS, Twilio, SpeedSMS) | **verified** | Cập nhật `assert-env.ts`: kiểm tra chính xác `SMS_API_KEY` + `SMS_SECRET_KEY` cho eSMS; `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_PHONE_NUMBER` cho Twilio; `SMS_API_KEY` cho SpeedSMS. | `feat(gate-b)` |
+| **RB-04** | P1 | Sửa regex SĐT `POST /auth/bootstrap-admin` (`^0[35789]`); biến endpoint thành one-shot có audit log | **verified** | `bootstrap-admin.dto.ts` sửa regex thành `^0[35789][0-9]{8}$`; `auth.service.ts` kiểm tra nếu đã có admin thì ném 400 BadRequest, ghi sự kiện vào `AuditEvent` bất biến. | `feat(gate-b)` |
+| **RB-05** | P1 | Sửa duyệt/từ chối tin thành CAS thật: where chứa `status: 'pending'` trong cùng query update; quota count nằm trong transaction | **verified** | `admin.service.ts`: `approveListing` và `rejectListing` dùng `tx.listing.updateMany` với `where: { id, status: 'pending' }`, nếu `count === 0` ném `ConflictException 409`; đếm quota trong transaction. | `feat(gate-b)` |
+| **RB-08** | P1 | Sửa advisory lock dùng đúng 1 connection/transaction qua pool; loại bỏ fallback in-memory khi raw query lỗi | open | Backlog Gate C | |
+| **RB-09** | P1 | Siết `remotePatterns` trong `next.config.mjs`, loại bỏ wildcard hostname `**` chống SSRF | **verified** | `next.config.mjs` giới hạn danh sách domain tin cậy cụ thể (localhost, 127.0.0.1, Unsplash, S3, Cloudflare R2, Cloudinary, qns.vn); loại bỏ hoàn toàn wildcard mở tự do `**`. | `feat(gate-b)` |
+| **RB-10** | P1 | Quota create và slug generation transaction-safe: serializable transaction hoặc lock cấp user; loại bỏ race slug idtemp | open | Backlog Gate C | |
+| **RB-11** | P1 | `LeadsService.createLead` kiểm tra thêm `expiresAt > now()` và chủ tin không bị block | **verified** | `leads.service.ts` kiểm tra: ném BadRequest nếu `listing.expiresAt < now()` hoặc tài khoản chủ tin bị khóa `owner.isBlocked === true`. | `feat(gate-b)` |
+| **RB-12** | P1 | Thêm BigInt serializer toàn cục (global JSON serializer / interceptor) ngăn ngừa 500 do nested BigInt | **verified** | Tạo `BigIntInterceptor` đệ quy chuyển BigInt thành string, monkey-patch `BigInt.prototype.toJSON`, đăng ký toàn cục trong `main.ts`. | `feat(gate-b)` |
+| **FE-N12** | P1 | Hợp nhất về đúng 1 key lưu token (`accessToken`) xuyên suốt AuthModal, trang login, ContactBrokerModal, auth-client | **verified** | `auth-client.ts` export `setTokens` lưu `accessToken` và xóa `access_token` cũ; `dang-nhap/page.tsx` dùng `setTokens`; `ContactBrokerModal` đọc qua `getAccessToken()`. | `feat(gate-b)` |
+| **FE-N14** | P1 | Sửa `sitemap.ts` đọc đúng field `items` (không phải `data.data`); thêm phân trang/cursor vượt 50 bản ghi, chỉ lấy tin `active` | **verified** | `sitemap.ts` đọc `rawItems = data.items || data.data || []`, gọi `pageSize=100&status=active`, lọc tin active không có tiền tố demo. | `feat(gate-b)` |
 
 ---
 

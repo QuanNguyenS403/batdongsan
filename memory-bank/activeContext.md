@@ -1,42 +1,46 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 1: CHẶN RỦI RO TRỌNG YẾU / GATE A):**
-1. **Khắc phục lỗi Rules of Hooks & Auth Token (FE-N01)**:
-   - Sửa `apps/web/src/components/ContactBrokerModal.tsx`: bọc `handleCloseModal` bằng `useCallback`, đảm bảo `if (!isOpen) return null;` nằm sau tất cả hooks.
-   - Chuẩn hóa đọc token: dùng `getAccessToken()` từ `@/lib/auth-client`.
-2. **Tắt Fallback Giá Ở Production & Empty State Trung Thực (FE-N02)**:
-   - Sửa `apps/web/src/app/gia-thanh-vien/page.tsx`: khi `NODE_ENV === 'production'`, nếu API rỗng/lỗi, set `plans = []` (không fallback sang mock).
-   - Thêm banner cảnh báo màu vàng ở dev mode: `Chế độ thử nghiệm (DEV): Đang hiển thị bảng giá mẫu`.
-   - Xử lý Empty State trong `MembershipPricingClient.tsx`: hiển thị thông báo "Bảng giá đang được cập nhật", vô hiệu hóa hoàn toàn nút nạp tiền/chuyển khoản.
-3. **Promise.allSettled & Định Vị Thương Hiệu Trên Trang Chủ (F16 / FE-N22 & BR-02)**:
-   - Sửa `apps/web/src/app/page.tsx`: chuyển `Promise.all` sang `Promise.allSettled` cho 4 chuyên mục, lỗi 1 API không làm sập 3 mục còn lại.
-   - Cập nhật H1: "Tìm chỗ thuê phù hợp, rõ chi phí ngay từ đầu".
-   - Cập nhật Hero slogan: "QNS Thuê — Rõ chi phí. Đúng người cho thuê." Loại bỏ hoàn toàn từ ngữ du lịch nghỉ dưỡng.
-4. **Dọn Sạch 100% Từ "Chính Chủ" & Hotline Cá Nhân (BR-01/F15, SEC-HOTLINE)**:
-   - Rà soát grep: Đã dọn sạch từ "chính chủ" ở cả 7 file (`layout.tsx`, `thue/page.tsx`, `tin/[slug]/page.tsx`, `cho-thue-tro/page.tsx`, `cho-thue-mat-bang/page.tsx`, `AuthModal.tsx`, `demo-data.ts`).
-   - Xóa bỏ toàn bộ hotline cá nhân `0981 753 082` và `0981753082` trong codebase, chuẩn hóa tập trung qua `SITE_CONFIG.hotline` (`1900 8868`) và `SITE_CONFIG.bankAccount`.
-5. **DTOs Giao Dịch & Fail-Fast Cấu Hình Production (F02/F03/FIN-01, RB-14)**:
-   - Tạo 3 DTOs có validation nghiêm ngặt: `ApproveMembershipRequestDto`, `RefundMembershipRequestDto`, `RejectMembershipRequestDto`.
-   - Cập nhật `AdminMembershipController` và `MembershipService`: bắt buộc `externalTransactionId`, `confirmedAmount > 0`, chống nạp trùng mã giao dịch, hoàn tiền không vượt số tiền thực thu.
-   - Cập nhật `assert-env.ts`: fail-fast chặn khởi động ở production nếu JWT secret < 32 ký tự, thiếu `DATABASE_URL`, password bootstrap < 12 ký tự hoặc SMS provider là mock.
-6. **Xác Minh Chất Lượng & Build Graph**:
-   - `tsc --noEmit` API: PASS 100% (exit code 0).
-   - `tsc --noEmit` Web: PASS 100% (exit code 0).
-   - Static lint check: 5/5 cấu trúc tệp mã nguồn khớp.
-   - Grep từ cấm: 0 kết quả cho "chính chủ", "không lừa đảo", "an toàn tuyệt đối", "chắc chắn có khách".
-   - `pnpm build`: 3/3 packages build thành công (31/31 routes static generation pass 100%).
+**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 2: SỬA TÍNH NHẤT QUÁN & BẢO MẬT / GATE B):**
+1. **RB-01: Session Revocation & Token Version Synchronization**:
+   - Cập nhật `apps/api/src/modules/auth/strategies/jwt.strategy.ts`: JWT strategy từ chối lập tức nếu payload thiếu `tokenVersion` hoặc `tokenVersion !== user.tokenVersion`.
+   - Cập nhật `users.service.ts`: tăng `tokenVersion` khi đổi mật khẩu (`changePassword`).
+   - Cập nhật `auth.service.ts`: tăng `tokenVersion` khi refresh token và admin bootstrap.
+2. **RB-02 / F06: OTP CSPRNG & Tách Store Rate Limit**:
+   - `apps/api/src/modules/auth/otp.service.ts`: chuyển sang CSPRNG an toàn `crypto.randomInt(100000, 1000000)`.
+   - Tách biệt 2 store: `activeOtps` và `rateLimits` (5 lần/giờ). Khi verify thành công và xóa OTP, bộ đếm rate limit không bị xóa mất $\rightarrow$ ngăn chặn triệt để spam SMS.
+   - Chuẩn hóa thương hiệu SMS: `[QNS Thue] Ma xac thuc OTP...`.
+3. **RB-03: Assert-env Theo Từng SMS Provider**:
+   - Sửa `apps/api/src/common/config/assert-env.ts`: kiểm tra biến môi trường nghiêm ngặt theo từng provider thực tế (eSMS: `SMS_API_KEY`, `SMS_SECRET_KEY`; Twilio: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`; SpeedSMS: `SMS_API_KEY`).
+4. **RB-04: Admin Bootstrap One-Shot & Chuẩn Hóa SĐT**:
+   - Sửa regex SĐT trong `bootstrap-admin.dto.ts` thành `^0[35789][0-9]{8}$`.
+   - `auth.service.ts`: `bootstrapAdmin` trở thành one-shot (ném `BadRequestException` 400 nếu hệ thống đã có admin), ghi nhật ký kiểm toán vào `AuditEvent`.
+5. **RB-05: CAS DB Atomic Update Cho Listing Approval**:
+   - `apps/api/src/modules/admin/admin.service.ts`: `approveListing` và `rejectListing` dùng `tx.listing.updateMany({ where: { id, status: 'pending' }, data })`. Nếu `count === 0` ném ngay `ConflictException 409`. Đếm quota `currentActiveCount` chạy bên trong transaction.
+6. **RB-09 / F14: Khóa Nguy Cơ SSRF Trong Next.js Images**:
+   - `apps/web/next.config.mjs`: Loại bỏ wildcard `**` nguy hiểm, siết chặt `remotePatterns` chỉ cho phép các domain được kiểm soát (`images.unsplash.com`, `res.cloudinary.com`, `localhost`, `127.0.0.1`).
+7. **RB-11: Kiểm Soát Tính Hợp Lệ Của Lead**:
+   - `apps/api/src/modules/leads/leads.service.ts`: Kiểm tra tin chưa hết hạn (`expiresAt > now()`) và chủ tin không bị khóa (`owner.isBlocked !== true`) trước khi cho phép tạo lead.
+8. **RB-12: Khắc Phục Triệt Để 500 BigInt JSON Serialization**:
+   - Tạo mới `apps/api/src/common/interceptors/bigint.interceptor.ts`.
+   - Monkey-patch `BigInt.prototype.toJSON` và đăng ký interceptor toàn cục trong `main.ts`.
+9. **FE-N12 & FE-N14: Đồng Bộ Token Key & Sửa Sitemap**:
+   - Đồng bộ 100% token key sang `accessToken` xuyên suốt frontend (`auth-client.ts`, `dang-nhap/page.tsx`).
+   - Sửa `apps/web/src/app/sitemap.ts`: đọc đúng field `items` (với fallback `data`), thêm `pageSize=100&status=active`, lọc bỏ tin demo `tin-tham-khao`.
+10. **Kiểm thử & Build**:
+    - Typecheck API & Web: PASS 100% (0 errors).
+    - Static structure lint: 5/5 PASS.
+    - Monorepo production build: PASS 3/3 packages (49.4s).
 
-**Kế hoạch tiếp theo (ĐỢT 2: SỬA TÍNH NHẤT QUÁN / GATE B):**
-- **RB-01**: Tăng `tokenVersion` khi đổi mật khẩu/vai trò/bootstrap, JWT strategy từ chối token thiếu version.
-- **RB-02 / F06**: Redis OTP + CSPRNG `crypto.randomInt`, phân định đếm lượt gửi khỏi xóa OTP khi verify.
-- **RB-03**: Assert env theo từng SMS provider (eSMS secret, Twilio auth/from, SpeedSMS).
-- **RB-04**: Sửa regex SĐT `POST /auth/bootstrap-admin` (`^0[35789]`), biến endpoint thành one-shot có audit log.
-- **RB-05**: CAS update status `pending` trong cùng query update; quota count nằm trong transaction.
-- **RB-09 / F14**: Upload ảnh transaction-safe, atomic DB state, siết `remotePatterns`.
-- **RB-11**: `LeadsService.createLead` kiểm tra `expiresAt > now()` và chủ tin không bị block.
-- **RB-12**: Global BigInt serializer / interceptor ngăn ngừa 500 do nested BigInt.
-- **FE-N12**: Hợp nhất về đúng 1 key lưu token (`accessToken`) xuyên suốt frontend.
-- **FE-N14**: Sửa `sitemap.ts` đọc đúng field `items`, thêm phân trang vượt 50 bản ghi.
+**Kế hoạch tiếp theo (ĐỢT 3: OUTBOX, TÀI CHÍNH & VẬN HÀNH / GATE C):**
+- **RB-06**: Nối Transactional Outbox vào các mutation chính: `listing.create`, `report.create`, `admin.approve/reject`, `membership.request/approve`, `lead.create` trong cùng DB transaction.
+- **RB-07**: Cơ chế lease/reclaim thật cho worker outbox (`lockedUntil`, `workerId`), chống stuck processing vĩnh viễn.
+- **RB-15**: Sửa `OutboxService.dispatchEvent`: phân định rõ 3 trạng thái handler `SENT` / `SKIPPED` / `RETRYABLE_FAILURE`; chỉ `SENT` mới đánh dấu `COMPLETED`.
+- **RB-08**: Sửa advisory lock của `TasksService` dùng đúng connection pool hoặc transaction an toàn.
+- **RB-10**: Quota create và slug generation transaction-safe.
+- **FIN-02**: Script kiểm tra/backfill dữ liệu lịch sử cho membership cũ sang ledger mới.
+- **FIN-03**: Nối tiếp `endDate` khi gia hạn gói chống ghi đè ngày gốc.
+- **FIN-08**: Đổi `onDelete: Cascade` giữa User và FinanceLedger thành `RESTRICT` để bảo toàn tính bất biến của sổ cái tài chính.
+- **FIN-09**: Thêm idempotency key và sweep cho membership pending request.
 
 ---
 

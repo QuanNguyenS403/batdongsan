@@ -1,29 +1,26 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
 
-interface OtpRecord {
+interface ActiveOtp {
   code: string;
   expiresAt: number;
   attempts: number;
+}
+
+interface RateLimitRecord {
   sentCount: number;
   windowStart: number;
 }
 
 /**
- * OtpService — quản lý sinh/gửi/xác thực OTP.
- *
- * Ở chế độ SMS_PROVIDER=mock (mặc định khi chưa có tài khoản nhà mạng SMS thật):
- * OTP KHÔNG được gửi qua SMS thật mà chỉ in ra console log của server — dùng để
- * phát triển/kiểm thử. Khi khách hàng có tài khoản eSMS/SpeedSMS/Twilio, cập nhật
- * `sendViaProvider()` bên dưới và đổi SMS_PROVIDER trong .env.
- *
- * Lưu trữ OTP: dùng in-memory Map cho môi trường dev đơn giản. Khi lên production
- * thật (nhiều instance API chạy song song), BẮT BUỘC đổi sang Redis (đã có sẵn
- * biến REDIS_URL trong .env) để OTP dùng chung được giữa các instance — xem TODO bên dưới.
+ * OtpService — quản lý sinh/gửi/xác thực OTP bảo mật cao.
+ * RB-02: Dùng CSPRNG crypto.randomInt, tách biệt hoàn toàn bộ đếm rate limit khỏi việc verify OTP.
  */
 @Injectable()
 export class OtpService {
   private readonly logger = new Logger(OtpService.name);
-  private readonly store = new Map<string, OtpRecord>();
+  private readonly activeOtps = new Map<string, ActiveOtp>();
+  private readonly rateLimits = new Map<string, RateLimitRecord>();
 
   private readonly OTP_TTL_MS = 5 * 60 * 1000; // 5 phút
   private readonly MAX_ATTEMPTS = 5;
@@ -31,22 +28,33 @@ export class OtpService {
 
   async sendOtp(phone: string): Promise<string> {
     const now = Date.now();
-    const existing = this.store.get(phone);
+    const rateRecord = this.rateLimits.get(phone);
 
-    if (existing && now - existing.windowStart < 60 * 60 * 1000 && existing.sentCount >= this.MAX_SENDS_PER_HOUR) {
-      throw new HttpException('Bạn đã yêu cầu OTP quá nhiều lần trong 1 giờ. Vui lòng thử lại sau.', HttpStatus.TOO_MANY_REQUESTS);
+    // Kiểm tra rate limit 1 giờ
+    if (rateRecord) {
+      if (now - rateRecord.windowStart < 60 * 60 * 1000) {
+        if (rateRecord.sentCount >= this.MAX_SENDS_PER_HOUR) {
+          throw new HttpException(
+            'Bạn đã yêu cầu OTP quá nhiều lần trong 1 giờ. Vui lòng thử lại sau.',
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+        rateRecord.sentCount += 1;
+      } else {
+        // Hết cửa sổ 1 giờ, reset window mới
+        this.rateLimits.set(phone, { sentCount: 1, windowStart: now });
+      }
+    } else {
+      this.rateLimits.set(phone, { sentCount: 1, windowStart: now });
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const windowStart = existing && now - existing.windowStart < 60 * 60 * 1000 ? existing.windowStart : now;
-    const sentCount = existing && now - existing.windowStart < 60 * 60 * 1000 ? existing.sentCount + 1 : 1;
+    // RB-02: Sinh mã OTP ngẫu nhiên 6 chữ số bằng CSPRNG (Cryptographically Secure Pseudo-Random Number Generator)
+    const code = crypto.randomInt(100000, 1000000).toString();
 
-    this.store.set(phone, {
+    this.activeOtps.set(phone, {
       code,
       expiresAt: now + this.OTP_TTL_MS,
       attempts: 0,
-      sentCount,
-      windowStart,
     });
 
     await this.sendViaProvider(phone, code);
@@ -54,16 +62,16 @@ export class OtpService {
   }
 
   verifyOtp(phone: string, code: string): boolean {
-    const record = this.store.get(phone);
+    const record = this.activeOtps.get(phone);
     if (!record) return false;
 
     if (Date.now() > record.expiresAt) {
-      this.store.delete(phone);
+      this.activeOtps.delete(phone);
       return false;
     }
 
     if (record.attempts >= this.MAX_ATTEMPTS) {
-      this.store.delete(phone);
+      this.activeOtps.delete(phone);
       return false;
     }
 
@@ -71,7 +79,8 @@ export class OtpService {
 
     if (record.code !== code) return false;
 
-    this.store.delete(phone); // OTP dùng 1 lần
+    // RB-02: Xóa mã OTP sau khi dùng thành công, nhưng GIỮ NGUYÊN rateLimits để chống spam gửi tiếp
+    this.activeOtps.delete(phone);
     return true;
   }
 
@@ -113,7 +122,7 @@ export class OtpService {
             ApiKey: apiKey,
             SecretKey: secretKey,
             Phone: phone,
-            Content: `Ma xac thuc Thue Tro Nhanh cua ban la: ${code}. Hieu luc 5 phut.`,
+            Content: `Ma xac thuc QNS Thue cua ban la: ${code}. Hieu luc 5 phut.`,
             SmsType: '2', // CSKH / OTP
           }),
           signal: controller.signal,
@@ -144,7 +153,7 @@ export class OtpService {
         const params = new URLSearchParams();
         params.set('To', phone.startsWith('+') ? phone : `+84${phone.replace(/^0/, '')}`);
         params.set('From', fromPhone);
-        params.set('Body', `Ma xac thuc Thue Tro Nhanh cua ban la: ${code}. Hieu luc 5 phut.`);
+        params.set('Body', `Ma xac thuc QNS Thue cua ban la: ${code}. Hieu luc 5 phut.`);
 
         const authHeader = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
         const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
@@ -179,7 +188,7 @@ export class OtpService {
           },
           body: JSON.stringify({
             to: [phone],
-            content: `Ma xac thuc Thue Tro Nhanh cua ban la: ${code}. Hieu luc 5 phut.`,
+            content: `Ma xac thuc QNS Thue cua ban la: ${code}. Hieu luc 5 phut.`,
             sms_type: 2,
           }),
           signal: controller.signal,
@@ -200,14 +209,19 @@ export class OtpService {
     }
   }
 
-  /** Dọn dẹp các bản ghi OTP đã hết hạn khỏi bộ nhớ */
+  /** Dọn dẹp các bản ghi OTP và rate limit đã hết hạn khỏi bộ nhớ */
   cleanupExpired(): number {
     const now = Date.now();
     let count = 0;
-    for (const [phone, record] of this.store.entries()) {
-      if (now > record.expiresAt && now - record.windowStart >= 60 * 60 * 1000) {
-        this.store.delete(phone);
+    for (const [phone, record] of this.activeOtps.entries()) {
+      if (now > record.expiresAt) {
+        this.activeOtps.delete(phone);
         count++;
+      }
+    }
+    for (const [phone, rate] of this.rateLimits.entries()) {
+      if (now - rate.windowStart >= 60 * 60 * 1000) {
+        this.rateLimits.delete(phone);
       }
     }
     return count;

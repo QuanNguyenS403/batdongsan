@@ -99,11 +99,28 @@ export function assertRequiredSecrets(): void {
           `Ứng dụng sẽ dừng khởi động để tránh người dùng bị kẹt không nhận được OTP.`,
       );
     }
-    if (!process.env.SMS_API_KEY && !process.env.TWILIO_ACCOUNT_SID) {
-      throw new Error(
-        `[CẤU HÌNH PRODUCTION THIẾU SECRET] SMS_PROVIDER="${provider}" nhưng thiếu SMS_API_KEY hoặc TWILIO_ACCOUNT_SID trong .env.\n` +
-          `→ Vui lòng điền API credentials thật của nhà mạng SMS trước khi deploy production.`,
-      );
+    if (provider === 'esms') {
+      if (!process.env.SMS_API_KEY || !process.env.SMS_SECRET_KEY) {
+        throw new Error(
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="esms" yêu cầu cả SMS_API_KEY và SMS_SECRET_KEY trong .env.`,
+        );
+      }
+    } else if (provider === 'twilio') {
+      if (
+        !process.env.TWILIO_ACCOUNT_SID ||
+        !process.env.TWILIO_AUTH_TOKEN ||
+        !process.env.TWILIO_PHONE_NUMBER
+      ) {
+        throw new Error(
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="twilio" yêu cầu đầy đủ TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN và TWILIO_PHONE_NUMBER trong .env.`,
+        );
+      }
+    } else if (provider === 'speedsms') {
+      if (!process.env.SMS_API_KEY) {
+        throw new Error(
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="speedsms" yêu cầu SMS_API_KEY trong .env.`,
+        );
+      }
     }
   }
 }
