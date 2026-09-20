@@ -63,4 +63,48 @@
 - **Kết quả phát hiện**:
   - Không tìm thấy cụm từ *"không lừa đảo"*, *"an toàn tuyệt đối"*, *"chắc chắn có khách"*.
   - Phát hiện từ *"chính chủ"* tại 7 tệp: `demo-data.ts`, `thue/page.tsx`, `tin/[slug]/page.tsx`, `layout.tsx`, `AuthModal.tsx`, `cho-thue-tro/page.tsx`, `cho-thue-mat-bang/page.tsx`.
-  - $\rightarrow$ **Cần xử lý triệt để trong Đợt 1 (Gate A)**.
+  - $\rightarrow$ Đã xử lý triệt để trong Đợt 1 (Gate A).
+
+---
+
+## 2. Nhật Ký Kiểm Thử Đợt 1 (Gate A — Chặn Rủi Ro Trọng Yếu — 21/09/2026)
+
+### Bài kiểm tra T07: Rà soát triệt để từ khóa cấm & Hotline cá nhân sau khi sửa
+- **Lệnh thực thi**:
+  - `grep_search(Query: "chính chủ", SearchPath: "d:\\BĐS\\apps\\web\\src")`
+  - `grep_search(Query: "0981 753 082", SearchPath: "d:\\BĐS\\apps")`
+  - `grep_search(Query: "0981753082", SearchPath: "d:\\BĐS\\apps")`
+- **Thời gian**: 2026-09-21 01:28:33
+- **Kết quả**: **PASS (0 kết quả tìm thấy)**
+- **Ghi chú**: Đã thay toàn bộ bằng `SITE_CONFIG.hotline` (`1900 8868`) và văn phong trung lập "bên cho thuê", "chủ trọ", "trực tiếp bên cho thuê".
+
+### Bài kiểm tra T08: NestJS DTO Validation cho Membership Transactions
+- **Mục tiêu**: Xác thực 3 DTOs mới (`ApproveMembershipRequestDto`, `RefundMembershipRequestDto`, `RejectMembershipRequestDto`) với các decorator `@IsPositive`, `@Min(1)`, `@IsString`, `@IsNotEmpty`.
+- **Tệp**: `apps/api/src/modules/membership/dto/*.dto.ts`
+- **Kết quả**: **PASS** (Strict property initialization assertions `!:` tránh TS2564).
+
+### Bài kiểm tra T09: NestJS Backend Typecheck
+- **Lệnh thực thi**: `pnpm --filter @batdongsan/api exec tsc --noEmit`
+- **Thời gian**: 2026-09-21 01:29:18
+- **Kết quả**: **PASS (Exit code 0, 0 errors)**
+
+### Bài kiểm tra T10: Next.js Frontend Typecheck
+- **Lệnh thực thi**: `pnpm --filter @batdongsan/web exec tsc --noEmit`
+- **Thời gian**: 2026-09-21 01:29:44
+- **Kết quả**: **PASS (Exit code 0, 0 errors)**
+
+### Bài kiểm tra T11: Static Structure Lint
+- **Lệnh thực thi**: `node packages/database/scripts/static-lint-check.js`
+- **Thời gian**: 2026-09-21 01:29:46
+- **Kết quả**: **PASS (5/5 checks)**
+
+### Bài kiểm tra T12: Toàn Bộ Monorepo Production Build (Turbo)
+- **Lệnh thực thi**: `pnpm build`
+- **Thời gian**: 2026-09-21 01:31:43
+- **Kết quả**: **PASS (3/3 packages build thành công, 31/31 routes static generation pass 100%)**
+- **Log trích xuất**:
+  ```text
+  Tasks:    3 successful, 3 total
+  Cached:   0 cached, 3 total
+  Time:     1m44.02s
+  ```

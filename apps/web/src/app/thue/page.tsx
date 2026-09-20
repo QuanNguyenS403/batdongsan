@@ -17,9 +17,9 @@ import {
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'Cho thuê Căn hộ & Studio giá tốt chính chủ',
+  title: 'Cho thuê Căn hộ & Studio giá tốt — QNS Thuê',
   description:
-    'Danh sách tin cho thuê căn hộ và studio chính chủ mới nhất. Phân tách rõ ràng chuyên mục Căn hộ và Studio riêng biệt.',
+    'Danh sách tin cho thuê căn hộ và studio minh bạch chi phí mới nhất. Phân tách rõ ràng chuyên mục Căn hộ và Studio riêng biệt, liên hệ trực tiếp bên cho thuê.',
 };
 
 const CATEGORY_NAMES: Record<string, string> = {

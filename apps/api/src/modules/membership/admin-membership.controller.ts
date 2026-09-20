@@ -8,6 +8,9 @@ import { CreateMembershipPlanDto } from './dto/create-membership-plan.dto';
 import { UpdateMembershipPlanDto } from './dto/update-membership-plan.dto';
 import { CreatePricingSeasonDto } from './dto/create-pricing-season.dto';
 import { UpdatePricingSeasonDto } from './dto/update-pricing-season.dto';
+import { ApproveMembershipRequestDto } from './dto/approve-membership-request.dto';
+import { RejectMembershipRequestDto } from './dto/reject-membership-request.dto';
+import { RefundMembershipRequestDto } from './dto/refund-membership-request.dto';
 
 interface AuthUser {
   id: bigint;
@@ -67,10 +70,9 @@ export class AdminMembershipController {
   approveRequest(
     @CurrentUser() admin: AuthUser,
     @Param('id', ParseBigIntPipe) id: bigint,
-    @Body('externalTransactionId') externalTransactionId?: string,
-    @Body('confirmedAmount') confirmedAmount?: number,
+    @Body() dto: ApproveMembershipRequestDto,
   ) {
-    return this.membershipService.approveRequest(admin.id, id, externalTransactionId, confirmedAmount);
+    return this.membershipService.approveRequest(admin.id, id, dto.externalTransactionId, dto.confirmedAmount, dto.adminNote);
   }
 
   @ApiOperation({ summary: 'Admin từ chối yêu cầu nâng cấp gói' })
@@ -78,9 +80,9 @@ export class AdminMembershipController {
   rejectRequest(
     @CurrentUser() admin: AuthUser,
     @Param('id', ParseBigIntPipe) id: bigint,
-    @Body('reason') reason?: string,
+    @Body() dto: RejectMembershipRequestDto,
   ) {
-    return this.membershipService.rejectRequest(admin.id, id, reason);
+    return this.membershipService.rejectRequest(admin.id, id, dto?.reason);
   }
 
   @ApiOperation({ summary: 'Admin hoàn tiền yêu cầu gói (Refund)' })
@@ -88,10 +90,9 @@ export class AdminMembershipController {
   refundRequest(
     @CurrentUser() admin: AuthUser,
     @Param('id', ParseBigIntPipe) id: bigint,
-    @Body('reason') reason: string,
-    @Body('refundAmount') refundAmount?: number,
+    @Body() dto: RefundMembershipRequestDto,
   ) {
-    return this.membershipService.refundRequest(admin.id, id, reason, refundAmount);
+    return this.membershipService.refundRequest(admin.id, id, dto.reason, dto.refundAmount, dto.externalTransactionId);
   }
 
   // ================= BÁO CÁO TÀI CHÍNH & AUDIT LOGS =================

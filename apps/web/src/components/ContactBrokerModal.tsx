@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { getAccessToken } from '@/lib/auth-client';
 
 interface ContactBrokerModalProps {
   isOpen: boolean;
@@ -27,6 +28,11 @@ export function ContactBrokerModal({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const handleCloseModal = useCallback(() => {
+    setErrorMessage(null);
+    setSubmitted(false);
+    onClose();
+  }, [onClose]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,7 +68,7 @@ export function ContactBrokerModal({
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      const token = getAccessToken();
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -115,12 +121,6 @@ export function ContactBrokerModal({
     }
   }
 
-  function handleCloseModal() {
-    setErrorMessage(null);
-    setSubmitted(false);
-    onClose();
-  }
-
   // Hỗ trợ phím Escape để đóng modal trợ năng (FE-11, FE-N01)
   useEffect(() => {
     if (!isOpen) return;
@@ -131,7 +131,7 @@ export function ContactBrokerModal({
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, handleCloseModal]);
 
   if (!isOpen) return null;
 

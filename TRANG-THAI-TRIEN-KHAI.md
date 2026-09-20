@@ -2,6 +2,32 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🚀 ĐỢT 1: CHẶN RỦI RO TRỌNG YẾU / GATE A (21/09/2026)
+
+Khắc phục triệt để các rủi ro P0, tiền bạc và bảo vệ thương hiệu theo chỉ thị §11:
+1. **FE-N01 (Rules of Hooks & Auth Token - verified)**:
+   - Sửa `ContactBrokerModal.tsx`: bọc `handleCloseModal` bằng `useCallback`, chuyển early return `!isOpen` xuống sau toàn bộ hooks, đọc token qua `getAccessToken()`.
+2. **FE-N02 (Tắt Fallback Giá Ở Production - verified)**:
+   - Sửa `gia-thanh-vien/page.tsx`: khi `NODE_ENV === 'production'`, nếu API rỗng/lỗi, set `plans = []` (không fallback sang mock).
+   - Thêm banner cảnh báo ở dev mode; xử lý Empty State trong `MembershipPricingClient.tsx`: hiển thị "Bảng giá đang được cập nhật", ẩn form chuyển khoản nạp tiền.
+3. **F16 / FE-N22 & BR-02 (Promise.allSettled & Hero Slogan - verified)**:
+   - Sửa `apps/web/src/app/page.tsx`: chuyển `Promise.all` sang `Promise.allSettled` cho 4 chuyên mục.
+   - Cập nhật H1: "Tìm chỗ thuê phù hợp, rõ chi phí ngay từ đầu".
+   - Cập nhật Hero slogan: "QNS Thuê — Rõ chi phí. Đúng người cho thuê." Loại bỏ câu chữ du lịch nghỉ dưỡng.
+4. **BR-01 / F15 & SEC-HOTLINE (Dọn Sạch Từ Cấm & Hotline Cá Nhân - verified)**:
+   - Đã rà soát và xóa sạch 100% từ "chính chủ" ở 7 file (`layout.tsx`, `thue/page.tsx`, `tin/[slug]/page.tsx`, `cho-thue-tro/page.tsx`, `cho-thue-mat-bang/page.tsx`, `AuthModal.tsx`, `demo-data.ts`).
+   - Xóa bỏ toàn bộ hotline cá nhân `0981 753 082` và `0981753082`, chuẩn hóa qua `SITE_CONFIG.hotline` (`1900 8868`) và `SITE_CONFIG.bankAccount`.
+5. **F02 / F03 / FIN-01 & RB-14 (DTOs Giao Dịch & Fail-Fast Production - verified)**:
+   - Tạo 3 DTOs có validation: `ApproveMembershipRequestDto`, `RefundMembershipRequestDto`, `RejectMembershipRequestDto`.
+   - Cập nhật `AdminMembershipController` và `MembershipService`: bắt buộc `externalTransactionId`, `confirmedAmount > 0`, chống nạp trùng mã giao dịch, hoàn tiền không vượt số tiền thực thu.
+   - Cập nhật `assert-env.ts`: fail-fast chặn khởi động ở production nếu JWT secret < 32 ký tự, thiếu `DATABASE_URL`, password bootstrap < 12 ký tự hoặc SMS provider là mock.
+6. **Xác Minh Chất Lượng & Build Graph**:
+   - `tsc --noEmit` API: PASS 100% (exit code 0).
+   - `tsc --noEmit` Web: PASS 100% (exit code 0).
+   - Static lint check: 5/5 cấu trúc tệp mã nguồn khớp.
+   - Grep từ cấm: 0 kết quả cho "chính chủ", "không lừa đảo", "an toàn tuyệt đối", "chắc chắn có khách".
+   - `pnpm build`: 3/3 packages build thành công (31/31 routes static generation pass 100%).
+
 ## 🚀 ĐỢT 0: CHỤP HIỆN TRẠNG & TẠO HỒ SƠ BÀN GIAO BỔ SUNG CHUYÊN ĐỀ §12.1 (21/09/2026)
 
 Thực thi theo chỉ thị tại `docs/audit/Ban-thu-hoach-va-chi-thi-AI-agent-batdongsan.md` (19/09/2026):

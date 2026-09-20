@@ -351,6 +351,7 @@ export class MembershipService {
     requestId: bigint,
     externalTransactionId?: string,
     confirmedAmount?: number,
+    adminNote?: string,
   ) {
     const request = await this.prisma.userMembership.findUnique({
       where: { id: requestId },
@@ -371,14 +372,25 @@ export class MembershipService {
       );
     }
 
+    // F02 / FIN-01: Bắt buộc mã giao dịch ngân hàng thật & số tiền xác nhận hợp lệ
+    const extTxId = externalTransactionId?.trim();
+    if (!extTxId) {
+      throw new BadRequestException('Bắt buộc phải có mã giao dịch ngân hàng / mã chứng từ sao kê (externalTransactionId).');
+    }
+
+    if (!confirmedAmount || confirmedAmount <= 0) {
+      throw new BadRequestException('Số tiền thực nhận vào tài khoản phải là số nguyên dương lớn hơn 0.');
+    }
+
     // Chống nạp trùng externalTransactionId
-    const extTxId = externalTransactionId?.trim() || `BANK_MANUAL_${requestId}_${Date.now()}`;
     const existingTx = await this.prisma.financeLedger.findUnique({
       where: { externalTransactionId: extTxId },
     });
     if (existingTx) {
       throw new BadRequestException(`Mã giao dịch ngân hàng [${extTxId}] đã tồn tại trong sổ cái. Vui lòng kiểm tra lại!`);
     }
+
+    const finalPaidAmount = BigInt(confirmedAmount);
 
     const now = new Date();
     const durationDays = request.plan.durationDays;
@@ -406,8 +418,6 @@ export class MembershipService {
       startDate = now;
       endDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
     }
-
-    const finalPaidAmount = confirmedAmount !== undefined ? BigInt(confirmedAmount) : request.quotedAmount;
 
     // Thực thi atomic transaction
     const [updated] = await this.prisma.$transaction([
@@ -519,9 +529,15 @@ export class MembershipService {
   }
 
   /**
-   * Admin hoàn tiền gói thành viên (Refund)
+   * Admin hoàn tiền gói thành viên (Refund - F03 / FIN-01)
    */
-  async refundRequest(adminId: bigint, requestId: bigint, reason: string, refundAmount?: number) {
+  async refundRequest(
+    adminId: bigint,
+    requestId: bigint,
+    reason: string,
+    refundAmount?: number,
+    externalTransactionId?: string,
+  ) {
     const request = await this.prisma.userMembership.findUnique({
       where: { id: requestId },
       include: { plan: true },
@@ -535,9 +551,34 @@ export class MembershipService {
       throw new BadRequestException('Chỉ có thể hoàn tiền cho gói đang hoạt động (active).');
     }
 
+    // F03 / FIN-01: Bắt buộc mã chứng từ chi tiền hoàn thật
+    const extTxId = externalTransactionId?.trim();
+    if (!extTxId) {
+      throw new BadRequestException('Bắt buộc phải có mã giao dịch/chứng từ chi hoàn tiền (externalTransactionId).');
+    }
+
+    const maxRefundable = Number(request.confirmedPaymentAmount);
+    if (refundAmount !== undefined) {
+      if (refundAmount <= 0) {
+        throw new BadRequestException('Số tiền hoàn lại phải là số nguyên dương lớn hơn 0.');
+      }
+      if (refundAmount > maxRefundable) {
+        throw new BadRequestException(
+          `Số tiền hoàn (${refundAmount.toLocaleString('vi-VN')} đ) không được vượt quá số tiền đã thực thu (${maxRefundable.toLocaleString('vi-VN')} đ).`,
+        );
+      }
+    }
+
+    // Chống trùng mã chứng từ chi
+    const existingRefundTx = await this.prisma.financeLedger.findUnique({
+      where: { externalTransactionId: extTxId },
+    });
+    if (existingRefundTx) {
+      throw new BadRequestException(`Mã giao dịch chi hoàn [${extTxId}] đã tồn tại trong sổ cái. Vui lòng kiểm tra lại!`);
+    }
+
     const finalRefund = refundAmount !== undefined ? BigInt(refundAmount) : request.confirmedPaymentAmount;
     const now = new Date();
-    const refundTxId = `REFUND_${requestId}_${Date.now()}`;
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.userMembership.update({
@@ -545,7 +586,7 @@ export class MembershipService {
         data: {
           status: 'expired',
           endDate: now,
-          paymentNote: `${request.paymentNote ?? ''} | Đã hoàn tiền: ${reason}`,
+          paymentNote: `${request.paymentNote ?? ''} | Đã hoàn tiền (${extTxId}): ${reason}`,
           version: { increment: 1 },
         },
       }),
@@ -555,8 +596,8 @@ export class MembershipService {
           amount: finalRefund,
           userMembershipId: requestId,
           userId: request.userId,
-          externalTransactionId: refundTxId,
-          note: `Hoàn tiền gói ${request.plan.name}: ${reason}`,
+          externalTransactionId: extTxId,
+          note: `Hoàn tiền gói ${request.plan.name} (${extTxId}): ${reason}`,
           recordedByUserId: adminId,
         },
       }),
@@ -567,7 +608,7 @@ export class MembershipService {
           entityType: 'user_membership',
           entityId: requestId.toString(),
           beforeState: { status: request.status, confirmedPaymentAmount: request.confirmedPaymentAmount.toString() },
-          afterState: { status: 'expired', refundAmount: finalRefund.toString() },
+          afterState: { status: 'expired', refundAmount: finalRefund.toString(), externalTransactionId: extTxId },
           reason,
         },
       }),

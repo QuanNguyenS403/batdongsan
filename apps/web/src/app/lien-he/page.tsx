@@ -1,22 +1,23 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { SITE_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: "Liên hệ & Hỗ trợ — QNS'bds.vn",
+  title: 'Liên hệ & Hỗ trợ | QNS Thuê',
   description:
-    "Thông tin liên hệ hotline, hỗ trợ kỹ thuật, giải đáp thắc mắc và tiếp nhận khiếu nại của nền tảng QNS'bds.vn.",
+    'Thông tin liên hệ, hotline hỗ trợ, báo cáo tin đăng vi phạm và giải đáp thắc mắc người dùng tại QNS Thuê.',
 };
 
-export default function LienHePage() {
+export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-surface-muted py-10">
+    <div className="bg-surface-subtle min-h-[80vh] py-8 lg:py-12">
       <div className="container-max max-w-4xl">
         {/* Breadcrumb */}
-        <nav className="mb-4 flex items-center gap-2 text-xs text-text-muted">
+        <nav className="flex items-center gap-2 text-xs text-text-muted mb-6">
           <Link href="/" className="hover:text-brand transition-colors">
             Trang chủ
           </Link>
-          <span>›</span>
+          <span>/</span>
           <span className="text-text-secondary font-medium">Liên hệ</span>
         </nav>
 
@@ -25,7 +26,7 @@ export default function LienHePage() {
             Thông tin Liên hệ & Hỗ trợ
           </h1>
           <p className="text-sm text-text-secondary leading-relaxed mb-8 border-b border-surface-border pb-4">
-            Ban Quản trị nền tảng QNS&apos;bds.vn luôn sẵn sàng lắng nghe ý kiến đóng góp, giải đáp thắc mắc và hỗ trợ bạn trong quá trình tìm phòng hoặc đăng tin.
+            Ban Quản trị nền tảng QNS Thuê luôn sẵn sàng lắng nghe ý kiến đóng góp, giải đáp thắc mắc và hỗ trợ bạn trong quá trình tìm phòng hoặc đăng tin.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -35,19 +36,19 @@ export default function LienHePage() {
               </h2>
               <div className="space-y-3 text-sm">
                 <div>
-                  <p className="text-xs text-text-muted">Hotline / Zalo hỗ trợ (08:00 - 21:30):</p>
-                  <a href="tel:0981753082" className="text-base font-bold text-brand hover:underline">
-                    0981 753 082
+                  <p className="text-xs text-text-muted">Hotline hỗ trợ (08:00 - 21:30):</p>
+                  <a href={`tel:${SITE_CONFIG.hotline.replace(/\s+/g, '')}`} className="text-base font-bold text-brand hover:underline">
+                    {SITE_CONFIG.hotline}
                   </a>
                 </div>
                 <div>
                   <p className="text-xs text-text-muted">Phụ trách kỹ thuật & Vận hành:</p>
-                  <p className="font-semibold text-text-primary">Nguyễn Đức Quân</p>
+                  <p className="font-semibold text-text-primary">Đội ngũ Vận hành QNS Thuê</p>
                 </div>
                 <div>
                   <p className="text-xs text-text-muted">Email tiếp nhận thông tin:</p>
-                  <a href="mailto:contact@qns.vn" className="text-brand hover:underline">
-                    contact@qns.vn
+                  <a href={`mailto:${SITE_CONFIG.supportEmail}`} className="text-brand hover:underline">
+                    {SITE_CONFIG.supportEmail}
                   </a>
                 </div>
                 <div>

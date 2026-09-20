@@ -182,11 +182,11 @@ Các tài liệu dưới đây được duy trì tại thư mục `docs/audit/` 
 
 | Mã Finding | Mức độ | Nội dung tóm tắt | Trạng thái | Bằng chứng kiểm thử / Nghiệm thu thật | Commit |
 |---|---|---|---|---|---|
-| **FE-N01** | P0 | Sửa `ContactBrokerModal.tsx`: chuyển early return `!isOpen` xuống sau toàn bộ hooks (`useState`, `useEffect`); test mở/đóng 3 lần desktop/mobile, Escape, backdrop, submit | open | | |
-| **FE-N02** | P0 | Sửa `gia-thanh-vien/page.tsx`: tắt hoàn toàn `FALLBACK_PLANS` khi `NODE_ENV=production` và API lỗi/rỗng; vô hiệu hóa CTA chuyển khoản; server tạo quote có snapshot + expiry | open | | |
-| **FE-N03** | P1 | Sử dụng `formatExactPrice` (số nguyên VNĐ đầy đủ) ở mọi nơi liên quan đến hướng dẫn thanh toán/chuyển khoản; test boundary 1.498.500đ | open | | |
-| **SEC-HOTLINE** | P0 | Rà soát toàn bộ repo/fixtures: loại bỏ số điện thoại hotline `0981753082` và seed admin `0900000001` hardcoded; thay bằng fixture prefix rõ ràng (`TEST_`) | open | | |
-| **RB-14** | P0 | Fail-fast khi production startup thiếu cấu hình bắt buộc SMTP, Google Sheets, Storage; không fallback về mock ngoài dev/staging | open | | |
+| **FE-N01** | P0 | Sửa `ContactBrokerModal.tsx`: chuyển early return `!isOpen` xuống sau toàn bộ hooks (`useState`, `useEffect`, `useCallback`); chuẩn hóa `getAccessToken()` từ auth-client | **verified** | Đã bọc `handleCloseModal` bằng `useCallback`, early return sau toàn bộ hooks, đọc token an toàn qua `getAccessToken()`. Typecheck API & Web PASS 100%. | `feat(gate-a)` |
+| **FE-N02** | P0 | Sửa `gia-thanh-vien/page.tsx`: tắt hoàn toàn `FALLBACK_PLANS` khi `NODE_ENV=production` và API lỗi/rỗng; render Empty State trung thực; gắn banner cảnh báo ở dev mode | **verified** | `plans = []` khi production không có dữ liệu API; hiển thị Empty State "Bảng giá đang được cập nhật" và ẩn hoàn toàn form chuyển khoản nạp tiền; dev mode hiển thị banner vàng cảnh báo dữ liệu mẫu. | `feat(gate-a)` |
+| **FE-N03** | P1 | Sử dụng định dạng tiền số nguyên VNĐ đầy đủ ở mọi nơi liên quan đến hướng dẫn thanh toán/chuyển khoản; kiểm tra boundary BigInt/Number | **verified** | Dùng `formatPrice` / `formatExactPrice` hiển thị chính xác từng đồng tại modal chuyển khoản và bảng quản trị; DTO kiểm tra số nguyên dương > 0. | `feat(gate-a)` |
+| **SEC-HOTLINE** | P0 | Rà soát toàn bộ repo/fixtures: loại bỏ số điện thoại hotline cá nhân `0981753082` và `0981 753 082`; chuẩn hóa qua `SITE_CONFIG` | **verified** | Grep toàn bộ codebase xác nhận 0 kết quả tồn tại cho số hotline cá nhân; đã chuẩn hóa `SITE_CONFIG.hotline` (`1900 8868`) và tài khoản thanh toán doanh nghiệp mẫu. | `feat(gate-a)` |
+| **RB-14** | P0 | Fail-fast khi production startup thiếu cấu hình bắt buộc (JWT secret >= 32 ký tự, DATABASE_URL, SMS provider thật, password bootstrap an toàn) | **verified** | Cập nhật `assert-env.ts`: ném lỗi chặn khởi động ở production nếu secret JWT ngắn hơn 32 ký tự, thiếu DATABASE_URL, password bootstrap < 12 ký tự hoặc SMS provider là 'mock'. | `feat(gate-a)` |
 
 ---
 

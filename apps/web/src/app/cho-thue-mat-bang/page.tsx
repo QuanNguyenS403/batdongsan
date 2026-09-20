@@ -7,9 +7,9 @@ import { SearchFilterBar } from '@/components/SearchFilterBar';
 import { DEMO_SPACE_RENT_LISTINGS } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'Cho thuê mặt bằng kinh doanh, cửa hàng, shophouse',
+  title: 'Cho thuê mặt bằng kinh doanh, cửa hàng, shophouse — QNS Thuê',
   description:
-    'Kênh tìm kiếm mặt bằng kinh doanh, nhà mặt phố buôn bán, shophouse khối đế, kho xưởng, ki-ốt vị trí đẹp, tiềm năng thương mại cao chính chủ trên toàn quốc.',
+    'Kênh tìm kiếm mặt bằng kinh doanh, nhà mặt phố buôn bán, shophouse khối đế, kho xưởng, ki-ốt vị trí đẹp, tiềm năng thương mại cao trên toàn quốc. Kết nối trực tiếp bên cho thuê.',
 };
 
 const PROPERTY_TYPES_SPACE = [

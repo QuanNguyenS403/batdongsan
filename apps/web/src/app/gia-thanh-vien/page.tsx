@@ -1,18 +1,18 @@
 import { Metadata } from 'next';
-import { fetchPublicPlans, MembershipPlanItem } from '@/lib/api';
+import { fetchPublicPlans, MembershipPlanItem, PricingSeasonItem } from '@/lib/api';
 import { MembershipPricingClient } from './MembershipPricingClient';
 
 export const metadata: Metadata = {
-  title: 'Bảng Giá Gói Hội Viên Đăng Tin Cho Thuê | BĐS Cho Thuê',
+  title: 'Bảng Giá Gói Hội Viên Đăng Tin Cho Thuê | QNS Thuê',
   description:
-    'Bảng giá gói thành viên đăng tin cho thuê phòng trọ, studio, căn hộ, mặt bằng. Tiếp cận hàng chục ngàn sinh viên và người thuê mỗi tuần với chi phí tối ưu nhất.',
+    'Bảng giá gói thành viên đăng tin cho thuê phòng trọ, studio, căn hộ, mặt bằng. Tiếp cận hàng chục ngàn người thuê mỗi tuần với chi phí tối ưu nhất.',
   alternates: {
     canonical: '/gia-thanh-vien',
   },
   openGraph: {
-    title: 'Bảng Giá Gói Hội Viên Đăng Tin Cho Thuê — BĐS Cho Thuê',
+    title: 'Bảng Giá Gói Hội Viên Đăng Tin Cho Thuê — QNS Thuê',
     description:
-      'Gói thành viên linh hoạt theo số tin, hỗ trợ mùa cao điểm tựu trường, tối ưu tỷ lệ lấp đầy phòng trọ cho chủ nhà và môi giới.',
+      'Gói thành viên linh hoạt theo số tin, hỗ trợ mùa cao điểm tựu trường, tối ưu tỷ lệ lấp đầy phòng trọ cho chủ trọ và bên cho thuê.',
     url: '/gia-thanh-vien',
   },
 };
@@ -77,22 +77,34 @@ const FALLBACK_PLANS: MembershipPlanItem[] = [
 ];
 
 export default async function MembershipPricingPage() {
-  let plans = FALLBACK_PLANS;
-  let activeSeason = null;
+  let plans: MembershipPlanItem[] = [];
+  let activeSeason: PricingSeasonItem | null = null;
+  let isFallback = false;
 
   try {
     const data = await fetchPublicPlans();
     if (data?.plans?.length) {
       plans = data.plans;
       activeSeason = data.activeSeason;
+    } else if (process.env.NODE_ENV !== 'production') {
+      plans = FALLBACK_PLANS;
+      isFallback = true;
     }
   } catch {
-    // An toàn: Khi backend cold start hoặc chạy build tĩnh, fallback data hiển thị trọn vẹn
+    // Chỉ fallback ở môi trường dev/local để thuận tiện kiểm thử giao diện
+    if (process.env.NODE_ENV !== 'production') {
+      plans = FALLBACK_PLANS;
+      isFallback = true;
+    }
   }
 
   return (
     <main className="min-h-screen bg-slate-50/50">
-      <MembershipPricingClient initialPlans={plans} activeSeason={activeSeason} />
+      <MembershipPricingClient
+        initialPlans={plans}
+        activeSeason={activeSeason}
+        isFallback={isFallback}
+      />
     </main>
   );
 }

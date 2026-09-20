@@ -1,26 +1,42 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 0: CHỤP HIỆN TRẠNG & TẠO HỒ SƠ BÀN GIAO §12.1):**
-1. **Kiểm kê Baseline Kỹ Thuật**:
-   - Xác lập nhánh làm việc `audit/qns-rental-implementation` từ commit tham chiếu `eb99862d8a6887dae0241d8e7302005d699ea40b`.
-   - Toolchain: Node `v24.19.0`, pnpm `9.15.9`.
-   - Chạy `static-lint-check.js`: 5/5 cấu trúc khớp.
-   - Typecheck `@batdongsan/api` & `@batdongsan/web`: PASS 100% (0 lỗi).
-   - Rà soát từ cấm: Phát hiện 7 tệp còn chứa "chính chủ" (Finding BR-01/F15) cần dọn trong Đợt 1.
-2. **Khởi tạo Bộ Hồ Sơ Bàn Giao Bổ Sung Chuyên Đề §12.1 (10 file trong `docs/audit/`)**:
-   - `CURRENT-STATE.md`: Commit, kiến trúc monorepo, 31 routes, prisma schema, bảng biến môi trường.
-   - `BUSINESS-MODEL.md`: Mô hình marketplace kết nối trực tiếp, bảng giá thử nghiệm, unit economics.
-   - `BRAND-AND-TRUST.md`: Tên QNS Thuê, slogan "Rõ chi phí. Đúng người cho thuê.", bảng thông tin thuê minh bạch, cơ chế tin cậy 3 lớp.
-   - `api-inventory.csv`: Toàn bộ 58 endpoints API thật và ma trận kiểm soát tương ứng.
-   - `ISSUE-REGISTER.md`: Sổ theo dõi lỗi chuẩn mẫu 12 trường của §12.1 (hợp nhất F01–F16).
-   - `PERMISSION-MATRIX.md`: Ma trận phân quyền theo capability (8 vai trò × 19 hành động).
-   - `DATA-AND-FINANCE-RULES.md`: Quy tắc tiền nguyên VNĐ BigInt, snapshot, sổ cái bất biến, concurrency, migration.
-   - `TEST-EVIDENCE.md`: Nhật ký bằng chứng kiểm thử tự động, build, lint, grep từ cấm.
-   - `RUNBOOK.md`: Sổ tay triển khai, rollback, backup/restore drill, ứng phó sự cố tích hợp, đối soát.
-   - `RELEASE-READINESS.md`: Báo cáo đối chiếu 10 mục nghiệm thu tối thiểu (§11), rủi ro và điều kiện phát hành.
-3. **Cập nhật & Hợp nhất Sổ theo dõi trung tâm**:
-   - Cập nhật `docs/audit/EXECUTION-STATUS.md`: Thêm liên kết chéo tới 10 tài liệu chuyên đề; bổ sung ma trận đối chiếu hợp nhất F01–F16 với mã hiện có.
-4. **Kế hoạch tiếp theo**: Tiến hành ĐỢT 1: Chặn rủi ro trọng yếu (Gate A) — sửa FE-N01 (Rules of Hooks), FE-N02 (tắt fallback production bảng giá), F16 (Promise.allSettled trang chủ), BR-01/BR-02 (xóa 100% từ "chính chủ", viết lại hero minh bạch chi phí), F02/F03 (DTO duyệt tiền và hoàn tiền), SEC-HOTLINE, RB-14.
+**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH ĐỢT 1: CHẶN RỦI RO TRỌNG YẾU / GATE A):**
+1. **Khắc phục lỗi Rules of Hooks & Auth Token (FE-N01)**:
+   - Sửa `apps/web/src/components/ContactBrokerModal.tsx`: bọc `handleCloseModal` bằng `useCallback`, đảm bảo `if (!isOpen) return null;` nằm sau tất cả hooks.
+   - Chuẩn hóa đọc token: dùng `getAccessToken()` từ `@/lib/auth-client`.
+2. **Tắt Fallback Giá Ở Production & Empty State Trung Thực (FE-N02)**:
+   - Sửa `apps/web/src/app/gia-thanh-vien/page.tsx`: khi `NODE_ENV === 'production'`, nếu API rỗng/lỗi, set `plans = []` (không fallback sang mock).
+   - Thêm banner cảnh báo màu vàng ở dev mode: `Chế độ thử nghiệm (DEV): Đang hiển thị bảng giá mẫu`.
+   - Xử lý Empty State trong `MembershipPricingClient.tsx`: hiển thị thông báo "Bảng giá đang được cập nhật", vô hiệu hóa hoàn toàn nút nạp tiền/chuyển khoản.
+3. **Promise.allSettled & Định Vị Thương Hiệu Trên Trang Chủ (F16 / FE-N22 & BR-02)**:
+   - Sửa `apps/web/src/app/page.tsx`: chuyển `Promise.all` sang `Promise.allSettled` cho 4 chuyên mục, lỗi 1 API không làm sập 3 mục còn lại.
+   - Cập nhật H1: "Tìm chỗ thuê phù hợp, rõ chi phí ngay từ đầu".
+   - Cập nhật Hero slogan: "QNS Thuê — Rõ chi phí. Đúng người cho thuê." Loại bỏ hoàn toàn từ ngữ du lịch nghỉ dưỡng.
+4. **Dọn Sạch 100% Từ "Chính Chủ" & Hotline Cá Nhân (BR-01/F15, SEC-HOTLINE)**:
+   - Rà soát grep: Đã dọn sạch từ "chính chủ" ở cả 7 file (`layout.tsx`, `thue/page.tsx`, `tin/[slug]/page.tsx`, `cho-thue-tro/page.tsx`, `cho-thue-mat-bang/page.tsx`, `AuthModal.tsx`, `demo-data.ts`).
+   - Xóa bỏ toàn bộ hotline cá nhân `0981 753 082` và `0981753082` trong codebase, chuẩn hóa tập trung qua `SITE_CONFIG.hotline` (`1900 8868`) và `SITE_CONFIG.bankAccount`.
+5. **DTOs Giao Dịch & Fail-Fast Cấu Hình Production (F02/F03/FIN-01, RB-14)**:
+   - Tạo 3 DTOs có validation nghiêm ngặt: `ApproveMembershipRequestDto`, `RefundMembershipRequestDto`, `RejectMembershipRequestDto`.
+   - Cập nhật `AdminMembershipController` và `MembershipService`: bắt buộc `externalTransactionId`, `confirmedAmount > 0`, chống nạp trùng mã giao dịch, hoàn tiền không vượt số tiền thực thu.
+   - Cập nhật `assert-env.ts`: fail-fast chặn khởi động ở production nếu JWT secret < 32 ký tự, thiếu `DATABASE_URL`, password bootstrap < 12 ký tự hoặc SMS provider là mock.
+6. **Xác Minh Chất Lượng & Build Graph**:
+   - `tsc --noEmit` API: PASS 100% (exit code 0).
+   - `tsc --noEmit` Web: PASS 100% (exit code 0).
+   - Static lint check: 5/5 cấu trúc tệp mã nguồn khớp.
+   - Grep từ cấm: 0 kết quả cho "chính chủ", "không lừa đảo", "an toàn tuyệt đối", "chắc chắn có khách".
+   - `pnpm build`: 3/3 packages build thành công (31/31 routes static generation pass 100%).
+
+**Kế hoạch tiếp theo (ĐỢT 2: SỬA TÍNH NHẤT QUÁN / GATE B):**
+- **RB-01**: Tăng `tokenVersion` khi đổi mật khẩu/vai trò/bootstrap, JWT strategy từ chối token thiếu version.
+- **RB-02 / F06**: Redis OTP + CSPRNG `crypto.randomInt`, phân định đếm lượt gửi khỏi xóa OTP khi verify.
+- **RB-03**: Assert env theo từng SMS provider (eSMS secret, Twilio auth/from, SpeedSMS).
+- **RB-04**: Sửa regex SĐT `POST /auth/bootstrap-admin` (`^0[35789]`), biến endpoint thành one-shot có audit log.
+- **RB-05**: CAS update status `pending` trong cùng query update; quota count nằm trong transaction.
+- **RB-09 / F14**: Upload ảnh transaction-safe, atomic DB state, siết `remotePatterns`.
+- **RB-11**: `LeadsService.createLead` kiểm tra `expiresAt > now()` và chủ tin không bị block.
+- **RB-12**: Global BigInt serializer / interceptor ngăn ngừa 500 do nested BigInt.
+- **FE-N12**: Hợp nhất về đúng 1 key lưu token (`accessToken`) xuyên suốt frontend.
+- **FE-N14**: Sửa `sitemap.ts` đọc đúng field `items`, thêm phân trang vượt 50 bản ghi.
 
 ---
 

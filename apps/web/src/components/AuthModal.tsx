@@ -201,7 +201,7 @@ export function AuthModal({
             <button
               type="button"
               onClick={() => {
-                setError('Hệ thống khuyến khích đăng nhập/đăng ký bằng số điện thoại bên dưới để xác thực chính chủ.');
+                setError('Hệ thống khuyến khích đăng nhập/đăng ký bằng số điện thoại bên dưới để xác thực tài khoản bên cho thuê.');
               }}
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
             >
@@ -244,7 +244,7 @@ export function AuthModal({
                   type="tel"
                   autoFocus
                   required
-                  placeholder="0981 753 082"
+                  placeholder="0912 345 678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-transparent text-base font-medium text-slate-900 outline-none placeholder:text-slate-300 pt-0.5"

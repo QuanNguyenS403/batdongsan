@@ -39,8 +39,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   } catch {
     return {
-      title: 'Chi tiết phòng cho thuê | Thuê Trọ Nhanh',
-      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê chính chủ.',
+      title: 'Chi tiết phòng cho thuê | QNS Thuê',
+      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê minh bạch chi phí, liên hệ trực tiếp bên cho thuê.',
     };
   }
 }

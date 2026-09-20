@@ -10,9 +10,9 @@ import {
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: "QNS'bds.vn — Tìm chỗ ở cho thuê, xem chi phí trước khi liên hệ",
+  title: 'QNS Thuê — Rõ chi phí. Đúng người cho thuê.',
   description:
-    "Tìm phòng trọ, studio, căn hộ và nhà cho thuê trên QNS'bds.vn — lọc theo trường học gần nhất, xem giá điện nước trên từng tin đăng, liên hệ trực tiếp người cho thuê.",
+    'Nền tảng tìm chỗ thuê minh bạch chi phí: phòng trọ sinh viên, studio, căn hộ, mặt bằng kinh doanh. Xem bảng chi phí trọn gói trước khi liên hệ, kết nối đúng bên có quyền cho thuê.',
 };
 
 const VALUE_PROPOSITIONS = [
@@ -40,7 +40,7 @@ const VALUE_PROPOSITIONS = [
   {
     icon: '🛡️',
     title: '100% Miễn phí cho người thuê',
-    desc: 'Tìm kiếm và kết nối hoàn toàn miễn phí. Nền tảng cam kết không thu phí môi giới, không phát sinh phụ phí ẩn.',
+    desc: 'Tìm kiếm và kết nối hoàn toàn miễn phí. Nền tảng cam kết không thu phí người tìm thuê, không phát sinh phụ phí ẩn.',
     color: 'from-emerald-500/10 to-emerald-500/5',
     border: 'border-emerald-200',
   },
@@ -54,14 +54,19 @@ export default async function HomePage() {
   let spaceListings: Awaited<ReturnType<typeof fetchListings>> | null = null;
 
   try {
-    [roomListings, apartmentListings, studioListings, spaceListings] = await Promise.all([
+    const [roomRes, aptRes, studioRes, spaceRes] = await Promise.allSettled([
       fetchListings({ categoryGroup: 'thue_tro', pageSize: '4' }),
       fetchListings({ categoryGroup: 'thue_can_ho', pageSize: '4' }),
       fetchListings({ categoryGroup: 'thue_studio', pageSize: '4' }),
       fetchListings({ categoryGroup: 'thue_mat_bang', pageSize: '4' }),
     ]);
+
+    roomListings = roomRes.status === 'fulfilled' ? roomRes.value : null;
+    apartmentListings = aptRes.status === 'fulfilled' ? aptRes.value : null;
+    studioListings = studioRes.status === 'fulfilled' ? studioRes.value : null;
+    spaceListings = spaceRes.status === 'fulfilled' ? spaceRes.value : null;
   } catch {
-    // API offline
+    // Không bao giờ để lỗi fetch làm sập toàn trang
   }
 
   // Ở Production (P0-04): Tuyệt đối KHÔNG fallback sang dữ liệu demo giả lập
@@ -88,16 +93,16 @@ export default async function HomePage() {
         <div className="container-max py-14 lg:py-20">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/20">
-              Cho thuê BĐS QNS.vn — Kết nối trực tiếp Chủ và Bên Thuê
+              QNS Thuê — Rõ chi phí. Đúng người cho thuê.
             </div>
             <h1 className="text-4xl font-bold leading-tight text-text-primary md:text-5xl lg:text-[3.25rem]">
-              Tìm phòng cho thuê{' '}
+              Tìm chỗ thuê phù hợp,{' '}
               <span className="bg-gradient-to-r from-brand to-brand-700 bg-clip-text text-transparent">
-                Minh bạch
+                rõ chi phí ngay từ đầu
               </span>
             </h1>
             <p className="mt-4 text-base text-text-secondary md:text-lg">
-              Giải quyết nhu cầu tìm phòng trọ sinh viên, chỗ ở tiện ích, nghỉ ngơi khi đi du lịch
+              Minh bạch giá thuê, tiền cọc, điện nước và vai trò người đăng — từ phòng trọ sinh viên, studio, căn hộ đến mặt bằng kinh doanh.
             </p>
 
             {/* Search bar & Tabs */}

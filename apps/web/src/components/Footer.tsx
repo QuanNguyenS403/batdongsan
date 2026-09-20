@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SITE_CONFIG } from '@/lib/constants';
 
 const FOOTER_LINKS = {
   'Căn hộ & Studio': [
@@ -25,8 +26,7 @@ const FOOTER_LINKS = {
 
 export function Footer() {
   return (
-    <footer className="bg-brand-900 text-white">
-      {/* Main footer content */}
+    <footer className="border-t border-brand-900 bg-brand-950 text-white">
       <div className="container-max py-12">
         <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
           {/* Brand column */}
@@ -36,22 +36,25 @@ export function Footer() {
                 Q
               </span>
               <span className="text-lg font-bold tracking-tight">
-                QNS&apos;bds<span className="font-normal opacity-70">.vn</span>
+                QNS <span className="font-normal opacity-80">Thuê</span>
               </span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-white/60">
-              Nền tảng trung gian tìm kiếm <strong>Phòng trọ, Nhà ở & Mặt bằng cho thuê</strong> hàng đầu.
-              Minh bạch chi phí điện nước, kết nối trực tiếp chủ trọ và người thuê.
+              Nền tảng cho thuê chuyên biệt — <strong>Rõ chi phí. Đúng người cho thuê.</strong>
+              <br />
+              Minh bạch biểu phí trọn gói, kết nối trực tiếp bên có quyền cho thuê.
             </p>
             <p className="mt-4 text-sm text-white/60">
-              📞 Hotline / Zalo:{' '}
-              <a href="tel:0981753082" className="font-bold text-brand-300 hover:text-white transition-colors">
-                0981 753 082
+              📞 Hotline:{' '}
+              <a href={`tel:${SITE_CONFIG.hotline.replace(/\s+/g, '')}`} className="font-bold text-brand-300 hover:text-white transition-colors">
+                {SITE_CONFIG.hotline}
               </a>
             </p>
             <p className="mt-1 text-sm text-white/60">
-              👤 Phụ trách:{' '}
-              <span className="font-semibold text-brand-300">Nguyễn Đức Quân</span>
+              ✉️ Email:{' '}
+              <a href={`mailto:${SITE_CONFIG.supportEmail}`} className="font-semibold text-brand-300 hover:text-white transition-colors">
+                {SITE_CONFIG.supportEmail}
+              </a>
             </p>
           </div>
 

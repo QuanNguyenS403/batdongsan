@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { SITE_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'Điều khoản sử dụng dịch vụ — BĐS Cho Thuê',
+  title: 'Điều khoản sử dụng dịch vụ — QNS Thuê',
   description:
-    'Quy định, quyền lợi và nghĩa vụ của người thuê phòng, chủ nhà trọ và môi giới khi tham gia nền tảng BĐS Cho Thuê.',
+    'Quy định, quyền lợi và nghĩa vụ của người thuê phòng, chủ trọ và môi giới khi tham gia nền tảng QNS Thuê.',
 };
 
 export default function DieuKhoanPage() {
@@ -69,9 +70,9 @@ export default function DieuKhoanPage() {
             <section>
               <h2 className="text-base font-bold text-text-primary mb-2">5. Liên hệ Hỗ trợ</h2>
               <p>
-                Mọi thắc mắc hoặc khiếu nại xin vui lòng liên hệ qua Hotline/Zalo:{' '}
-                <a href="tel:0981753082" className="font-bold text-brand hover:underline">
-                  0981 753 082
+                Mọi thắc mắc hoặc khiếu nại xin vui lòng liên hệ qua Hotline:{' '}
+                <a href={`tel:${SITE_CONFIG.hotline.replace(/\s+/g, '')}`} className="font-bold text-brand hover:underline">
+                  {SITE_CONFIG.hotline}
                 </a>{' '}
                 hoặc truy cập trang <Link href="/lien-he" className="text-brand font-semibold hover:underline">Liên hệ</Link>.
               </p>
