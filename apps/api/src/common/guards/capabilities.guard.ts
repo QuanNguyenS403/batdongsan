@@ -41,8 +41,14 @@ export class CapabilitiesGuard implements CanActivate {
           );
         }
 
-        const validSecret = process.env.ADMIN_MFA_SECRET || '123456';
-        if (mfaCode !== validSecret && mfaCode !== '123456') {
+        const validSecret = process.env.ADMIN_MFA_SECRET;
+        if (!validSecret) {
+          throw new ForbiddenException(
+            'Hệ thống chưa cấu hình ADMIN_MFA_SECRET. Vui lòng liên hệ quản trị viên cấp cao.',
+          );
+        }
+
+        if (mfaCode !== validSecret) {
           throw new ForbiddenException('Mã xác thực hai bước (MFA) không chính xác.');
         }
       }
@@ -50,22 +56,29 @@ export class CapabilitiesGuard implements CanActivate {
 
     // 2. Kiểm tra Capability tối thiểu (F12)
     if (requiredCapabilities && requiredCapabilities.length > 0) {
-      // Super Admin mặc định (khớp SĐT ADMIN_PHONE hoặc role superadmin) có toàn quyền
-      const adminPhoneEnv = process.env.ADMIN_PHONE;
-      const isSuperAdmin = (adminPhoneEnv && user.phone === adminPhoneEnv) || req.headers['x-admin-role'] === 'superadmin';
+      // Super Admin khớp SĐT ADMIN_PHONE hoặc ADMIN_BOOTSTRAP_PHONE có toàn quyền
+      const adminPhoneEnv = process.env.ADMIN_PHONE || process.env.ADMIN_BOOTSTRAP_PHONE;
+      const isSuperAdmin = Boolean(adminPhoneEnv && user.phone === adminPhoneEnv);
 
       if (isSuperAdmin) {
         return true;
       }
 
-      // Lấy danh sách capabilities của người dùng từ token/header
+      // Lấy danh sách capabilities của người dùng từ context xác thực hoặc cấu hình máy chủ
       let userCapabilities: string[] = [];
       if (Array.isArray(user.capabilities)) {
         userCapabilities = user.capabilities;
-      } else if (typeof req.headers['x-admin-capabilities'] === 'string') {
-        userCapabilities = req.headers['x-admin-capabilities'].split(',').map((c: string) => c.trim().toUpperCase());
-      } else {
-        // Mặc định nếu không phân tách cụ thể trên môi trường đơn lẻ thì cấp quyền cơ bản
+      } else if (process.env.ADMIN_CAPABILITIES_CONFIG) {
+        try {
+          const config = JSON.parse(process.env.ADMIN_CAPABILITIES_CONFIG);
+          if (config && Array.isArray(config[user.phone])) {
+            userCapabilities = config[user.phone].map((c: string) => c.trim().toUpperCase());
+          }
+        } catch {
+          // JSON parse fail -> không cấp quyền ngầm
+        }
+      } else if (!adminPhoneEnv) {
+        // Môi trường dev cục bộ khi chưa cấu hình ADMIN_PHONE / ADMIN_CAPABILITIES_CONFIG
         userCapabilities = [
           AdminCapability.LISTINGS_MODERATE,
           AdminCapability.LEADS_SUPPORT,

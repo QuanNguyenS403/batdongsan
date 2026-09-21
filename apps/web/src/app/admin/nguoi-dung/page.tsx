@@ -79,9 +79,25 @@ export default function AdminUsersPage() {
     if (!userToToggle) return;
     setSubmitting(true);
     try {
-      const res = await authFetch(`/admin/users/${userToToggle.id}/toggle-block`, {
+      let res = await authFetch(`/admin/users/${userToToggle.id}/toggle-block`, {
         method: 'POST',
       });
+
+      // Nếu hệ thống yêu cầu xác thực hai bước (MFA)
+      if (res.status === 403) {
+        const err = await res.json();
+        if (err.message && (err.message.includes('MFA') || err.message.includes('x-admin-mfa-code'))) {
+          const mfaCode = prompt('Thao tác nhạy cảm yêu cầu mã xác thực hai bước (MFA).\nVui lòng nhập mã x-admin-mfa-code:');
+          if (mfaCode && mfaCode.trim()) {
+            res = await authFetch(`/admin/users/${userToToggle.id}/toggle-block`, {
+              method: 'POST',
+              headers: {
+                'x-admin-mfa-code': mfaCode.trim(),
+              },
+            });
+          }
+        }
+      }
 
       if (res.ok) {
         const data = await res.json();

@@ -81,6 +81,21 @@ export function assertRequiredSecrets(): void {
     }
   }
 
+  // BẢO MẬT MFA ADMIN (F12)
+  if (process.env.ADMIN_MFA_ENFORCED === 'true') {
+    const mfaSecret = process.env.ADMIN_MFA_SECRET;
+    if (!mfaSecret) {
+      throw new Error(
+        `[CẤU HÌNH MFA THIẾU] ADMIN_MFA_ENFORCED=true nhưng ADMIN_MFA_SECRET chưa được thiết lập trong .env.`,
+      );
+    }
+    if (isProduction && (mfaSecret === '123456' || mfaSecret.length < 8)) {
+      throw new Error(
+        `[BẢO MẬT MFA YẾU] ADMIN_MFA_SECRET không được dùng giá trị mặc định "123456" và phải có tối thiểu 8 ký tự trong môi trường production.`,
+      );
+    }
+  }
+
   // BẢO MẬT & VẬN HÀNH (P0-06): Trong môi trường production, BẮT BUỘC có nhà cung cấp SMS thật và API key hợp lệ
   const SUPPORTED_SMS_PROVIDERS = ['esms', 'twilio', 'speedsms'];
   if (isProduction) {

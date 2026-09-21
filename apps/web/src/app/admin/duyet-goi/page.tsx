@@ -108,21 +108,66 @@ export default function AdminDuyetGoiPage() {
 
   async function handleApprove(requestId: string, planName: string, userPhone: string, defaultAmount: string) {
     const extTx = prompt(
-      `Nhập mã giao dịch ngân hàng / Bank Ref (để trống sẽ tạo tự động):`,
-      `BANK_${Date.now().toString().slice(-6)}`,
+      `Nhập mã giao dịch ngân hàng / Bank Ref (chứng từ thực tế bắt buộc):`,
+      `VCB_${Date.now().toString().slice(-6)}`,
     );
-    if (extTx === null) return; // hủy
+    if (!extTx || !extTx.trim()) {
+      alert('Mã giao dịch ngân hàng là bắt buộc để đối soát sao kê kế toán (F02).');
+      return;
+    }
+
+    const defaultAmtNum = parseInt(defaultAmount ? String(defaultAmount) : '199000', 10);
+    const amountStr = prompt(
+      `Xác nhận số tiền thực nhận vào tài khoản ngân hàng (VNĐ, số nguyên dương):`,
+      String(isNaN(defaultAmtNum) || defaultAmtNum <= 0 ? 199000 : defaultAmtNum),
+    );
+    if (!amountStr) return;
+    const confirmedAmount = parseInt(amountStr.replace(/\D/g, ''), 10);
+    if (isNaN(confirmedAmount) || confirmedAmount <= 0) {
+      alert('Số tiền thực nhận không hợp lệ. Vui lòng nhập số nguyên dương > 0.');
+      return;
+    }
+
+    const note = prompt('Ghi chú kế toán (tùy chọn):', 'Đã khớp sao kê tài khoản ngân hàng') || undefined;
 
     setActionLoading(requestId);
     setFeedback(null);
     try {
-      const res = await authFetch(`/admin/membership-requests/${requestId}/approve`, {
+      let mfaCode: string | null = null;
+      let res = await authFetch(`/admin/membership-requests/${requestId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           externalTransactionId: extTx.trim(),
+          confirmedAmount,
+          ...(note ? { adminNote: note.trim() } : {}),
         }),
       });
+
+      // Nếu hệ thống yêu cầu xác thực hai bước (MFA)
+      if (res.status === 403) {
+        const err = await res.json();
+        if (err.message && (err.message.includes('MFA') || err.message.includes('x-admin-mfa-code'))) {
+          const inputMfa = prompt('Thao tác nhạy cảm yêu cầu mã xác thực hai bước (MFA).\nVui lòng nhập mã x-admin-mfa-code:');
+          if (inputMfa && inputMfa.trim()) {
+            mfaCode = inputMfa.trim();
+            res = await authFetch(`/admin/membership-requests/${requestId}/approve`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-mfa-code': mfaCode,
+              },
+              body: JSON.stringify({
+                externalTransactionId: extTx.trim(),
+                confirmedAmount,
+                ...(note ? { adminNote: note.trim() } : {}),
+              }),
+            });
+          } else {
+            throw new Error('Thao tác bị hủy do không cung cấp mã MFA.');
+          }
+        }
+      }
 
       if (!res.ok) {
         const err = await res.json();
@@ -131,7 +176,7 @@ export default function AdminDuyetGoiPage() {
 
       setFeedback({
         type: 'success',
-        message: `Đã kích hoạt thành công gói "${planName}" cho SĐT ${userPhone}! Đã ghi nhận dòng tiền vào Sổ cái.`,
+        message: `Đã kích hoạt thành công gói "${planName}" cho SĐT ${userPhone}! Đã ghi nhận dòng tiền ${confirmedAmount.toLocaleString('vi-VN')} đ vào Sổ cái.`,
       });
       loadRequests();
       loadFinanceSummary();
@@ -142,18 +187,77 @@ export default function AdminDuyetGoiPage() {
     }
   }
 
-  async function handleRefund(requestId: string, userPhone: string) {
-    const reason = prompt(`Nhập lý do hoàn tiền cho SĐT ${userPhone}:`);
-    if (!reason || !reason.trim()) return;
+  async function handleRefund(requestId: string, userPhone: string, currentAmount?: string) {
+    const extTx = prompt(
+      `Nhập mã chứng từ ngân hàng chuyển hoàn (Bank Ref hoàn tiền bắt buộc):`,
+      `REF_${Date.now().toString().slice(-6)}`,
+    );
+    if (!extTx || !extTx.trim()) {
+      alert('Mã chứng từ chi hoàn tiền là bắt buộc để đối soát sổ cái (F03).');
+      return;
+    }
+
+    const reason = prompt(`Nhập lý do hoàn tiền cho SĐT ${userPhone} (bắt buộc):`);
+    if (!reason || !reason.trim()) {
+      alert('Lý do hoàn tiền là bắt buộc.');
+      return;
+    }
+
+    let refundAmount: number | undefined;
+    if (currentAmount) {
+      const parsedAmt = parseInt(currentAmount, 10);
+      if (!isNaN(parsedAmt) && parsedAmt > 0) {
+        const refundStr = prompt(
+          `Số tiền hoàn lại (VNĐ, để trống sẽ hoàn đủ ${parsedAmt.toLocaleString('vi-VN')} đ):`,
+          String(parsedAmt),
+        );
+        if (refundStr && refundStr.trim()) {
+          const parsed = parseInt(refundStr.replace(/\D/g, ''), 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            refundAmount = parsed;
+          }
+        }
+      }
+    }
 
     setActionLoading(requestId);
     setFeedback(null);
     try {
-      const res = await authFetch(`/admin/membership-requests/${requestId}/refund`, {
+      let mfaCode: string | null = null;
+      let res = await authFetch(`/admin/membership-requests/${requestId}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason.trim() }),
+        body: JSON.stringify({
+          reason: reason.trim(),
+          externalTransactionId: extTx.trim(),
+          ...(refundAmount ? { refundAmount } : {}),
+        }),
       });
+
+      // Nếu hệ thống yêu cầu xác thực hai bước (MFA)
+      if (res.status === 403) {
+        const err = await res.json();
+        if (err.message && (err.message.includes('MFA') || err.message.includes('x-admin-mfa-code'))) {
+          const inputMfa = prompt('Thao tác nhạy cảm yêu cầu mã xác thực hai bước (MFA).\nVui lòng nhập mã x-admin-mfa-code:');
+          if (inputMfa && inputMfa.trim()) {
+            mfaCode = inputMfa.trim();
+            res = await authFetch(`/admin/membership-requests/${requestId}/refund`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-mfa-code': mfaCode,
+              },
+              body: JSON.stringify({
+                reason: reason.trim(),
+                externalTransactionId: extTx.trim(),
+                ...(refundAmount ? { refundAmount } : {}),
+              }),
+            });
+          } else {
+            throw new Error('Thao tác bị hủy do không cung cấp mã MFA.');
+          }
+        }
+      }
 
       if (!res.ok) {
         const err = await res.json();
@@ -457,7 +561,7 @@ export default function AdminDuyetGoiPage() {
                           <button
                             type="button"
                             disabled={actionLoading === item.id}
-                            onClick={() => handleRefund(item.id, item.user.phone)}
+                            onClick={() => handleRefund(item.id, item.user.phone, item.confirmedPaymentAmount || item.pricePaid)}
                             className="px-2.5 py-1 text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg transition-colors border border-rose-200"
                           >
                             Hoàn tiền (Refund)

@@ -1,18 +1,25 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (21/09/2026 — HOÀN THÀNH TOÀN BỘ 6 ĐỢT LỘ TRÌNH §11 / GATE A -> GATE F):**
-1. **Đợt 5: Pilot, Nguồn Cung Thực & Quản Lý Bằng Chứng (§7, §4.5, §11 - Gate E)**:
-   - **SUPPLY-01**: Endpoint `POST /listings/:id/confirm-availability` cập nhật `refreshedAt = now()`, ghi `AuditEvent` bất biến.
-   - **SUPPLY-02**: Frontend `/tai-khoan/quan-ly-tin` hiển thị ngày xác nhận, cảnh báo quá 7 ngày, nút "🔄 Còn phòng". Trang chi tiết `/tin/[slug]` hiển thị trạng thái "🟢 Còn phòng (Xác nhận dd/mm/yyyy)" trong 7 ngày hoặc cảnh báo "🟡 Cần xác nhận lại".
-   - **REPORT-01**: Bổ sung các lý do báo cáo vi phạm trọng tâm (§3.2): `da_het_phong`, `gia_thuc_te_khac`, `khong_phai_chinh_chu` vào cả DTO backend và modal frontend.
-   - **PILOT-01**: Đo lường 3 chỉ số Pilot KPI trên `AdminDashboard` (`verifiedSupplyRatio >= 90%`, `leadResponseRate >= 80%`, `violationRate < 2%`) kèm cờ đạt ngưỡng tự động.
-2. **Đợt 6: Bàn Giao, Runbook & Sẵn Sàng Phát Hành (§12.1, §11 - Gate F)**:
-   - **10 Hồ sơ bàn giao chuyên đề §12.1**: Hoàn thiện đồng bộ 100% trong `docs/audit/` (`CURRENT-STATE.md`, `BUSINESS-MODEL.md`, `BRAND-AND-TRUST.md`, `api-inventory.csv`, `ISSUE-REGISTER.md`, `PERMISSION-MATRIX.md`, `DATA-AND-FINANCE-RULES.md`, `TEST-EVIDENCE.md`, `RUNBOOK.md`, `RELEASE-READINESS.md`).
-   - **10/10 Cổng nghiệm thu tối thiểu (§11)**: Đạt trạng thái `VERIFIED` 100%.
-   - **Rà soát Zero từ cấm**: 0 kết quả đối với các cụm: `"100% chính chủ"`, `"không lừa đảo"`, `"an toàn tuyệt đối"`, `"chắc chắn có khách"`.
-   - **Monorepo Build**: PASS 3/3 packages (52.0s), 31/31 routes Next.js pass, Typecheck API & Web 0 lỗi.
-3. **Trạng thái hệ thống**:
-   - Sẵn sàng 100% về mặt kỹ thuật và vận hành cho giai đoạn thử nghiệm Pilot tại địa bàn tập trung theo chỉ thị của Quan.
+**Việc vừa hoàn thành (21/09/2026 — RÀ SOÁT TOÀN DIỆN HỆ THỐNG & KHẮC PHỤC TRIỆT ĐỂ TOÀN BỘ LỖ HỔNG):**
+1. **Khắc phục lỗ hổng leo quyền & bypass MFA trong `CapabilitiesGuard` (`apps/api/src/common/guards/capabilities.guard.ts`)**:
+   - **Xóa bỏ hoàn toàn việc tin tưởng headers từ client**: Loại bỏ `req.headers['x-admin-role']` và `req.headers['x-admin-capabilities']` (nguy cơ bị attacker/kiểm duyệt viên giả mạo header để leo quyền SuperAdmin). SuperAdmin chỉ được nhận diện duy nhất từ máy chủ (`ADMIN_PHONE` / `ADMIN_BOOTSTRAP_PHONE`). Các quyền hạn khác đọc từ `ADMIN_CAPABILITIES_CONFIG` hoặc token context.
+   - **Triệt tiêu mã MFA bypass `123456`**: Xóa bỏ hoàn toàn fallback code `123456`. Khi `ADMIN_MFA_ENFORCED=true`, bắt buộc phải khớp chính xác `ADMIN_MFA_SECRET` đã cấu hình; nếu thiếu secret ở production, ứng dụng dừng khởi động qua `assert-env.ts`.
+2. **Khắc phục lệch pha DTO & MFA trên giao diện Admin (`apps/web/src/app/admin/duyet-goi/page.tsx` & `nguoi-dung/page.tsx`)**:
+   - **Đồng bộ DTO Phê duyệt gói (F02)**: Bổ sung bắt buộc thu thập `confirmedAmount` (số nguyên > 0) và `externalTransactionId` (mã giao dịch ngân hàng/sao kê thực tế), xóa bỏ gợi ý "để trống sẽ tạo tự động" gây lỗi 400 Bad Request.
+   - **Đồng bộ DTO Hoàn tiền gói (F03)**: Bổ sung bắt buộc thu thập `externalTransactionId` và `reason`, hỗ trợ `refundAmount` tùy chọn, khắc phục hoàn toàn lỗi 400 Bad Request.
+   - **Tích hợp MFA Challenge UI**: Khi endpoint yêu cầu MFA (403), giao diện tự động bật popup yêu cầu mã `x-admin-mfa-code` và retry an toàn cho cả Duyệt gói, Hoàn tiền và Khóa/mở khóa người dùng (`toggleBlockUser`).
+3. **Bảo mật Anti-Scraping Số điện thoại (`apps/api/src/modules/listings/listings.service.ts`)**:
+   - Bổ sung hạn mức chống cào dữ liệu SĐT (tối đa 30 số mới/giờ/tài khoản). Nếu xem lại tin đã từng reveal thì không tính vào hạn mức và không trùng lặp record.
+   - Bổ sung ghi nhận `AuditEvent` bất biến cho thao tác gỡ tin (`listing.removed`) và đánh dấu đã cho thuê (`listing.mark_rented`).
+4. **Bổ sung HTTP Security Headers & Cấu hình Mạng (`apps/web/next.config.mjs` & `apps/api/src/main.ts`)**:
+   - Cấu hình chuẩn `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`.
+   - Nâng cấp CORS hỗ trợ đa tên miền qua `CORS_ORIGINS` hoặc `NEXT_PUBLIC_SITE_URL`.
+   - Cập nhật `.env.example` đầy đủ các biến bảo mật `ADMIN_PHONE`, `ADMIN_MFA_ENFORCED`, `ADMIN_MFA_SECRET`, `ADMIN_CAPABILITIES_CONFIG`, `CORS_ORIGINS`.
+5. **Xác minh chất lượng & Runtime Evidence**:
+   - `tsc --noEmit` API & Web: 0 lỗi.
+   - `static-lint-check.js`: PASS 5/5.
+   - Grep từ cấm: 0 kết quả cho `"100% chính chủ"`, `"không lừa đảo"`, `"an toàn tuyệt đối"`, `"chắc chắn có khách"`.
+   - `turbo run build`: PASS 3/3 packages (@batdongsan/database, @batdongsan/api, @batdongsan/web) với 31/31 static & dynamic routes trong 1m12s.
 
 ---
 

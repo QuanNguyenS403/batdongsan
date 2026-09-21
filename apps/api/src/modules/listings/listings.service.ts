@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma, ListingStatus, TransactionType } from '@batdongsan/database';
 import slugify from 'slugify';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -900,14 +900,40 @@ export class ListingsService {
 
   async remove(id: bigint, requester: { id: bigint; role: string }) {
     const listing = await this.assertOwnership(id, requester);
-    await this.prisma.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.removed } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.removed } });
+      await tx.auditEvent.create({
+        data: {
+          action: 'listing.removed',
+          actorId: requester.id,
+          entityType: 'listing',
+          entityId: listing.id.toString(),
+          beforeState: { status: listing.status },
+          afterState: { status: ListingStatus.removed },
+          reason: 'Người dùng hoặc quản trị viên gỡ tin đăng',
+        },
+      });
+    });
     return { message: 'Đã gỡ tin đăng.' };
   }
 
   /** Đánh dấu phòng đã cho thuê thành công (FE-N09) */
   async markAsRented(id: bigint, requester: { id: bigint; role: string }) {
     const listing = await this.assertOwnership(id, requester);
-    await this.prisma.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.rented } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.rented } });
+      await tx.auditEvent.create({
+        data: {
+          action: 'listing.mark_rented',
+          actorId: requester.id,
+          entityType: 'listing',
+          entityId: listing.id.toString(),
+          beforeState: { status: listing.status },
+          afterState: { status: ListingStatus.rented },
+          reason: 'Người dùng hoặc quản trị viên đánh dấu phòng đã cho thuê',
+        },
+      });
+    });
     return { message: 'Đã đánh dấu phòng cho thuê thành công.' };
   }
 
@@ -994,6 +1020,36 @@ export class ListingsService {
       listing.owner.isBlocked
     ) {
       throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn.');
+    }
+
+    // Kiểm tra xem chính user này đã từng reveal số của tin này trước đó chưa (re-view tin cũ thì không tính rate limit)
+    const alreadyRevealed = await this.prisma.phoneRevealLog.findUnique({
+      where: {
+        userId_listingId: {
+          userId: requesterId,
+          listingId: id,
+        },
+      },
+    });
+
+    if (alreadyRevealed) {
+      return { phone: listing.owner.phone };
+    }
+
+    // Chống cào dữ liệu SĐT (Anti-scraping rate limit): Tối đa 30 số mới/giờ cho mỗi tài khoản
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentRevealsCount = await this.prisma.phoneRevealLog.count({
+      where: {
+        userId: requesterId,
+        createdAt: { gte: oneHourAgo },
+      },
+    });
+
+    if (recentRevealsCount >= 30) {
+      throw new HttpException(
+        'Bạn đã đạt giới hạn xem tối đa 30 số điện thoại mới trong 1 giờ. Vui lòng thử lại sau để bảo vệ quyền riêng tư người cho thuê.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     // BE-09: Atomic write chống race condition bằng composite unique constraint
