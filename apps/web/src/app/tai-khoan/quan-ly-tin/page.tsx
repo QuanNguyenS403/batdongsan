@@ -53,11 +53,11 @@ export default function QuanLyTinPage() {
       const query = `?${statusParam}page=${targetPage}&pageSize=15`;
       const res = await authFetch(`/listings/mine${query}`);
       if (res.status === 401) {
-        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         setListings([]);
         return;
       }
-      if (!res.ok) throw new Error('Không tải được danh sách tin đăng.');
+      if (!res.ok) throw new Error('Không tải được danh sách tin đăng');
       const data: ListingListResponse = await res.json();
       setListings(data.items);
       setTotal(data.pagination.total);
@@ -86,12 +86,12 @@ export default function QuanLyTinPage() {
   }, [checkedAuth, statusFilter]);
 
   async function handleMarkRented(listingId: string) {
-    if (!confirm('Xác nhận phòng này ĐÃ CHO THUÊ THÀNH CÔNG? Tin sẽ được chuyển sang trạng thái Đã cho thuê và tạm ẩn khỏi sàn.')) {
+    if (!confirm('Xác nhận phòng này ĐÃ CHO THUÊ THÀNH CÔNG? Tin sẽ được chuyển sang trạng thái Đã cho thuê và tạm ẩn khỏi sàn')) {
       return;
     }
     try {
       const res = await authFetch(`/listings/${listingId}/rented`, { method: 'PATCH' });
-      if (!res.ok) throw new Error('Không thể cập nhật trạng thái đã cho thuê.');
+      if (!res.ok) throw new Error('Không thể cập nhật trạng thái đã cho thuê');
       load(statusFilter, page);
     } catch (err) {
       alert((err as Error).message);
@@ -103,7 +103,7 @@ export default function QuanLyTinPage() {
     try {
       const res = await authFetch(`/listings/${listingId}/confirm-availability`, { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Không thể xác nhận tình trạng còn phòng.');
+      if (!res.ok) throw new Error(data.message || 'Không thể xác nhận tình trạng còn phòng');
       alert('✓ ' + (data.message || 'Đã xác nhận phòng vẫn còn trống thành công!'));
       load(statusFilter, page);
     } catch (err) {
@@ -112,12 +112,12 @@ export default function QuanLyTinPage() {
   }
 
   async function handleRemove(listingId: string) {
-    if (!confirm('Bạn có chắc chắn muốn gỡ tin đăng này? Tin sau khi gỡ sẽ không hiển thị công khai.')) {
+    if (!confirm('Bạn có chắc chắn muốn gỡ tin đăng này? Tin sau khi gỡ sẽ không hiển thị công khai')) {
       return;
     }
     try {
       const res = await authFetch(`/listings/${listingId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Không thể gỡ tin đăng.');
+      if (!res.ok) throw new Error('Không thể gỡ tin đăng');
       load(statusFilter, page);
     } catch (err) {
       alert((err as Error).message);

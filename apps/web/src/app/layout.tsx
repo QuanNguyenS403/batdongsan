@@ -14,11 +14,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'QNS Thuê — Rõ chi phí. Đúng người cho thuê.',
+    default: 'QNS Thuê — Rõ chi phí, đúng người cho thuê',
     template: '%s | QNS Thuê',
   },
   description:
-    'Nền tảng kết nối tìm phòng trọ sinh viên, căn hộ dịch vụ, studio và mặt bằng cho thuê QNS Thuê. Biểu phí điện nước minh bạch, kết nối đúng bên có quyền cho thuê.',
+    'Nền tảng kết nối tìm phòng trọ sinh viên, căn hộ dịch vụ, studio và mặt bằng cho thuê QNS Thuê — biểu phí điện nước minh bạch, kết nối đúng bên có quyền cho thuê',
   keywords: [
     'QNS Thuê',
     'thuê phòng trọ',

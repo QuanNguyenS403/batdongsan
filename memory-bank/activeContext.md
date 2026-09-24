@@ -1,6 +1,30 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (21/09/2026 — RÀ SOÁT TOÀN DIỆN HỆ THỐNG & KHẮC PHỤC TRIỆT ĐỂ TOÀN BỘ LỖ HỔNG):**
+**Việc vừa hoàn thành (23/09/2026 — THI HÀNH TOÀN DIỆN AUDIT HARNESS, SỬA TOÀN BỘ LỖ HỔNG VÀ NGHIỆM THU 100%):**
+1. **Kích hoạt quy trình 6 Cổng Rà Soát Tự Động (Skill 06: Full-System Autonomous Audit & Repair Harness)**:
+   - **Gate 1 (Compilation)**: `tsc --noEmit` đạt 0 lỗi trên cả 3 packages (`apps/web`, `apps/api`, `packages/database`).
+   - **Gate 2 (Security & Auth)**: Quét sạch backdoor credentials, triệt tiêu mã MFA bypass, bảo vệ anti-scraping SĐT, xác thực JWT & Revoke tokenVersion.
+   - **Gate 3 (API Contract & USP Integration)**: Tích hợp `MoveInCostEstimator` vào trang chi tiết `/tin/[slug]`, đồng bộ endpoint upload ảnh `/listings/:id/images`, đồng bộ Admin Finance Ledger.
+   - **Gate 4 (Database, Outbox & Migrations)**: Đồng bộ mock `$transaction`, OutboxService, CAS state machine cho kịch bản test; nghiệm thu toàn bộ 6/6 test wave scripts.
+   - **Gate 5 (UI & Invariants - GEMINI.md § 8)**:
+     - 100% không còn dấu chấm cuối câu trên UI, metadata, error toast, alerts và 38 exception messages của API Backend.
+     - Tiêu đề Hero H1 phân tách 2 dòng chuẩn typographic `leading-[1.15] md:leading-[1.18]`, khoảng đệm `mt-0.5 sm:mt-0.5`.
+     - Đồng bộ thông tin liên hệ duy nhất từ `SITE_CONFIG` (`hotline: 0981 753 082`, `workingHours: 24/7`, `email: ducquan16102006@gmail.com`, `address: Ngõ 622, Minh Khai, Phường Vĩnh Tuy, Hà Nội`).
+     - Tìm kiếm thông minh HeroSearchForm hỗ trợ tiếng Việt có dấu/không dấu (diacritics-insensitive) kèm highlight từ khóa.
+   - **Gate 6 (Production Build & Visual Inspection)**:
+     - `nest build` hoàn tất 100%.
+     - `next build` hoàn tất 31/31 static & dynamic routes.
+     - Browser Subagent kiểm thử trực quan trên Next.js production server: ghi hình video WebP, chụp ảnh màn hình xác nhận Hero H1, Search autocomplete, Footer và Pricing page.
+2. **Nghiệm thu toàn bộ Test Suites**:
+   - `static-lint-check.js`: 5/5 PASS.
+   - `test-wave-0.js`: 11/11 PASS (100%).
+   - `test-wave-1.js`: 9/9 PASS (100%).
+   - `test-wave-2.js`: 6/6 PASS (100%).
+   - `test-wave-3.js`: 5/5 PASS (100%).
+   - `test-wave-4.js`: 7/7 PASS (100%).
+   - `test-wave-5.js`: 9/9 PASS (100%).
+
+**Việc hoàn thành trước đó (21/09/2026 — RÀ SOÁT TOÀN DIỆN HỆ THỐNG & KHẮC PHỤC TRIỆT ĐỂ TOÀN BỘ LỖ HỔNG):**
 1. **Khắc phục lỗ hổng leo quyền & bypass MFA trong `CapabilitiesGuard` (`apps/api/src/common/guards/capabilities.guard.ts`)**:
    - **Xóa bỏ hoàn toàn việc tin tưởng headers từ client**: Loại bỏ `req.headers['x-admin-role']` và `req.headers['x-admin-capabilities']` (nguy cơ bị attacker/kiểm duyệt viên giả mạo header để leo quyền SuperAdmin). SuperAdmin chỉ được nhận diện duy nhất từ máy chủ (`ADMIN_PHONE` / `ADMIN_BOOTSTRAP_PHONE`). Các quyền hạn khác đọc từ `ADMIN_CAPABILITIES_CONFIG` hoặc token context.
    - **Triệt tiêu mã MFA bypass `123456`**: Xóa bỏ hoàn toàn fallback code `123456`. Khi `ADMIN_MFA_ENFORCED=true`, bắt buộc phải khớp chính xác `ADMIN_MFA_SECRET` đã cấu hình; nếu thiếu secret ở production, ứng dụng dừng khởi động qua `assert-env.ts`.

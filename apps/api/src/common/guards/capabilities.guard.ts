@@ -26,7 +26,7 @@ export class CapabilitiesGuard implements CanActivate {
     const user = req.user;
 
     if (!user || user.role !== 'admin') {
-      throw new ForbiddenException('Bạn không có quyền thực hiện thao tác quản trị này.');
+      throw new ForbiddenException('Bạn không có quyền thực hiện thao tác quản trị này');
     }
 
     // 1. Kiểm tra xác thực hai bước (MFA) nếu endpoint yêu cầu (F12)
@@ -37,19 +37,19 @@ export class CapabilitiesGuard implements CanActivate {
       if (isMfaEnforced) {
         if (!mfaCode) {
           throw new ForbiddenException(
-            'Thao tác nhạy cảm yêu cầu xác thực hai bước (MFA). Vui lòng cung cấp mã x-admin-mfa-code hợp lệ.',
+            'Thao tác nhạy cảm yêu cầu xác thực hai bước (MFA), vui lòng cung cấp mã x-admin-mfa-code hợp lệ',
           );
         }
 
         const validSecret = process.env.ADMIN_MFA_SECRET;
         if (!validSecret) {
           throw new ForbiddenException(
-            'Hệ thống chưa cấu hình ADMIN_MFA_SECRET. Vui lòng liên hệ quản trị viên cấp cao.',
+            'Hệ thống chưa cấu hình ADMIN_MFA_SECRET, vui lòng liên hệ quản trị viên cấp cao',
           );
         }
 
         if (mfaCode !== validSecret) {
-          throw new ForbiddenException('Mã xác thực hai bước (MFA) không chính xác.');
+          throw new ForbiddenException('Mã xác thực hai bước (MFA) không chính xác');
         }
       }
     }
@@ -91,7 +91,7 @@ export class CapabilitiesGuard implements CanActivate {
 
       if (!hasRequiredCapability) {
         throw new ForbiddenException(
-          `Bạn không có quyền capability [${requiredCapabilities.join(', ')}] để thực hiện thao tác này. (F12 PERMISSION-MATRIX)`,
+          `Bạn không có quyền capability [${requiredCapabilities.join(', ')}] để thực hiện thao tác này (F12 PERMISSION-MATRIX)`,
         );
       }
     }

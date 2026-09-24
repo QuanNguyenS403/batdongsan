@@ -288,7 +288,7 @@ export function MembershipPricingClient({ initialPlans, activeSeason, isFallback
             <span className="text-2xl mb-2">📞</span>
             <h4 className="font-bold text-sm text-slate-900">Hỗ trợ chủ trọ tận tình</h4>
             <p className="mt-1 text-xs text-slate-600">
-              Cần hỗ trợ chụp ảnh, xác thực tin hoặc tư vấn định giá cho thuê? Hotline/Tổng đài: <strong>{SITE_CONFIG.hotline}</strong>.
+              Cần hỗ trợ chụp ảnh, xác thực tin hoặc tư vấn định giá cho thuê? Hotline/Tổng đài: <strong>{SITE_CONFIG.hotline}</strong>
             </p>
           </div>
         </div>

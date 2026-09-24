@@ -52,10 +52,10 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
-    if (existing) throw new ConflictException('Số điện thoại đã được đăng ký. Vui lòng đăng nhập.');
+    if (existing) throw new ConflictException('Số điện thoại đã được đăng ký, vui lòng đăng nhập');
 
     const otpValid = this.otpService.verifyOtp(dto.phone, dto.otpCode);
-    if (!otpValid) throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn.');
+    if (!otpValid) throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn');
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.user.create({
@@ -72,14 +72,14 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
-    if (!user || !user.passwordHash) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng.');
+    if (!user || !user.passwordHash) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng');
 
     if (user.isBlocked) {
-      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa do vi phạm chính sách. Vui lòng liên hệ quản trị viên.');
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa do vi phạm chính sách, vui lòng liên hệ quản trị viên');
     }
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!passwordMatches) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng.');
+    if (!passwordMatches) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng');
 
     return this.issueTokens(user);
   }
@@ -91,10 +91,10 @@ export class AuthService {
   async bootstrapAdmin(dto: { secret: string; phone: string; password: string; fullName?: string }) {
     const configuredSecret = process.env.ADMIN_BOOTSTRAP_SECRET;
     if (!configuredSecret || configuredSecret.trim().length < 16) {
-      throw new BadRequestException('Chức năng bootstrap admin chưa được cấu hình hoặc đã bị vô hiệu hóa.');
+      throw new BadRequestException('Chức năng bootstrap admin chưa được cấu hình hoặc đã bị vô hiệu hóa');
     }
     if (dto.secret !== configuredSecret) {
-      throw new UnauthorizedException('Secret bootstrap không chính xác.');
+      throw new UnauthorizedException('Secret bootstrap không chính xác');
     }
 
     const existingAdminCount = await this.prisma.user.count({ where: { role: 'admin' } });
@@ -105,11 +105,11 @@ export class AuthService {
           action: 'auth.bootstrap_admin_rejected',
           entityType: 'system',
           entityId: '0',
-          reason: `Từ chối bootstrap admin cho số ${dto.phone} vì hệ thống đã có ${existingAdminCount} tài khoản quản trị viên.`,
+          reason: `Từ chối bootstrap admin cho số ${dto.phone} vì hệ thống đã có ${existingAdminCount} tài khoản quản trị viên`,
         },
       });
       throw new BadRequestException(
-        'Hệ thống đã tồn tại tài khoản Quản trị viên. Chức năng bootstrap chỉ được thực hiện một lần duy nhất (one-shot). Vui lòng đăng nhập bằng tài khoản quản trị hiện có.',
+        'Hệ thống đã tồn tại tài khoản Quản trị viên. Chức năng bootstrap chỉ được thực hiện một lần duy nhất (one-shot), vui lòng đăng nhập bằng tài khoản quản trị hiện có',
       );
     }
 
@@ -174,15 +174,15 @@ export class AuthService {
         secret: process.env.JWT_REFRESH_SECRET as string,
       });
     } catch {
-      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.');
+      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn, vui lòng đăng nhập lại');
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: BigInt(payload.sub) } });
-    if (!user || user.isBlocked) throw new UnauthorizedException('Tài khoản không hợp lệ hoặc đã bị khóa.');
+    if (!user || user.isBlocked) throw new UnauthorizedException('Tài khoản không hợp lệ hoặc đã bị khóa');
 
     // RB-01 & BE-02: Bắt buộc tokenVersion phải có và khớp chính xác phiên hiện tại
     if (payload.tokenVersion === undefined || payload.tokenVersion !== user.tokenVersion) {
-      throw new UnauthorizedException('Phiên đăng nhập đã bị thu hồi hoặc mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.');
+      throw new UnauthorizedException('Phiên đăng nhập đã bị thu hồi hoặc mật khẩu đã được thay đổi, vui lòng đăng nhập lại');
     }
 
     return this.issueTokens(user);
@@ -194,15 +194,15 @@ export class AuthService {
       where: { id: userId },
       data: { tokenVersion: { increment: 1 } },
     });
-    return { message: 'Đăng xuất thành công, toàn bộ phiên làm việc đã được thu hồi.' };
+    return { message: 'Đăng xuất thành công, toàn bộ phiên làm việc đã được thu hồi' };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
-    if (!user) throw new BadRequestException('Tài khoản không tồn tại.');
+    if (!user) throw new BadRequestException('Tài khoản không tồn tại');
 
     const otpValid = this.otpService.verifyOtp(dto.phone, dto.otpCode);
-    if (!otpValid) throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn.');
+    if (!otpValid) throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn');
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10);
     // BE-02: Đổi mật khẩu đồng thời tăng tokenVersion để cắt đứt mọi session cũ
@@ -214,7 +214,7 @@ export class AuthService {
       },
     });
 
-    return { message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.' };
+    return { message: 'Đặt lại mật khẩu thành công, vui lòng đăng nhập lại' };
   }
 
   async me(userId: bigint) {

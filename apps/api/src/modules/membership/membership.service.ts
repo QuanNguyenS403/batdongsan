@@ -188,7 +188,7 @@ export class MembershipService {
       where: { id: dto.planId, isActive: true },
     });
     if (!plan) {
-      throw new NotFoundException('Gói thành viên không tồn tại hoặc đã ngừng cung cấp.');
+      throw new NotFoundException('Gói thành viên không tồn tại hoặc đã ngừng cung cấp');
     }
 
     const now = new Date();
@@ -224,7 +224,7 @@ export class MembershipService {
         where: { userId, plan: { code: 'trial' } },
       });
       if (existingTrial) {
-        throw new BadRequestException('Bạn đã từng sử dụng gói Dùng thử miễn phí. Vui lòng chọn gói nâng cấp có phí.');
+        throw new BadRequestException('Bạn đã từng sử dụng gói Dùng thử miễn phí, vui lòng chọn gói nâng cấp có phí');
       }
 
       // Kích hoạt ngay lập tức gói dùng thử
@@ -395,24 +395,24 @@ export class MembershipService {
     });
 
     if (!request) {
-      throw new NotFoundException('Yêu cầu nâng cấp gói không tồn tại.');
+      throw new NotFoundException('Yêu cầu nâng cấp gói không tồn tại');
     }
 
     // AF-03 / BE-13: Compare-And-Set check
     if (request.status !== 'pending') {
       throw new ConflictException(
-        `Yêu cầu này không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${request.status}). Có thể một quản trị viên khác vừa xử lý xong.`,
+        `Yêu cầu này không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${request.status}), có thể một quản trị viên khác vừa xử lý xong`,
       );
     }
 
     // F02 / FIN-01: Bắt buộc mã giao dịch ngân hàng thật & số tiền xác nhận hợp lệ
     const extTxId = externalTransactionId?.trim();
     if (!extTxId) {
-      throw new BadRequestException('Bắt buộc phải có mã giao dịch ngân hàng / mã chứng từ sao kê (externalTransactionId).');
+      throw new BadRequestException('Bắt buộc phải có mã giao dịch ngân hàng / mã chứng từ sao kê (externalTransactionId)');
     }
 
     if (!confirmedAmount || confirmedAmount <= 0) {
-      throw new BadRequestException('Số tiền thực nhận vào tài khoản phải là số nguyên dương lớn hơn 0.');
+      throw new BadRequestException('Số tiền thực nhận vào tài khoản phải là số nguyên dương lớn hơn 0');
     }
 
     // Chống nạp trùng externalTransactionId
@@ -429,7 +429,7 @@ export class MembershipService {
         where: { externalTransactionId: extTxId },
       });
       if (existingTx) {
-        throw new BadRequestException(`Mã giao dịch ngân hàng [${extTxId}] đã tồn tại trong sổ cái. Vui lòng kiểm tra lại!`);
+        throw new BadRequestException(`Mã giao dịch ngân hàng [${extTxId}] đã tồn tại trong sổ cái, vui lòng kiểm tra lại`);
       }
 
       // FIN-04 & FIN-05: Đọc quyền lợi gói bất biến từ planSnapshot thay vì đọc live catalog
@@ -556,16 +556,16 @@ export class MembershipService {
       where: { id: requestId },
     });
     if (!request) {
-      throw new NotFoundException('Yêu cầu nâng cấp gói không tồn tại.');
+      throw new NotFoundException('Yêu cầu nâng cấp gói không tồn tại');
     }
 
     if (request.status !== 'pending') {
       throw new ConflictException(
-        `Yêu cầu này không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${request.status}). Không thể từ chối.`,
+        `Yêu cầu này không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${request.status}), không thể từ chối`,
       );
     }
 
-    const reason = note?.trim() || 'Không nhận được chuyển khoản hoặc thông tin không khớp.';
+    const reason = note?.trim() || 'Không nhận được chuyển khoản hoặc thông tin không khớp';
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.userMembership.update({
@@ -609,27 +609,27 @@ export class MembershipService {
     });
 
     if (!request) {
-      throw new NotFoundException('Gói thành viên không tồn tại.');
+      throw new NotFoundException('Gói thành viên không tồn tại');
     }
 
     if (request.status !== 'active') {
-      throw new BadRequestException('Chỉ có thể hoàn tiền cho gói đang hoạt động (active).');
+      throw new BadRequestException('Chỉ có thể hoàn tiền cho gói đang hoạt động (active)');
     }
 
     // F03 / FIN-01: Bắt buộc mã chứng từ chi tiền hoàn thật
     const extTxId = externalTransactionId?.trim();
     if (!extTxId) {
-      throw new BadRequestException('Bắt buộc phải có mã giao dịch/chứng từ chi hoàn tiền (externalTransactionId).');
+      throw new BadRequestException('Bắt buộc phải có mã giao dịch/chứng từ chi hoàn tiền (externalTransactionId)');
     }
 
     const maxRefundable = Number(request.confirmedPaymentAmount);
     if (refundAmount !== undefined) {
       if (refundAmount <= 0) {
-        throw new BadRequestException('Số tiền hoàn lại phải là số nguyên dương lớn hơn 0.');
+        throw new BadRequestException('Số tiền hoàn lại phải là số nguyên dương lớn hơn 0');
       }
       if (refundAmount > maxRefundable) {
         throw new BadRequestException(
-          `Số tiền hoàn (${refundAmount.toLocaleString('vi-VN')} đ) không được vượt quá số tiền đã thực thu (${maxRefundable.toLocaleString('vi-VN')} đ).`,
+          `Số tiền hoàn (${refundAmount.toLocaleString('vi-VN')} đ) không được vượt quá số tiền đã thực thu (${maxRefundable.toLocaleString('vi-VN')} đ)`,
         );
       }
     }
@@ -781,7 +781,7 @@ export class MembershipService {
     const end = new Date(dto.endDate);
 
     if (start >= end) {
-      throw new BadRequestException('Ngày bắt đầu mùa vụ phải nhỏ hơn ngày kết thúc.');
+      throw new BadRequestException('Ngày bắt đầu mùa vụ phải nhỏ hơn ngày kết thúc');
     }
 
     const created = await this.prisma.pricingSeason.create({
@@ -806,14 +806,14 @@ export class MembershipService {
   async updatePricingSeason(id: number, dto: UpdatePricingSeasonDto) {
     const season = await this.prisma.pricingSeason.findUnique({ where: { id } });
     if (!season) {
-      throw new NotFoundException('Cấu hình mùa cao điểm không tồn tại.');
+      throw new NotFoundException('Cấu hình mùa cao điểm không tồn tại');
     }
 
     const start = dto.startDate ? new Date(dto.startDate) : season.startDate;
     const end = dto.endDate ? new Date(dto.endDate) : season.endDate;
 
     if (start >= end) {
-      throw new BadRequestException('Ngày bắt đầu mùa vụ phải nhỏ hơn ngày kết thúc.');
+      throw new BadRequestException('Ngày bắt đầu mùa vụ phải nhỏ hơn ngày kết thúc');
     }
 
     const data: Prisma.PricingSeasonUpdateInput = {};

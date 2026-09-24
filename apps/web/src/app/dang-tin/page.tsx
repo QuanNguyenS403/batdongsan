@@ -83,13 +83,13 @@ export default function DangTinPage() {
 
     // FE-N05 & FE-N19: Kiểm tra giới hạn tối đa 20 ảnh và < 10MB mỗi file
     if (selectedFiles.length + files.length > 20) {
-      setError(`Bạn chỉ được tải lên tối đa 20 ảnh (hiện đã chọn ${selectedFiles.length} ảnh).`);
+      setError(`Bạn chỉ được tải lên tối đa 20 ảnh (hiện đã chọn ${selectedFiles.length} ảnh)`);
       return;
     }
 
     for (const file of files) {
       if (file.size > 10 * 1024 * 1024) {
-        setError(`Ảnh "${file.name}" vượt quá dung lượng 10MB cho phép.`);
+        setError(`Ảnh "${file.name}" vượt quá dung lượng 10MB cho phép`);
         return;
       }
     }
@@ -121,7 +121,7 @@ export default function DangTinPage() {
     const form = new FormData(e.currentTarget);
     const locationIdValue = form.get('locationId');
     if (!locationIdValue) {
-      setError('Vui lòng chọn khu vực bất động sản cho thuê.');
+      setError('Vui lòng chọn khu vực bất động sản cho thuê');
       return;
     }
 
@@ -171,7 +171,7 @@ export default function DangTinPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message ?? 'Đăng tin thất bại, vui lòng kiểm tra lại thông tin.');
+        throw new Error(data.message ?? 'Đăng tin thất bại, vui lòng kiểm tra lại thông tin');
       }
 
       const newListing = await res.json();
@@ -185,7 +185,7 @@ export default function DangTinPage() {
           formData.append('files', file);
         });
 
-        const imgRes = await authFetch(`/listings/${createdListingId}/images`, {
+        const imgRes = await authFetch(`/listings/${newListing.id}/images`, {
           method: 'POST',
           body: formData,
         });

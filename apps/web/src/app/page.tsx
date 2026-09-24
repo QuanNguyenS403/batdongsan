@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { fetchListings } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
+import { HeroSearchForm } from '@/components/HeroSearchForm';
 import {
   DEMO_ROOM_RENT_LISTINGS,
   DEMO_CAN_HO_RENT_LISTINGS,
@@ -10,37 +11,37 @@ import {
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'QNS Thuê — Rõ chi phí. Đúng người cho thuê.',
+  title: 'QNS Thuê — Rõ chi phí, đúng người cho thuê',
   description:
-    'Nền tảng tìm chỗ thuê minh bạch chi phí: phòng trọ sinh viên, studio, căn hộ, mặt bằng kinh doanh. Xem bảng chi phí trọn gói trước khi liên hệ, kết nối đúng bên có quyền cho thuê.',
+    'Nền tảng tìm chỗ thuê minh bạch chi phí: phòng trọ sinh viên, studio, căn hộ, mặt bằng kinh doanh. Xem bảng chi phí trọn gói trước khi liên hệ, kết nối đúng bên có quyền cho thuê',
 };
 
 const VALUE_PROPOSITIONS = [
   {
     icon: '📋',
     title: 'Tin đăng xác thực, rõ ràng',
-    desc: 'Hình ảnh thực tế, thông tin mô tả chi tiết, giá thuê và các chi phí dịch vụ được công khai minh bạch.',
+    desc: 'Hình ảnh thực tế, thông tin mô tả chi tiết, giá thuê và các chi phí dịch vụ được công khai minh bạch',
     color: 'from-teal-500/10 to-teal-500/5',
     border: 'border-teal-200',
   },
   {
     icon: '🔍',
     title: 'Tìm kiếm nhanh chóng, tiện lợi',
-    desc: 'Dễ dàng lọc theo khu vực, mức giá, diện tích và loại hình phòng phù hợp với mọi nhu cầu sinh hoạt và ngân sách.',
+    desc: 'Dễ dàng lọc theo khu vực, mức giá, diện tích và loại hình phòng phù hợp với mọi nhu cầu sinh hoạt và ngân sách',
     color: 'from-blue-500/10 to-blue-500/5',
     border: 'border-blue-200',
   },
   {
     icon: '📞',
     title: 'Kết nối trực tiếp người cho thuê',
-    desc: 'Xem số điện thoại và liên hệ trực tiếp qua Zalo hoặc cuộc gọi để trao đổi thông tin, hẹn lịch xem phòng nhanh chóng.',
+    desc: 'Xem số điện thoại và liên hệ trực tiếp qua Zalo hoặc cuộc gọi để trao đổi thông tin, hẹn lịch xem phòng nhanh chóng',
     color: 'from-amber-500/10 to-amber-500/5',
     border: 'border-amber-200',
   },
   {
     icon: '🛡️',
     title: '100% Miễn phí cho người thuê',
-    desc: 'Tìm kiếm và kết nối hoàn toàn miễn phí. Nền tảng cam kết không thu phí người tìm thuê, không phát sinh phụ phí ẩn.',
+    desc: 'Tìm kiếm và kết nối hoàn toàn miễn phí. Nền tảng cam kết không thu phí người tìm thuê, không phát sinh phụ phí ẩn',
     color: 'from-emerald-500/10 to-emerald-500/5',
     border: 'border-emerald-200',
   },
@@ -93,16 +94,16 @@ export default async function HomePage() {
         <div className="container-max py-14 lg:py-20">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/20">
-              QNS Thuê — Rõ chi phí. Đúng người cho thuê.
+              QNS Thuê — Rõ chi phí, đúng người cho thuê
             </div>
-            <h1 className="text-4xl font-bold leading-tight text-text-primary md:text-5xl lg:text-[3.25rem]">
-              Tìm chỗ thuê phù hợp,{' '}
-              <span className="bg-gradient-to-r from-brand to-brand-700 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold tracking-normal text-text-primary sm:text-4xl md:text-5xl lg:text-[3.25rem] leading-[1.15] md:leading-[1.18]">
+              <span className="block">Tìm chỗ thuê phù hợp,</span>
+              <span className="mt-0.5 block bg-gradient-to-r from-brand to-brand-700 bg-clip-text pb-0.5 text-transparent sm:mt-0.5">
                 rõ chi phí ngay từ đầu
               </span>
             </h1>
             <p className="mt-4 text-base text-text-secondary md:text-lg">
-              Minh bạch giá thuê, tiền cọc, điện nước và vai trò người đăng — từ phòng trọ sinh viên, studio, căn hộ đến mặt bằng kinh doanh.
+              Minh bạch giá thuê, tiền cọc, điện nước và vai trò người đăng — từ phòng trọ sinh viên, studio, căn hộ đến mặt bằng kinh doanh
             </p>
 
             {/* Search bar & Tabs */}
@@ -143,26 +144,7 @@ export default async function HomePage() {
                 </div>
               </div>
 
-              <form
-                action="/thue"
-                className="flex overflow-hidden rounded-b-2xl rounded-tr-2xl border border-surface-border bg-white shadow-elevated"
-              >
-                <input
-                  name="keyword"
-                  placeholder="Nhập địa chỉ bất kỳ, tên đường, trường ĐH (VD: Đại Cồ Việt, Cầu Giấy, Bách Khoa...)..."
-                  className="flex-1 px-5 py-4 text-sm text-text-primary placeholder:text-text-muted outline-none"
-                />
-                <button
-                  type="submit"
-                  id="hero-search-button"
-                  className="flex items-center gap-2 bg-brand px-7 font-semibold text-white transition-colors hover:bg-brand-700"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                  </svg>
-                  Tìm phòng ngay
-                </button>
-              </form>
+              <HeroSearchForm />
             </div>
           </div>
         </div>
@@ -222,7 +204,7 @@ export default async function HomePage() {
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center text-sm text-slate-500">
-              Hiện chưa có tin đăng nào trong chuyên mục này.
+              Hiện chưa có tin đăng nào trong chuyên mục này
             </div>
           )}
         </div>

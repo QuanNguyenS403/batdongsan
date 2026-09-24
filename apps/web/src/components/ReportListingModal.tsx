@@ -37,7 +37,7 @@ export function ReportListingModal({ listingId }: { listingId: string }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (listingId.startsWith('demo-')) {
-      setError('Đây là tin mẫu thử nghiệm, không thể gửi báo cáo vi phạm.');
+      setError('Đây là tin mẫu thử nghiệm, không thể gửi báo cáo vi phạm');
       return;
     }
     setLoading(true);
@@ -51,7 +51,7 @@ export function ReportListingModal({ listingId }: { listingId: string }) {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message?.toString() ?? 'Gửi báo cáo thất bại.');
+      if (!res.ok) throw new Error(data.message?.toString() ?? 'Gửi báo cáo thất bại');
 
       setSuccess(true);
       setTimeout(() => {
@@ -116,7 +116,7 @@ export function ReportListingModal({ listingId }: { listingId: string }) {
                 </div>
                 <p className="font-semibold text-green-800">Cảm ơn bạn đã gửi phản ánh!</p>
                 <p className="mt-1 text-xs text-green-600">
-                  Đội ngũ kiểm duyệt sẽ xem xét và xử lý tin đăng này trong thời gian sớm nhất.
+                 Đội ngũ kiểm duyệt sẽ xem xét và xử lý tin đăng này trong thời gian sớm nhất
                 </p>
               </div>
             ) : (

@@ -96,7 +96,7 @@ export class OtpService {
 
     if (provider === 'mock') {
       if (process.env.NODE_ENV === 'production') {
-        throw new HttpException('Chế độ SMS mock không được phép chạy ở môi trường production.', HttpStatus.INTERNAL_SERVER_ERROR);
+        throw new HttpException('Chế độ SMS mock không được phép chạy ở môi trường production', HttpStatus.INTERNAL_SERVER_ERROR);
       }
       this.logger.warn(`[MOCK SMS] Gửi OTP tới ${phone}: ${code} (chỉ hiện trong log dev/test)`);
       return;

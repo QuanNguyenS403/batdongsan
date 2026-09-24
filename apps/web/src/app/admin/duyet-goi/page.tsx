@@ -112,7 +112,7 @@ export default function AdminDuyetGoiPage() {
       `VCB_${Date.now().toString().slice(-6)}`,
     );
     if (!extTx || !extTx.trim()) {
-      alert('Mã giao dịch ngân hàng là bắt buộc để đối soát sao kê kế toán (F02).');
+      alert('Mã giao dịch ngân hàng là bắt buộc để đối soát sao kê kế toán (F02)');
       return;
     }
 
@@ -124,7 +124,7 @@ export default function AdminDuyetGoiPage() {
     if (!amountStr) return;
     const confirmedAmount = parseInt(amountStr.replace(/\D/g, ''), 10);
     if (isNaN(confirmedAmount) || confirmedAmount <= 0) {
-      alert('Số tiền thực nhận không hợp lệ. Vui lòng nhập số nguyên dương > 0.');
+      alert('Số tiền thực nhận không hợp lệ, vui lòng nhập số nguyên dương > 0');
       return;
     }
 
@@ -193,13 +193,13 @@ export default function AdminDuyetGoiPage() {
       `REF_${Date.now().toString().slice(-6)}`,
     );
     if (!extTx || !extTx.trim()) {
-      alert('Mã chứng từ chi hoàn tiền là bắt buộc để đối soát sổ cái (F03).');
+      alert('Mã chứng từ chi hoàn tiền là bắt buộc để đối soát sổ cái (F03)');
       return;
     }
 
     const reason = prompt(`Nhập lý do hoàn tiền cho SĐT ${userPhone} (bắt buộc):`);
     if (!reason || !reason.trim()) {
-      alert('Lý do hoàn tiền là bắt buộc.');
+      alert('Lý do hoàn tiền là bắt buộc');
       return;
     }
 

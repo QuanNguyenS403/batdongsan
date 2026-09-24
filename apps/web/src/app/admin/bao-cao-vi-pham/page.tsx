@@ -89,16 +89,16 @@ export default function AdminReportsPage() {
       if (res.ok) {
         showToast(
           resolvingReport.action === 'remove_listing'
-            ? 'Đã gỡ bỏ tin đăng vi phạm thành công.'
-            : 'Đã bỏ qua báo cáo vi phạm.',
+            ? 'Đã gỡ bỏ tin đăng vi phạm thành công'
+            : 'Đã bỏ qua báo cáo vi phạm',
         );
         setResolvingReport(null);
         loadReports();
       } else {
-        alert('Có lỗi xảy ra khi xử lý báo cáo.');
+        alert('Có lỗi xảy ra khi xử lý báo cáo');
       }
     } catch {
-      alert('Không thể kết nối tới máy chủ.');
+      alert('Không thể kết nối tới máy chủ');
     } finally {
       setSubmitting(false);
     }

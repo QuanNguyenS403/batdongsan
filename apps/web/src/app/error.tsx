@@ -22,7 +22,7 @@ export default function GlobalError({
         </div>
         <h1 className="text-2xl font-bold text-text-primary">Đã có sự cố xảy ra</h1>
         <p className="mt-3 text-sm text-text-secondary leading-relaxed">
-          Hệ thống gặp sự cố trong quá trình xử lý yêu cầu hoặc chưa thể kết nối tới máy chủ dữ liệu.
+          Hệ thống gặp sự cố trong quá trình xử lý yêu cầu hoặc chưa thể kết nối tới máy chủ dữ liệu
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">

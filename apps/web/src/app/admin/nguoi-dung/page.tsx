@@ -106,10 +106,10 @@ export default function AdminUsersPage() {
         loadUsers();
       } else {
         const err = await res.json();
-        alert(err.message ?? 'Không thể thay đổi trạng thái người dùng.');
+        alert(err.message ?? 'Không thể thay đổi trạng thái người dùng');
       }
     } catch {
-      alert('Không thể kết nối đến máy chủ.');
+      alert('Không thể kết nối đến máy chủ');
     } finally {
       setSubmitting(false);
     }

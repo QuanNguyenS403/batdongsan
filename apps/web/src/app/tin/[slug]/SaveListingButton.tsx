@@ -20,12 +20,12 @@ export function SaveListingButton({ listingId }: { listingId: string }) {
 
   async function handleToggle() {
     if (listingId.startsWith('demo-')) {
-      alert('Đây là tin mẫu thử nghiệm, không thể lưu vào danh sách yêu thích.');
+      alert('Đây là tin mẫu thử nghiệm, không thể lưu vào danh sách yêu thích');
       return;
     }
 
     if (!isLoggedIn()) {
-      if (confirm('Vui lòng đăng nhập để lưu bất động sản vào danh sách yêu thích. Đến trang đăng nhập ngay?')) {
+      if (confirm('Vui lòng đăng nhập để lưu bất động sản vào danh sách yêu thích, chuyển đến trang đăng nhập ngay?')) {
         router.push('/dang-nhap');
       }
       return;

@@ -329,7 +329,7 @@ export default function AdminPricingSeasonsPage() {
 
           <div className="mt-6 pt-5 border-t border-white/10 text-[11px] text-slate-400 flex items-center gap-2">
             <span>💡</span>
-            <span>Gói Dùng Thử luôn giữ mức 0đ bất kể hệ số mùa vụ.</span>
+            <span>Gói Dùng Thử luôn giữ mức 0đ bất kể hệ số mùa vụ</span>
           </div>
         </div>
       </div>

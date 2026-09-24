@@ -440,13 +440,13 @@ export class AdminService {
       },
     });
     if (!listing) {
-      throw new NotFoundException('Không tìm thấy tin đăng.');
+      throw new NotFoundException('Không tìm thấy tin đăng');
     }
 
     // BE-13 / CAS check: Chỉ duyệt tin đang ở trạng thái pending
     if (listing.status !== ListingStatus.pending) {
       throw new ConflictException(
-        `Tin đăng không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${listing.status}). Có thể đã được xử lý bởi quản trị viên khác.`,
+        `Tin đăng không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${listing.status}), có thể đã được xử lý bởi quản trị viên khác`,
       );
     }
 
@@ -556,11 +556,11 @@ export class AdminService {
     });
 
     if (!updated) {
-      throw new NotFoundException('Không thể tìm thấy tin đăng sau khi cập nhật.');
+      throw new NotFoundException('Không thể tìm thấy tin đăng sau khi cập nhật');
     }
 
     return {
-      message: 'Đã duyệt tin đăng thành công.',
+      message: 'Đã duyệt tin đăng thành công',
       listing: serialize(updated),
     };
   }
@@ -574,12 +574,12 @@ export class AdminService {
       },
     });
     if (!listing) {
-      throw new NotFoundException('Không tìm thấy tin đăng.');
+      throw new NotFoundException('Không tìm thấy tin đăng');
     }
 
     if (listing.status !== ListingStatus.pending) {
       throw new ConflictException(
-        `Tin đăng không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${listing.status}). Không thể từ chối.`,
+        `Tin đăng không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${listing.status}), không thể từ chối`,
       );
     }
 
@@ -641,11 +641,11 @@ export class AdminService {
     });
 
     if (!updated) {
-      throw new NotFoundException('Không thể tìm thấy tin đăng sau khi từ chối.');
+      throw new NotFoundException('Không thể tìm thấy tin đăng sau khi từ chối');
     }
 
     return {
-      message: 'Đã từ chối tin đăng.',
+      message: 'Đã từ chối tin đăng',
       listing: serialize(updated),
     };
   }
@@ -653,7 +653,7 @@ export class AdminService {
   /** Đánh dấu tin là "Đã xác thực thực tế" (Giai đoạn 2 Trust-as-a-Service + Audit) */
   async verifyListing(id: bigint, adminId: bigint) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
 
     const now = new Date();
     const [updated] = await this.prisma.$transaction([
@@ -679,7 +679,7 @@ export class AdminService {
     ]);
 
     return {
-      message: 'Đã xác thực thực tế tin đăng thành công.',
+      message: 'Đã xác thực thực tế tin đăng thành công',
       listing: serialize(updated),
     };
   }
@@ -687,7 +687,7 @@ export class AdminService {
   /** Gỡ bỏ huy hiệu xác thực thực tế */
   async unverifyListing(id: bigint, adminId: bigint) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.listing.update({
@@ -712,7 +712,7 @@ export class AdminService {
     ]);
 
     return {
-      message: 'Đã gỡ bỏ huy hiệu xác thực thực tế.',
+      message: 'Đã gỡ bỏ huy hiệu xác thực thực tế',
       listing: serialize(updated),
     };
   }
@@ -769,7 +769,7 @@ export class AdminService {
   async resolveReport(id: bigint, action: 'remove_listing' | 'dismiss') {
     const report = await this.prisma.listingReport.findUnique({ where: { id } });
     if (!report) {
-      throw new NotFoundException('Không tìm thấy báo cáo.');
+      throw new NotFoundException('Không tìm thấy báo cáo');
     }
 
     const now = new Date();
@@ -785,13 +785,13 @@ export class AdminService {
           data: { status: 'resolved', resolvedAt: now },
         }),
       ]);
-      return { message: 'Đã gỡ bỏ tin đăng vi phạm và hoàn tất xử lý báo cáo.' };
+      return { message: 'Đã gỡ bỏ tin đăng vi phạm và hoàn tất xử lý báo cáo' };
     } else {
       await this.prisma.listingReport.update({
         where: { id },
         data: { status: 'dismissed', resolvedAt: now },
       });
-      return { message: 'Đã bỏ qua báo cáo vi phạm.' };
+      return { message: 'Đã bỏ qua báo cáo vi phạm' };
     }
   }
 
@@ -862,12 +862,12 @@ export class AdminService {
   /** Khóa hoặc Mở khóa tài khoản */
   async toggleBlockUser(id: bigint, adminId: bigint) {
     if (id === adminId) {
-      throw new BadRequestException('Bạn không thể tự khóa tài khoản của chính mình.');
+      throw new BadRequestException('Bạn không thể tự khóa tài khoản của chính mình');
     }
 
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException('Không tìm thấy người dùng.');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     const nextState = !user.isBlocked;
@@ -901,8 +901,8 @@ export class AdminService {
 
     return {
       message: nextState
-        ? `Đã khóa tài khoản của người dùng ${user.fullName ?? user.phone}.`
-        : `Đã mở khóa tài khoản của người dùng ${user.fullName ?? user.phone}.`,
+        ? `Đã khóa tài khoản của người dùng ${user.fullName ?? user.phone}`
+        : `Đã mở khóa tài khoản của người dùng ${user.fullName ?? user.phone}`,
       user: serialize(updated),
     };
   }

@@ -326,7 +326,7 @@ function DangNhapContent() {
               type="button"
               onClick={() => {
                 if (!otpCode.trim()) {
-                  setError('Vui lòng nhập mã OTP.');
+                  setError('Vui lòng nhập mã OTP');
                   return;
                 }
                 setStep('register-info');

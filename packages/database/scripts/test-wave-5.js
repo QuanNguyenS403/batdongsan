@@ -246,8 +246,8 @@ runTest('FE-12 & FE-13: Metadata sạch từ khoá mua bán, Robots chặn stagi
   assert(robotsCode.includes("'/admin/'"), 'Robots cấm crawl trang /admin/');
   assert(robotsCode.includes("'/tai-khoan/'"), 'Robots cấm crawl trang /tai-khoan/');
 
-  assert(!lienHeCode.includes('24/7'), 'Đã loại bỏ cam kết 24/7 phi thực tế');
-  assert(lienHeCode.includes('08:00 - 21:30'), 'Đồng bộ giờ trực hỗ trợ 08:00 - 21:30');
+  assert(lienHeCode.includes('SITE_CONFIG.workingHours'), 'Tham chiếu workingHours duy nhất từ SITE_CONFIG');
+  assert(lienHeCode.includes('SITE_CONFIG.hotline'), 'Tham chiếu hotline duy nhất từ SITE_CONFIG');
 });
 
 // -----------------------------------------------------------------------------

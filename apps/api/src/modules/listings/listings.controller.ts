@@ -141,7 +141,7 @@ export class ListingsController {
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     if (!files || files.length === 0) {
-      throw new BadRequestException('Vui lòng chọn ít nhất 1 ảnh để tải lên.');
+      throw new BadRequestException('Vui lòng chọn ít nhất 1 ảnh để tải lên');
     }
     // BẢO MẬT (audit 02/09/2026): kiểm tra quyền sở hữu TRƯỚC KHI ghi file vào đĩa server.
     // Trước đây uploadsService.saveListingImages chạy trước, ghi hàng chục file và convert webp
@@ -150,7 +150,7 @@ export class ListingsController {
     const currentCount = await this.listingsService.getImageCount(id);
     if (currentCount + files.length > 20) {
       throw new BadRequestException(
-        `Một tin đăng chỉ được phép có tối đa 20 ảnh (hiện đã có ${currentCount} ảnh, không thể thêm ${files.length} ảnh nữa).`,
+        `Một tin đăng chỉ được phép có tối đa 20 ảnh (hiện đã có ${currentCount} ảnh, không thể thêm ${files.length} ảnh nữa)`,
       );
     }
     const urls = await this.uploadsService.saveListingImages(id.toString(), files);

@@ -623,7 +623,7 @@ export class ListingsService {
     }
 
     const match = idOrSlug.match(/-id(\d+)$/) ?? idOrSlug.match(/^(\d+)$/);
-    if (!match) throw new NotFoundException('Đường dẫn tin đăng không hợp lệ.');
+    if (!match) throw new NotFoundException('Đường dẫn tin đăng không hợp lệ');
     const id = BigInt(match[1]);
 
     const listing = await this.prisma.listing.findUnique({
@@ -639,7 +639,7 @@ export class ListingsService {
       (listing.expiresAt && listing.expiresAt <= now) ||
       (listing as any).owner?.isBlocked
     ) {
-      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn.');
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn');
     }
 
     // Tăng view count (fire-and-forget, không chặn response)
@@ -657,7 +657,7 @@ export class ListingsService {
   async findOneForOwner(id: bigint, requester: { id: bigint; role: string }) {
     await this.assertOwnership(id, requester);
     const listing = await this.prisma.listing.findUnique({ where: { id }, select: PUBLIC_LISTING_SELECT });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
     return serialize(listing);
   }
 
@@ -944,7 +944,7 @@ export class ListingsService {
   async confirmAvailability(id: bigint, requester: { id: bigint; role: string }) {
     const listing = await this.assertOwnership(id, requester);
     if (listing.status !== ListingStatus.active) {
-      throw new BadRequestException('Chỉ có thể xác nhận tình trạng còn phòng đối với tin đăng đang hoạt động (active).');
+      throw new BadRequestException('Chỉ có thể xác nhận tình trạng còn phòng đối với tin đăng đang hoạt động (active)');
     }
 
     const now = new Date();
@@ -969,7 +969,7 @@ export class ListingsService {
     return {
       success: true,
       refreshedAt: now,
-      message: 'Đã xác nhận phòng vẫn còn trống thành công.',
+      message: 'Đã xác nhận phòng vẫn còn trống thành công',
     };
   }
 
@@ -1019,7 +1019,7 @@ export class ListingsService {
       (listing.expiresAt && listing.expiresAt <= now) ||
       listing.owner.isBlocked
     ) {
-      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn.');
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn');
     }
 
     // Kiểm tra xem chính user này đã từng reveal số của tin này trước đó chưa (re-view tin cũ thì không tính rate limit)
@@ -1047,7 +1047,7 @@ export class ListingsService {
 
     if (recentRevealsCount >= 30) {
       throw new HttpException(
-        'Bạn đã đạt giới hạn xem tối đa 30 số điện thoại mới trong 1 giờ. Vui lòng thử lại sau để bảo vệ quyền riêng tư người cho thuê.',
+        'Bạn đã đạt giới hạn xem tối đa 30 số điện thoại mới trong 1 giờ, vui lòng thử lại sau để bảo vệ quyền riêng tư người cho thuê',
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
@@ -1073,7 +1073,7 @@ export class ListingsService {
       where: { id },
       select: { id: true, title: true },
     });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
 
     const reportRecord = await this.prisma.$transaction(async (tx) => {
       const record = await tx.listingReport.create({
@@ -1127,7 +1127,7 @@ export class ListingsService {
     });
 
     return {
-      message: 'Báo cáo vi phạm đã được tiếp nhận. Đội ngũ kiểm duyệt sẽ xem xét sớm.',
+      message: 'Báo cáo vi phạm đã được tiếp nhận, đội ngũ kiểm duyệt sẽ xem xét sớm',
       reportId: reportRecord.id.toString(),
     };
   }
@@ -1138,7 +1138,7 @@ export class ListingsService {
   async toggleSave(listingId: bigint, userId: bigint) {
     const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
     if (!listing || listing.status !== ListingStatus.active) {
-      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt.');
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt');
     }
 
     const existing = await this.prisma.savedListing.findUnique({
@@ -1149,12 +1149,12 @@ export class ListingsService {
       await this.prisma.savedListing.delete({
         where: { userId_listingId: { userId, listingId } },
       });
-      return { saved: false, message: 'Đã bỏ lưu tin đăng.' };
+      return { saved: false, message: 'Đã bỏ lưu tin đăng' };
     } else {
       await this.prisma.savedListing.create({
         data: { userId, listingId },
       });
-      return { saved: true, message: 'Đã lưu tin đăng vào danh sách yêu thích.' };
+      return { saved: true, message: 'Đã lưu tin đăng vào danh sách yêu thích' };
     }
   }
 
@@ -1196,9 +1196,9 @@ export class ListingsService {
   /** Public để Controller kiểm tra quyền trước khi ghi file upload vào đĩa */
   async assertOwnership(id: bigint, requester: { id: bigint; role: string }) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
     if (listing.ownerId !== requester.id && requester.role !== 'admin') {
-      throw new ForbiddenException('Bạn không có quyền thao tác trên tin đăng này.');
+      throw new ForbiddenException('Bạn không có quyền thao tác trên tin đăng này');
     }
     return listing;
   }

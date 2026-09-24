@@ -39,7 +39,7 @@ export function ComingSoonNotice({ title, description }: Props) {
             </p>
             <p className="mt-2 text-sm text-text-secondary">
               Chức năng này đang được phát triển theo lộ trình Giai đoạn 2-3. Trang hiện tại là
-              placeholder trung thực — không có dữ liệu giả.
+              placeholder trung thực — không có dữ liệu giả
             </p>
           </div>
 

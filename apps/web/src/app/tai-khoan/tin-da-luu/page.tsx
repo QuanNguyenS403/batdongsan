@@ -22,11 +22,11 @@ export default function TinDaLuuPage() {
     try {
       const res = await authFetch(`/listings/saved/mine?page=${targetPage}&pageSize=10`);
       if (res.status === 401) {
-        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         setListings([]);
         return;
       }
-      if (!res.ok) throw new Error('Không tải được danh sách tin đã lưu.');
+      if (!res.ok) throw new Error('Không tải được danh sách tin đã lưu');
       const data: ListingListResponse = await res.json();
       setListings(data.items);
       setTotal(data.pagination.total);
@@ -60,7 +60,7 @@ export default function TinDaLuuPage() {
         setTotal((prev) => Math.max(0, prev - 1));
       }
     } catch {
-      alert('Không thể bỏ lưu tin đăng. Vui lòng thử lại.');
+      alert('Không thể bỏ lưu tin đăng. Vui lòng thử lại');
     }
   }
 

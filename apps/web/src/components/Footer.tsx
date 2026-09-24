@@ -26,42 +26,54 @@ const FOOTER_LINKS = {
 
 export function Footer() {
   return (
-    <footer className="border-t border-brand-900 bg-brand-950 text-white">
+    <footer className="border-t border-slate-700 bg-slate-900 text-white">
       <div className="container-max py-12">
         <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
           {/* Brand column */}
           <div className="col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-base font-bold text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-base font-bold text-white">
                 Q
               </span>
-              <span className="text-lg font-bold tracking-tight">
-                QNS <span className="font-normal opacity-80">Thuê</span>
+              <span className="text-lg font-bold tracking-tight text-white">
+                QNS <span className="font-normal text-slate-300">Thuê</span>
               </span>
             </Link>
-            <p className="mt-3 text-sm leading-relaxed text-white/60">
-              Nền tảng cho thuê chuyên biệt — <strong>Rõ chi phí. Đúng người cho thuê.</strong>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+              Nền tảng cho thuê chuyên biệt — <strong className="text-white">Rõ chi phí, đúng người cho thuê</strong>
               <br />
-              Minh bạch biểu phí trọn gói, kết nối trực tiếp bên có quyền cho thuê.
+              Minh bạch biểu phí trọn gói, kết nối trực tiếp bên có quyền cho thuê
             </p>
-            <p className="mt-4 text-sm text-white/60">
-              📞 Hotline:{' '}
-              <a href={`tel:${SITE_CONFIG.hotline.replace(/\s+/g, '')}`} className="font-bold text-brand-300 hover:text-white transition-colors">
-                {SITE_CONFIG.hotline}
-              </a>
-            </p>
-            <p className="mt-1 text-sm text-white/60">
-              ✉️ Email:{' '}
-              <a href={`mailto:${SITE_CONFIG.supportEmail}`} className="font-semibold text-brand-300 hover:text-white transition-colors">
-                {SITE_CONFIG.supportEmail}
-              </a>
-            </p>
+            <div className="mt-4 space-y-2">
+              <p className="flex items-center gap-2 text-sm text-slate-300">
+                <span className="text-brand">📞</span>
+                <span>Hotline:</span>
+                <a href={`tel:${SITE_CONFIG.hotline.replace(/\s+/g, '')}`} className="font-bold text-white hover:text-brand transition-colors">
+                  {SITE_CONFIG.hotline}
+                </a>
+              </p>
+              <p className="flex items-center gap-2 text-sm text-slate-300">
+                <span className="text-brand">✉️</span>
+                <span>Email:</span>
+                <a href={`mailto:${SITE_CONFIG.supportEmail}`} className="font-semibold text-white hover:text-brand transition-colors">
+                  {SITE_CONFIG.supportEmail}
+                </a>
+              </p>
+              <p className="flex items-start gap-2 text-sm text-slate-400">
+                <span className="text-brand shrink-0">📍</span>
+                <span>{SITE_CONFIG.address}</span>
+              </p>
+              <p className="flex items-center gap-2 text-sm text-slate-400">
+                <span className="text-brand">🕐</span>
+                <span>{SITE_CONFIG.workingHours}</span>
+              </p>
+            </div>
           </div>
 
           {/* Link columns */}
           {Object.entries(FOOTER_LINKS).map(([category, links]) => (
             <div key={category}>
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-brand-300">
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-brand">
                 {category}
               </h3>
               <ul className="space-y-2.5">
@@ -69,7 +81,7 @@ export function Footer() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-sm text-white/60 hover:text-white transition-colors"
+                      className="text-sm text-slate-400 hover:text-white transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -82,20 +94,20 @@ export function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-white/10">
+      <div className="border-t border-slate-700/60">
         <div className="container-max flex flex-col items-center justify-between gap-2 py-5 sm:flex-row">
-          <p className="text-xs text-white/40">
-            © {new Date().getFullYear()} QNS&apos;bds.vn — Nền tảng Cho thuê Bất Động Sản hàng đầu.
+          <p className="text-xs text-slate-500">
+            © {new Date().getFullYear()} QNS&apos;bds.vn — Nền tảng Cho thuê Bất Động Sản hàng đầu
           </p>
-          <div className="flex items-center gap-4 text-xs text-white/60">
+          <div className="flex items-center gap-4 text-xs text-slate-400">
             <Link href="/dieu-khoan" className="hover:text-white transition-colors">
               Điều khoản sử dụng
             </Link>
-            <span>·</span>
+            <span className="text-slate-600">·</span>
             <Link href="/chinh-sach" className="hover:text-white transition-colors">
               Chính sách bảo mật
             </Link>
-            <span>·</span>
+            <span className="text-slate-600">·</span>
             <Link href="/lien-he" className="hover:text-white transition-colors">
               Liên hệ hỗ trợ
             </Link>

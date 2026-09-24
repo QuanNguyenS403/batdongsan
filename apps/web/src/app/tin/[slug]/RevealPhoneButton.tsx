@@ -29,7 +29,7 @@ export function RevealPhoneButton({
   async function handleReveal() {
     setError(null);
     if (listingId.startsWith('demo-')) {
-      setError('Đây là tin mẫu thử nghiệm, không có số điện thoại thật.');
+      setError('Đây là tin mẫu thử nghiệm, không có số điện thoại thật');
       return;
     }
     if (!isLoggedIn()) {
@@ -46,7 +46,7 @@ export function RevealPhoneButton({
         if (onRequireAuth) onRequireAuth();
         return;
       }
-      if (!res.ok) throw new Error('Không lấy được số điện thoại.');
+      if (!res.ok) throw new Error('Không lấy được số điện thoại');
       const data = await res.json();
       setPhone(data.phone);
       if (onPhoneRevealed && data.phone) {

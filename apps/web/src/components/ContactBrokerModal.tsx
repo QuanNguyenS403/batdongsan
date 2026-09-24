@@ -42,7 +42,7 @@ export function ContactBrokerModal({
     const rawId = listingId ? String(listingId) : '';
     if (!rawId || rawId.startsWith('demo-')) {
       setErrorMessage(
-        'Đây là dữ liệu mẫu thử nghiệm hoặc tin chưa kích hoạt. Không thể gửi yêu cầu liên hệ thật.',
+        'Đây là dữ liệu mẫu thử nghiệm hoặc tin chưa kích hoạt. Không thể gửi yêu cầu liên hệ thật',
       );
       return;
     }
@@ -52,14 +52,14 @@ export function ContactBrokerModal({
     const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
     if (!phoneRegex.test(cleanPhone)) {
       setErrorMessage(
-        'Số điện thoại không hợp lệ. Vui lòng nhập số di động 10 chữ số (bắt đầu bằng 03, 05, 07, 08, 09).',
+        'Số điện thoại không hợp lệ. Vui lòng nhập số di động 10 chữ số (bắt đầu bằng 03, 05, 07, 08, 09)',
       );
       return;
     }
 
     if (!consent) {
       setErrorMessage(
-        'Bạn cần đồng ý chia sẻ thông tin liên hệ để người cho thuê có thể gọi lại cho bạn.',
+        'Bạn cần đồng ý chia sẻ thông tin liên hệ để người cho thuê có thể gọi lại cho bạn',
       );
       return;
     }
@@ -104,7 +104,7 @@ export function ContactBrokerModal({
       // Chỉ chuyển sang trạng thái thành công khi máy chủ phản hồi 200/201 thật
       setSubmitted(true);
       setSuccessMessage(
-        data.message || 'Đã gửi liên hệ thành công! Người đăng tin sẽ sớm liên lạc lại với bạn.',
+        data.message || 'Đã gửi liên hệ thành công! Người đăng tin sẽ sớm liên lạc lại với bạn',
       );
 
       // Đặt timeout đóng modal tự động nhưng cho phép người dùng đóng ngay
@@ -114,7 +114,7 @@ export function ContactBrokerModal({
       }, 3500);
     } catch (err: any) {
       setErrorMessage(
-        err.message || 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.',
+        err.message || 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại',
       );
     } finally {
       setLoading(false);
@@ -261,7 +261,7 @@ export function ContactBrokerModal({
                 className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#58cca9] focus:ring-[#58cca9]"
               />
               <label htmlFor="lead-consent" className="text-xs text-slate-600 leading-snug">
-                Tôi đồng ý chia sẻ thông tin liên hệ này cho người đăng tin/môi giới để được hỗ trợ xem phòng.
+                Tôi đồng ý chia sẻ thông tin liên hệ này cho người đăng tin/môi giới để được hỗ trợ xem phòng
               </label>
             </div>
 

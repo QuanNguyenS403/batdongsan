@@ -121,7 +121,7 @@ export class LeadsService {
       this.logger.log(`Duplicate lead prevented by dedupeKey=${dedupeKey}`);
       return {
         success: true,
-        message: 'Yêu cầu liên hệ của bạn đã được ghi nhận trước đó cho tin này trong hôm nay.',
+        message: 'Yêu cầu liên hệ của bạn đã được ghi nhận trước đó cho tin này trong hôm nay',
         isDuplicate: true,
         leadId: existing.id.toString(),
       };
@@ -172,7 +172,7 @@ export class LeadsService {
 
       return {
         success: true,
-        message: 'Gửi yêu cầu liên hệ thành công! Người đăng tin sẽ sớm liên lạc lại với bạn.',
+        message: 'Gửi yêu cầu liên hệ thành công! Người đăng tin sẽ sớm liên lạc lại với bạn',
         isDuplicate: false,
         leadId: created.id.toString(),
       };
@@ -182,7 +182,7 @@ export class LeadsService {
         const raceLead = await this.prisma.lead.findUnique({ where: { dedupeKey } });
         return {
           success: true,
-          message: 'Yêu cầu liên hệ của bạn đã được ghi nhận trước đó cho tin này trong hôm nay.',
+          message: 'Yêu cầu liên hệ của bạn đã được ghi nhận trước đó cho tin này trong hôm nay',
           isDuplicate: true,
           leadId: raceLead?.id ? raceLead.id.toString() : 'unknown',
         };

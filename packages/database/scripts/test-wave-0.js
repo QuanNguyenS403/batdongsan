@@ -86,10 +86,21 @@ class InMemoryUserStore {
     }
     return { count: 0 };
   }
+
+  async count({ where } = {}) {
+    let users = Array.from(this.users.values());
+    if (where && where.role) {
+      users = users.filter((u) => u.role === where.role);
+    }
+    return users.length;
+  }
 }
 
 const mockPrisma = {
   user: new InMemoryUserStore(),
+  auditEvent: {
+    create: async () => ({ id: 1n }),
+  },
   $disconnect: async () => {},
 };
 const prisma = mockPrisma;

@@ -8,6 +8,7 @@ import { PropertyGallery } from './PropertyGallery';
 import { ReportListingModal } from '@/components/ReportListingModal';
 import { OwnerContactBox } from './OwnerContactBox';
 import { MobileStickyContactBar } from './MobileStickyContactBar';
+import { MoveInCostEstimator } from '@/components/MoveInCostEstimator';
 
 interface Props {
   params: { slug: string };
@@ -43,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     return {
       title: 'Chi tiết phòng cho thuê | QNS Thuê',
-      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê minh bạch chi phí, liên hệ trực tiếp bên cho thuê.',
+      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê minh bạch chi phí, liên hệ trực tiếp bên cho thuê',
     };
   }
 }
@@ -205,7 +206,7 @@ export default async function ListingDetailPage({ params }: Props) {
                       </span>
                     </div>
                     <p className="mt-1.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
-                      Đội ngũ cộng tác viên địa phương đã đến trực tiếp địa chỉ này, chụp ảnh/quay video xác thực tình trạng phòng trọ, đồng hồ điện nước và trang thiết bị thực tế trước khi niêm yết trên sàn.
+                      Đội ngũ cộng tác viên địa phương đã đến trực tiếp địa chỉ này, chụp ảnh/quay video xác thực tình trạng phòng trọ, đồng hồ điện nước và trang thiết bị thực tế trước khi niêm yết trên sàn
                     </p>
                     {listing.verifiedAt && (
                       <p className="mt-2 text-[11px] text-emerald-700 font-medium">
@@ -276,11 +277,21 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             </div>
 
+            {/* Khối Ước tính chi phí dọn vào ở (MoveInCostEstimator) */}
+            <MoveInCostEstimator
+              initialRentPrice={listing.price}
+              depositAmount={listing.depositAmount}
+              electricityPricePerKwh={listing.electricityPricePerKwh}
+              waterPricePerM3={listing.waterPricePerM3}
+              waterPriceFlat={listing.waterPriceFlat}
+              utilitiesIncluded={listing.utilitiesIncluded}
+            />
+
             {/* Khối Giới thiệu (Chuẩn mẫu Mogi) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-4">
               <h2 className="font-bold text-text-primary text-base">Giới thiệu</h2>
               <div className="whitespace-pre-line text-sm leading-relaxed text-text-secondary">
-                {listing.description || 'Chưa có thông tin mô tả chi tiết cho bất động sản này.'}
+                {listing.description || 'Chưa có thông tin mô tả chi tiết cho bất động sản này'}
               </div>
 
               {/* Báo vi phạm */}
@@ -412,15 +423,15 @@ export default async function ListingDetailPage({ params }: Props) {
                 <ul className="mt-2 space-y-1.5 text-xs text-text-secondary">
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
-                    <span>Luôn đến xem phòng trực tiếp trước khi quyết định đặt cọc.</span>
+                    <span>Luôn đến xem phòng trực tiếp trước khi quyết định đặt cọc</span>
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
-                    <span>Kiểm tra thực tế đồng hồ điện nước, công tơ riêng từng phòng.</span>
+                    <span>Kiểm tra thực tế đồng hồ điện nước, công tơ riêng từng phòng</span>
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
-                    <span>Ký hợp đồng thuê bằng văn bản có đầy đủ chữ ký của hai bên.</span>
+                    <span>Ký hợp đồng thuê bằng văn bản có đầy đủ chữ ký của hai bên</span>
                   </li>
                 </ul>
               </div>

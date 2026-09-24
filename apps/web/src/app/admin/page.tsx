@@ -86,6 +86,7 @@ interface PilotStats {
 interface DashboardData {
   stats?: Stats;
   money?: MoneyStats;
+  financeSummary?: MoneyStats;
   growth?: GrowthStats;
   risk?: RiskStats;
   pilot?: PilotStats;
@@ -150,12 +151,12 @@ export default function AdminDashboardPage() {
     try {
       const res = await authFetch(`/admin/listings/${id}/approve`, { method: 'POST' });
       if (res.ok) {
-        setActionMessage('Đã duyệt tin đăng thành công!');
+        setActionMessage('Đã duyệt tin đăng thành công');
         setTimeout(() => setActionMessage(null), 3000);
         loadDashboard();
       }
     } catch {
-      alert('Có lỗi xảy ra khi duyệt tin.');
+      alert('Có lỗi xảy ra khi duyệt tin');
     }
   }
 
@@ -165,14 +166,14 @@ export default function AdminDashboardPage() {
       const res = await authFetch('/admin/tasks/run-sweep', { method: 'POST' });
       if (res.ok) {
         const sweepRes = await res.json();
-        setActionMessage(sweepRes.message ?? 'Đã hoàn tất quét dọn hệ thống.');
+        setActionMessage(sweepRes.message ?? 'Đã hoàn tất quét dọn hệ thống');
         setTimeout(() => setActionMessage(null), 6000);
         loadDashboard();
       } else {
-        alert('Không thể thực hiện quét dọn.');
+        alert('Không thể thực hiện quét dọn');
       }
     } catch {
-      alert('Lỗi kết nối máy chủ khi quét dọn.');
+      alert('Lỗi kết nối máy chủ khi quét dọn');
     } finally {
       setSweeping(false);
     }
@@ -341,7 +342,7 @@ export default function AdminDashboardPage() {
                 {money.confirmedCashInFormatted}
               </p>
               <p className="text-[11px] text-emerald-600 mt-1">
-                Ghi nhận vào sổ cái FinanceLedger
+                Ghi nhận vào Sổ cái Dòng tiền thực thu (Finance Ledger / FinanceLedger)
               </p>
             </div>
 
@@ -658,7 +659,7 @@ export default function AdminDashboardPage() {
               <div className="p-8 text-center">
                 <p className="text-3xl mb-2">🎉</p>
                 <p className="text-sm font-semibold text-slate-700">Không có tin nào chờ duyệt</p>
-                <p className="text-xs text-slate-400 mt-1">Toàn bộ tin đăng mới đều đã được xử lý.</p>
+                <p className="text-xs text-slate-400 mt-1">Toàn bộ tin đăng mới đều đã được xử lý</p>
               </div>
             ) : (
               recentListings.map((item) => (
@@ -734,7 +735,7 @@ export default function AdminDashboardPage() {
               <div className="p-8 text-center">
                 <p className="text-3xl mb-2">🛡️</p>
                 <p className="text-sm font-semibold text-slate-700">Không có báo cáo vi phạm mới</p>
-                <p className="text-xs text-slate-400 mt-1">Hệ thống đang hoạt động an toàn và minh bạch.</p>
+                <p className="text-xs text-slate-400 mt-1">Hệ thống đang hoạt động an toàn và minh bạch</p>
               </div>
             ) : (
               recentReports.map((rep) => (

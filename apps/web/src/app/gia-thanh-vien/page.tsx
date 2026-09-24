@@ -5,14 +5,14 @@ import { MembershipPricingClient } from './MembershipPricingClient';
 export const metadata: Metadata = {
   title: 'Bảng Giá Gói Hội Viên Đăng Tin Cho Thuê | QNS Thuê',
   description:
-    'Bảng giá gói thành viên đăng tin cho thuê phòng trọ, studio, căn hộ, mặt bằng. Tiếp cận hàng chục ngàn người thuê mỗi tuần với chi phí tối ưu nhất.',
+    'Bảng giá gói thành viên đăng tin cho thuê phòng trọ, studio, căn hộ, mặt bằng — tiếp cận hàng chục ngàn người thuê mỗi tuần với chi phí tối ưu nhất',
   alternates: {
     canonical: '/gia-thanh-vien',
   },
   openGraph: {
     title: 'Bảng Giá Gói Hội Viên Đăng Tin Cho Thuê — QNS Thuê',
     description:
-      'Gói thành viên linh hoạt theo số tin, hỗ trợ mùa cao điểm tựu trường, tối ưu tỷ lệ lấp đầy phòng trọ cho chủ trọ và bên cho thuê.',
+      'Gói thành viên linh hoạt theo số tin, hỗ trợ mùa cao điểm tựu trường, tối ưu tỷ lệ lấp đầy phòng trọ cho chủ trọ và bên cho thuê',
     url: '/gia-thanh-vien',
   },
 };
