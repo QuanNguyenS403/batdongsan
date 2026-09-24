@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { authFetch, isLoggedIn } from '@/lib/auth-client';
+import { SITE_CONFIG } from '@/lib/constants';
 
 interface RevealPhoneButtonProps {
   listingId: string;
@@ -29,7 +30,7 @@ export function RevealPhoneButton({
   async function handleReveal() {
     setError(null);
     if (listingId.startsWith('demo-')) {
-      setError('Đây là tin mẫu thử nghiệm, không có số điện thoại thật.');
+      setError('Đây là tin mẫu thử nghiệm, vui lòng liên hệ hotline chính thức');
       return;
     }
     if (!isLoggedIn()) {
@@ -46,11 +47,12 @@ export function RevealPhoneButton({
         if (onRequireAuth) onRequireAuth();
         return;
       }
-      if (!res.ok) throw new Error('Không lấy được số điện thoại.');
+      if (!res.ok) throw new Error('Không lấy được số liên hệ');
       const data = await res.json();
-      setPhone(data.phone);
-      if (onPhoneRevealed && data.phone) {
-        onPhoneRevealed(data.phone);
+      const revealedPhone = data.phone || SITE_CONFIG.hotline;
+      setPhone(revealedPhone);
+      if (onPhoneRevealed && revealedPhone) {
+        onPhoneRevealed(revealedPhone);
       }
     } catch (err) {
       setError((err as Error).message);
@@ -62,14 +64,14 @@ export function RevealPhoneButton({
   if (phone) {
     return (
       <a
-        href={`tel:${phone}`}
+        href={`tel:${phone.replace(/\s+/g, '')}`}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-[0.99] transition-all"
       >
         <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
         </svg>
         <span>{phone}</span>
-        <span className="text-xs font-normal opacity-90">• Gọi ngay</span>
+        <span className="text-xs font-normal opacity-90">• Gọi người dẫn xem</span>
       </a>
     );
   }
@@ -89,7 +91,7 @@ export function RevealPhoneButton({
           <span className="font-mono text-sm tracking-wide">09•• ••• •••</span>
         </div>
         <span className="text-xs font-semibold underline underline-offset-2">
-          {loading ? 'Đang lấy số...' : 'Bấm để hiện số'}
+          {loading ? 'Đang lấy số...' : 'Bấm để hiện số người dẫn xem'}
         </span>
       </button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}

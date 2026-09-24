@@ -9,7 +9,7 @@ export default function NotFound() {
         </div>
         <h1 className="text-3xl font-bold text-text-primary">Không tìm thấy trang</h1>
         <p className="mt-3 text-sm text-text-secondary leading-relaxed">
-          Bất động sản hoặc trang bạn đang tìm kiếm không tồn tại, đã bị gỡ bỏ hoặc địa chỉ liên kết không chính xác.
+          Bất động sản hoặc trang bạn đang tìm kiếm không tồn tại, đã bị gỡ bỏ hoặc địa chỉ liên kết không chính xác
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">

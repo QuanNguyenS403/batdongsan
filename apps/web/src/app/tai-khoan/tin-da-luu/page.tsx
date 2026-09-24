@@ -10,24 +10,28 @@ export default function TinDaLuuPage() {
   const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
 
-  const loadSaved = useCallback(async () => {
+  const loadSaved = useCallback(async (targetPage = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await authFetch('/listings/saved/mine?pageSize=50');
+      const res = await authFetch(`/listings/saved/mine?page=${targetPage}&pageSize=10`);
       if (res.status === 401) {
-        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         setListings([]);
         return;
       }
-      if (!res.ok) throw new Error('Không tải được danh sách tin đã lưu.');
+      if (!res.ok) throw new Error('Không tải được danh sách tin đã lưu');
       const data: ListingListResponse = await res.json();
       setListings(data.items);
       setTotal(data.pagination.total);
+      setPage(data.pagination.page);
+      setTotalPages(data.pagination.totalPages || 1);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -44,8 +48,8 @@ export default function TinDaLuuPage() {
   }, [router]);
 
   useEffect(() => {
-    if (checkedAuth) loadSaved();
-  }, [checkedAuth, loadSaved]);
+    if (checkedAuth) loadSaved(page);
+  }, [checkedAuth, loadSaved, page]);
 
   async function handleUnsave(listingId: string) {
     try {
@@ -56,7 +60,7 @@ export default function TinDaLuuPage() {
         setTotal((prev) => Math.max(0, prev - 1));
       }
     } catch {
-      alert('Không thể bỏ lưu tin đăng. Vui lòng thử lại.');
+      alert('Không thể bỏ lưu tin đăng. Vui lòng thử lại');
     }
   }
 
@@ -98,57 +102,86 @@ export default function TinDaLuuPage() {
               </div>
             </div>
           ) : (
-            <div className="mt-6 divide-y divide-surface-border rounded-2xl border border-surface-border bg-white shadow-card overflow-hidden">
-              {listings.map((listing) => (
-                <div key={listing.id} className="flex items-center gap-4 p-4 hover:bg-slate-50/50 transition-colors">
-                  <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                    {listing.images[0]?.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={listing.images[0].imageUrl} alt={listing.title} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[10px] text-text-muted">Chưa có ảnh</div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/tin/${listing.slug}`}
-                      className="line-clamp-1 font-semibold text-text-primary hover:text-brand transition-colors"
-                    >
-                      {listing.title}
-                    </Link>
-                    <p className="mt-0.5 text-xs text-text-muted">{listing.addressDetail ?? listing.location.name}</p>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-text-secondary">
-                      <span className="font-bold text-brand text-sm">{formatPrice(listing.price)}</span>
-                      {listing.transactionType === 'rent' && <span className="text-[11px] text-text-muted">/tháng</span>}
-                      <span>•</span>
-                      <span>{listing.areaM2} m²</span>
-                      {listing.bedrooms != null && (
-                        <>
-                          <span>•</span>
-                          <span>{listing.bedrooms} PN</span>
-                        </>
+            <>
+              <div className="mt-6 divide-y divide-surface-border rounded-2xl border border-surface-border bg-white shadow-card overflow-hidden">
+                {listings.map((listing) => (
+                  <div key={listing.id} className="flex items-center gap-4 p-4 hover:bg-slate-50/50 transition-colors">
+                    <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                      {listing.images[0]?.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={listing.images[0].imageUrl} alt={listing.title} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[10px] text-text-muted">Chưa có ảnh</div>
                       )}
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/tin/${listing.slug}`}
+                        className="line-clamp-1 font-semibold text-text-primary hover:text-brand transition-colors"
+                      >
+                        {listing.title}
+                      </Link>
+                      <p className="mt-0.5 text-xs text-text-muted">{listing.addressDetail ?? listing.location.name}</p>
+                      <div className="mt-1 flex items-center gap-3 text-xs text-text-secondary">
+                        <span className="font-bold text-brand text-sm">{formatPrice(listing.price)}</span>
+                        {listing.transactionType === 'rent' && <span className="text-[11px] text-text-muted">/tháng</span>}
+                        <span>•</span>
+                        <span>{listing.areaM2} m²</span>
+                        {listing.bedrooms != null && (
+                          <>
+                            <span>•</span>
+                            <span>{listing.bedrooms} PN</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <Link
+                        href={`/tin/${listing.slug}`}
+                        className="rounded-xl border border-surface-border bg-white px-3.5 py-1.5 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand transition-colors"
+                      >
+                        Xem chi tiết
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleUnsave(listing.id)}
+                        className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="Bỏ lưu tin này"
+                      >
+                        Bỏ lưu
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <Link
-                      href={`/tin/${listing.slug}`}
-                      className="rounded-xl border border-surface-border bg-white px-3.5 py-1.5 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand transition-colors"
-                    >
-                      Xem chi tiết
-                    </Link>
+                ))}
+              </div>
+
+              {/* Phân trang (FE-N08) */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between rounded-2xl border border-surface-border bg-white px-6 py-4 shadow-sm">
+                  <p className="text-xs text-text-muted">
+                    Hiển thị trang <strong>{page}</strong> / <strong>{totalPages}</strong> (tổng số {total} tin đã lưu)
+                  </p>
+                  <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => handleUnsave(listing.id)}
-                      className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
-                      title="Bỏ lưu tin này"
+                      disabled={page <= 1 || loading}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="px-3.5 py-1.5 bg-white border border-surface-border text-text-primary text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-surface-muted transition-colors"
                     >
-                      Bỏ lưu
+                      ← Trang trước
+                    </button>
+                    <button
+                      type="button"
+                      disabled={page >= totalPages || loading}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3.5 py-1.5 bg-white border border-surface-border text-text-primary text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-surface-muted transition-colors"
+                    >
+                      Trang sau →
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </>
       )}

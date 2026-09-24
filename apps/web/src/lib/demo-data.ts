@@ -370,7 +370,7 @@ export const DEMO_SPACE_RENT_LISTINGS: Listing[] = [
     title: '[MẪU] Cho thuê mặt bằng kinh doanh phố lớn Nguyễn Trãi, mặt tiền 6m',
     slug: 'cho-thue-mat-bang-kinh-doanh-pho-lon-id4',
     description:
-      'Vị trí đắc địa ngay tuyến phố sầm uất, mặt tiền rộng 6m thông thoáng, vỉa hè rộng để xe thoải mái. Thích hợp kinh doanh cafe, showroom, văn phòng, nha khoa. Hợp đồng dài hạn chính chủ.',
+      'Vị trí đắc địa ngay tuyến phố sầm uất, mặt tiền rộng 6m thông thoáng, vỉa hè rộng để xe thoải mái. Thích hợp kinh doanh cafe, showroom, văn phòng, nha khoa. Hợp đồng dài hạn trực tiếp bên cho thuê.',
     transactionType: 'rent',
     propertyType: 'mat_bang',
     price: '25000000',

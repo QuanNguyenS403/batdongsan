@@ -4,5 +4,6 @@
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["src", "prisma", "scripts"]
+  "include": ["src", "prisma", "scripts"],
+  "exclude": ["scripts/test-wave-0.ts"]
 }

@@ -1,20 +1,56 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (12/09/2026 — NÂNG CẤP THƯƠNG HIỆU QNS.VN, BỘ LỌC ĐH TOÀN QUỐC & THUẬT TOÁN TÌM PHÒNG GẦN NHẤT THEO ĐỊA CHỈ):**
-1. **Thương hiệu & Giao diện (Rebrand QNS.vn)**:
-   - Đổi toàn bộ thương hiệu từ `BĐS.vn` thành `QNS.vn` (Header logo 'Q' + 'QNS.vn', Footer, layout metadata, OpenGraph siteName, trang giới thiệu, điều khoản, liên hệ `contact@qns.vn`).
-   - Thêm mục "🏠 Trang chủ" cạnh mục "🏢 Căn hộ" trên thanh tab danh mục Hero, thanh Header Navigation và hàng Quick Categories.
-   - Loại bỏ hàng nút trường ĐH hardcode thừa thãi (`🎓 Gần trường ĐH: ...`) dưới thanh tìm kiếm Hero.
-2. **Danh mục các trường Đại học toàn quốc (`vietnam-universities.ts`)**:
-   - Xây dựng dataset chuẩn hóa hơn 80 trường Đại học lớn tại Việt Nam, phân nhóm 5 vùng miền (TP.HCM, Hà Nội, Đà Nẵng & Miền Trung, Cần Thơ & Miền Tây, Miền Bắc khác).
-   - Tích hợp vào `SearchFilterBar.tsx` với giao diện phân nhóm `<optgroup>` trực quan.
-   - Cập nhật seed database với toạ độ thực tế của toàn bộ các trường ĐH.
-3. **Thuật toán tìm phòng gần nhất theo địa chỉ (`ListingsService`)**:
-   - Geocoding & Coordinate Resolution: Nhận diện tọa độ địa chỉ từ từ khóa hoặc tọa độ gửi lên (qua database các trường, các tuyến đường/quận huyện trọng điểm và Nominatim geocode fallback).
-   - Tính toán khoảng cách (Haversine formula) và sắp xếp phòng gần nhất lên đầu (`distanceMeters ASC`).
-   - Hiển thị badge khoảng cách trực quan (`📍 Cách địa chỉ ~350m`) trên `ListingCard.tsx`.
-4. **Kiểm thử**:
-   - `tsc --noEmit` cho cả `@batdongsan/web` và `@batdongsan/api`: Đạt 100% không lỗi.
+**Việc vừa hoàn thành (24/09/2026 — HOÀN THÀNH 100% PHASE KỸ THUẬT P0 VÀ NGHIỆM THU 30 CA AT CHO PIVOT MÔI GIỚI CHO THUÊ):**
+1. **Chuyển đổi triệt để Mô hình Kinh doanh (Pivot 24/09/2026)**:
+   - Thay thế toàn bộ mô hình marketplace bán gói membership sang môi giới trực tiếp có người thật (Đức Quân) điều phối độc quyền.
+   - Thu phí thành công 40% (một lần) từ chủ nhà khi giao dịch thành công (đủ 4 điều kiện §6.2), khách thuê 100% miễn phí (0 đồng phí môi giới). Nền tảng không thu hộ tiền thuê, không giữ cọc.
+   - Toàn bộ tin đăng hiển thị hotline chuyên viên Đức Quân (`0981 753 082`), vai trò "Người tư vấn và trực tiếp dẫn xem", bảo mật tuyệt đối SĐT riêng của chủ nhà khỏi mã nguồn HTML và API public.
+2. **Hoàn tất 14/14 Hạng mục Kỹ thuật P0 (DEV-01 → DEV-14)**:
+   - DEV-01: Đồng bộ đặc tả CLAUDE.md, README.md, TRANG-THAI-TRIEN-KHAI.md, RUNBOOK.md.
+   - DEV-02: 20 Prisma models pivot (AgencyProfile, AgentProfile, OwnerProfile, RentalUnit, AgreementUnit, RentalRequest, Introduction, Viewing, UnitReservation, RentalDeal, DepositRecord, HandoverRecord, Commission, Payment, PaymentAllocation, Document, DocumentAcceptance, ConsentRecord, Dispute).
+   - DEV-03: Endpoint `revealPhone` chỉ trả hotline Quân, thêm `GET /listings/:id/contact`, sửa web components.
+   - DEV-04: LeadsService tự động gán Quan, tạo RentalRequest, che SĐT/email với chủ nhà, cấm chủ đổi status.
+   - DEV-05: OtpService lưu Redis TTL 300s, CSPRNG `crypto.randomInt`, chống mượn OTP, chống replay.
+   - DEV-06: Cổng duyệt tin bắt buộc HĐ-01 active và thẩm quyền xác thực (BR-05).
+   - DEV-07: ViewingsService chống trùng giờ dẫn Quan (AT-10), maxDailyViewings (3/ngày), chống giữ trùng phòng (AT-11), hủy/đổi giờ lưu vết (AT-12).
+   - DEV-08: DealsService quản lý hợp đồng thuê, cọc (held_by_owner), bàn giao (HandoverRecord), tách bạch thuê thành công khỏi thu phí.
+   - DEV-09: CommissionsService tính phí 40% bằng BigInt basis points (4000/10000), hạn 2 ngày làm việc, DB unique constraint `@unique([dealId])` chống trùng phí tuyệt đối (BR-12, AT-18).
+   - DEV-10: PaymentsService đối soát mã giao dịch ngân hàng thật `externalBankTxId` (BR-11, AT-20), xử lý trả thiếu, trả đủ, phân bổ nhiều deal, hoàn phí ghi sổ cái FinanceLedger.
+   - DEV-11: Chặn mua mới membership (GAP-07), bỏ gate nâng cấp trả tiền tại ListingsService.create (GAP-08), bảo toàn planSnapshot gói cũ, cập nhật trang giá sang mô hình 40%.
+   - DEV-12: Transactional Outbox ghi lead và thông báo nguyên tử (GAP-12), retry exponential backoff và chuyển Dead Letter Queue FAILED (AT-27).
+   - DEV-13: Đồng bộ nội dung công khai (/dieu-khoan, /gioi-thieu, /chinh-sach, /moi-gioi, /thue, /tin/[slug], /page.tsx), xóa sạch lời hứa liên hệ trực tiếp chủ trọ (GAP-13), tuân thủ GEMINI.md § 8 (không dấu chấm cuối câu).
+   - DEV-14: Thực thi kiểm thử toàn diện, đạt 100% PASS cho 30 ca AT-01 → AT-30 với dữ liệu thực tế.
+3. **Giải quyết 16/16 Khoảng cách (GAP-01 → GAP-16)**: Toàn bộ chuyển sang trạng thái `resolved`.
+4. **Nghiệm thu 30/30 Ca Kiểm Thử Bắt Buộc (AT-01 → AT-30)**:
+   - Đã viết và chạy các script kiểm thử chuyên biệt: `test-dev03-at01-03.js`, `test-dev04-at06.js`, `test-dev05-at08.js`, `test-dev06-at04.js`, `test-dev07-at10-12.js`, `test-dev08-at13-14.js`, `test-dev09-at15-18.js`, `test-dev10-at20-23.js`, `test-dev11-at29.js`, `test-dev12-at27.js`, `test-dev14-batch1.js`, `test-dev14-batch2.js`.
+   - Kết quả: 30/30 ca PASS 100% với dữ liệu chứng minh thực tế trên CSDL PostgreSQL.
+5. **Đóng các Gate G1 → G4 (Kỹ thuật và Diễn tập sẵn sàng)**:
+   - Gate G1 (Liên hệ và nguồn cung): ĐÓNG (AT-01..04 PASS).
+   - Gate G2 (Lead và lịch bạn dẫn): ĐÓNG (AT-05..12 PASS).
+   - Gate G3 (Hợp đồng và tiền): ĐÓNG (AT-13..23 PASS).
+   - Gate G4 (Diễn tập và nghiệm thu): ĐÓNG (AT-24..30 PASS, monorepo build PASS 100%).
+   - Gate G5 (Pilot 14 ngày, 10-20 phòng): Giữ nguyên cờ `payments_enabled=false` ở cấu hình. Chờ Quan hoàn tất các điều kiện pháp lý LEG-01..08 và ra quyết định kinh doanh.
+
+**Việc hoàn thành trước đó (21/09/2026 — RÀ SOÁT TOÀN DIỆN HỆ THỐNG & KHẮC PHỤC TRIỆT ĐỂ TOÀN BỘ LỖ HỔNG):**
+1. **Khắc phục lỗ hổng leo quyền & bypass MFA trong `CapabilitiesGuard` (`apps/api/src/common/guards/capabilities.guard.ts`)**:
+   - **Xóa bỏ hoàn toàn việc tin tưởng headers từ client**: Loại bỏ `req.headers['x-admin-role']` và `req.headers['x-admin-capabilities']` (nguy cơ bị attacker/kiểm duyệt viên giả mạo header để leo quyền SuperAdmin). SuperAdmin chỉ được nhận diện duy nhất từ máy chủ (`ADMIN_PHONE` / `ADMIN_BOOTSTRAP_PHONE`). Các quyền hạn khác đọc từ `ADMIN_CAPABILITIES_CONFIG` hoặc token context.
+   - **Triệt tiêu mã MFA bypass `123456`**: Xóa bỏ hoàn toàn fallback code `123456`. Khi `ADMIN_MFA_ENFORCED=true`, bắt buộc phải khớp chính xác `ADMIN_MFA_SECRET` đã cấu hình; nếu thiếu secret ở production, ứng dụng dừng khởi động qua `assert-env.ts`.
+2. **Khắc phục lệch pha DTO & MFA trên giao diện Admin (`apps/web/src/app/admin/duyet-goi/page.tsx` & `nguoi-dung/page.tsx`)**:
+   - **Đồng bộ DTO Phê duyệt gói (F02)**: Bổ sung bắt buộc thu thập `confirmedAmount` (số nguyên > 0) và `externalTransactionId` (mã giao dịch ngân hàng/sao kê thực tế), xóa bỏ gợi ý "để trống sẽ tạo tự động" gây lỗi 400 Bad Request.
+   - **Đồng bộ DTO Hoàn tiền gói (F03)**: Bổ sung bắt buộc thu thập `externalTransactionId` và `reason`, hỗ trợ `refundAmount` tùy chọn, khắc phục hoàn toàn lỗi 400 Bad Request.
+   - **Tích hợp MFA Challenge UI**: Khi endpoint yêu cầu MFA (403), giao diện tự động bật popup yêu cầu mã `x-admin-mfa-code` và retry an toàn cho cả Duyệt gói, Hoàn tiền và Khóa/mở khóa người dùng (`toggleBlockUser`).
+3. **Bảo mật Anti-Scraping Số điện thoại (`apps/api/src/modules/listings/listings.service.ts`)**:
+   - Bổ sung hạn mức chống cào dữ liệu SĐT (tối đa 30 số mới/giờ/tài khoản). Nếu xem lại tin đã từng reveal thì không tính vào hạn mức và không trùng lặp record.
+   - Bổ sung ghi nhận `AuditEvent` bất biến cho thao tác gỡ tin (`listing.removed`) và đánh dấu đã cho thuê (`listing.mark_rented`).
+4. **Bổ sung HTTP Security Headers & Cấu hình Mạng (`apps/web/next.config.mjs` & `apps/api/src/main.ts`)**:
+   - Cấu hình chuẩn `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`.
+   - Nâng cấp CORS hỗ trợ đa tên miền qua `CORS_ORIGINS` hoặc `NEXT_PUBLIC_SITE_URL`.
+   - Cập nhật `.env.example` đầy đủ các biến bảo mật `ADMIN_PHONE`, `ADMIN_MFA_ENFORCED`, `ADMIN_MFA_SECRET`, `ADMIN_CAPABILITIES_CONFIG`, `CORS_ORIGINS`.
+5. **Xác minh chất lượng & Runtime Evidence**:
+   - `tsc --noEmit` API & Web: 0 lỗi.
+   - `static-lint-check.js`: PASS 5/5.
+   - Grep từ cấm: 0 kết quả cho `"100% chính chủ"`, `"không lừa đảo"`, `"an toàn tuyệt đối"`, `"chắc chắn có khách"`.
+   - `turbo run build`: PASS 3/3 packages (@batdongsan/database, @batdongsan/api, @batdongsan/web) với 31/31 static & dynamic routes trong 1m12s.
 
 ---
 

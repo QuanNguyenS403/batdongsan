@@ -4,9 +4,10 @@ import { ListingsService } from './listings.service';
 import { UploadsModule } from '../uploads/uploads.module';
 import { EmailModule } from '../email/email.module';
 import { GoogleSheetsModule } from '../google-sheets/google-sheets.module';
+import { OutboxModule } from '../outbox/outbox.module';
 
 @Module({
-  imports: [UploadsModule, EmailModule, GoogleSheetsModule],
+  imports: [UploadsModule, EmailModule, GoogleSheetsModule, OutboxModule],
   controllers: [ListingsController],
   providers: [ListingsService],
   exports: [ListingsService],

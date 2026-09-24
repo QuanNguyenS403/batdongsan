@@ -78,7 +78,22 @@ export default function DangTinPage() {
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files) return;
+    setError(null);
     const files = Array.from(e.target.files);
+
+    // FE-N05 & FE-N19: Kiểm tra giới hạn tối đa 20 ảnh và < 10MB mỗi file
+    if (selectedFiles.length + files.length > 20) {
+      setError(`Bạn chỉ được tải lên tối đa 20 ảnh (hiện đã chọn ${selectedFiles.length} ảnh)`);
+      return;
+    }
+
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError(`Ảnh "${file.name}" vượt quá dung lượng 10MB cho phép`);
+        return;
+      }
+    }
+
     setSelectedFiles((prev) => [...prev, ...files]);
     const newUrls = files.map((f) => URL.createObjectURL(f));
     setPreviewUrls((prev) => [...prev, ...newUrls]);
@@ -106,9 +121,23 @@ export default function DangTinPage() {
     const form = new FormData(e.currentTarget);
     const locationIdValue = form.get('locationId');
     if (!locationIdValue) {
-      setError('Vui lòng chọn khu vực bất động sản cho thuê.');
+      setError('Vui lòng chọn khu vực bất động sản cho thuê');
       return;
     }
+
+    // FE-N06 & FE-N07: Thu thập tiện ích và biểu phí điện nước minh bạch
+    const amenities = {
+      dieuHoa: form.get('amenity_dieuHoa') === 'on',
+      nongLanh: form.get('amenity_nongLanh') === 'on',
+      tuLanh: form.get('amenity_tuLanh') === 'on',
+      mayGiat: form.get('amenity_mayGiat') === 'on',
+      banCong: form.get('amenity_banCong') === 'on',
+      thangMay: form.get('amenity_thangMay') === 'on',
+      khoaVanTay: form.get('amenity_khoaVanTay') === 'on',
+      gioTuDo: form.get('amenity_gioTuDo') === 'on',
+      choDeXe: form.get('amenity_choDeXe') === 'on',
+      bepRieng: form.get('amenity_bepRieng') === 'on',
+    };
 
     const payload = {
       transactionType: 'rent',
@@ -120,12 +149,19 @@ export default function DangTinPage() {
       price: Number(form.get('price')),
       depositAmount: form.get('depositAmount') ? Number(form.get('depositAmount')) : undefined,
       minLeaseMonths: form.get('minLeaseMonths') ? Number(form.get('minLeaseMonths')) : undefined,
+      electricityPricePerKwh: form.get('electricityPricePerKwh') ? Number(form.get('electricityPricePerKwh')) : undefined,
+      waterPricePerM3: form.get('waterPricePerM3') ? Number(form.get('waterPricePerM3')) : undefined,
+      waterPriceFlat: form.get('waterPriceFlat') ? Number(form.get('waterPriceFlat')) : undefined,
+      utilitiesIncluded: form.get('utilitiesIncluded') === 'on',
+      amenities,
       areaM2: Number(form.get('areaM2')),
       bedrooms: form.get('bedrooms') ? Number(form.get('bedrooms')) : undefined,
       bathrooms: form.get('bathrooms') ? Number(form.get('bathrooms')) : undefined,
     };
 
     setLoading(true);
+    let createdListingId: string | null = null;
+
     try {
       const res = await authFetch('/listings', {
         method: 'POST',
@@ -135,13 +171,14 @@ export default function DangTinPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message ?? 'Đăng tin thất bại, vui lòng kiểm tra lại thông tin.');
+        throw new Error(data.message ?? 'Đăng tin thất bại, vui lòng kiểm tra lại thông tin');
       }
 
       const newListing = await res.json();
+      createdListingId = newListing?.id ? String(newListing.id) : null;
 
-      // FE-06: Upload ảnh trực tiếp qua FormData tới API /listings/:id/images
-      if (selectedFiles.length > 0 && newListing?.id) {
+      // FE-06 / FE-N19: Upload ảnh trực tiếp qua FormData tới API /listings/:id/images
+      if (selectedFiles.length > 0 && createdListingId) {
         setUploadStatus(`Đang tải lên ${selectedFiles.length} ảnh thực tế...`);
         const formData = new FormData();
         selectedFiles.forEach((file) => {
@@ -156,7 +193,7 @@ export default function DangTinPage() {
         if (!imgRes.ok) {
           const errData = await imgRes.json().catch(() => ({}));
           throw new Error(
-            `Tin đăng #${newListing.id} đã được tạo thành công, nhưng tải ảnh lên bị lỗi: ${errData.message ?? 'Không thể tải ảnh'}. Vui lòng vào trang "Quản lý tin" để thêm ảnh bổ sung.`,
+            `Tin đăng #${createdListingId} đã tạo thành công, nhưng tải ảnh gặp sự cố: ${errData.message ?? 'Lỗi tải ảnh'}. Bạn có thể vào "Quản lý tin" để bổ sung ảnh sau mà không sợ mất tin!`,
           );
         }
       }
@@ -310,6 +347,97 @@ export default function DangTinPage() {
               placeholder="VD: 6 hoặc 12"
               className="input-field"
             />
+          </div>
+        </div>
+
+        {/* Biểu phí điện nước & Chi phí sinh hoạt minh bạch (USP QNS Thuê) */}
+        <div className="rounded-xl border border-surface-border bg-slate-50/60 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-text-primary">
+              Biểu phí sinh hoạt minh bạch (Rõ chi phí)
+            </span>
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-brand">
+              <input type="checkbox" name="utilitiesIncluded" className="rounded text-brand" />
+              <span>Đã bao gồm điện nước trong giá thuê</span>
+            </label>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">Tiền điện (VNĐ/kWh)</label>
+              <input
+                name="electricityPricePerKwh"
+                type="number"
+                placeholder="VD: 3500 hoặc 4000"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">Tiền nước theo m³ (VNĐ/m³)</label>
+              <input
+                name="waterPricePerM3"
+                type="number"
+                placeholder="VD: 25000"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-text-secondary">Hoặc nước khoán (VNĐ/người/tháng)</label>
+              <input
+                name="waterPriceFlat"
+                type="number"
+                placeholder="VD: 100000"
+                className="input-field"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Tiện ích có sẵn trong phòng / căn hộ */}
+        <div className="rounded-xl border border-surface-border bg-slate-50/60 p-4 space-y-2.5">
+          <span className="text-xs font-bold uppercase tracking-wider text-text-primary block">
+            Tiện ích có sẵn
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 text-xs">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_dieuHoa" defaultChecked className="rounded text-brand" />
+              <span>❄️ Điều hòa</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_nongLanh" defaultChecked className="rounded text-brand" />
+              <span>🚿 Nóng lạnh</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_tuLanh" className="rounded text-brand" />
+              <span>🧊 Tủ lạnh</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_mayGiat" className="rounded text-brand" />
+              <span>🧺 Máy giặt</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_banCong" className="rounded text-brand" />
+              <span>🌿 Ban công</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_thangMay" className="rounded text-brand" />
+              <span>🛗 Thang máy</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_khoaVanTay" className="rounded text-brand" />
+              <span>🔐 Khóa vân tay</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_gioTuDo" defaultChecked className="rounded text-brand" />
+              <span>🕒 Giờ giấc tự do</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_choDeXe" defaultChecked className="rounded text-brand" />
+              <span>🛵 Chỗ để xe</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="amenity_bepRieng" className="rounded text-brand" />
+              <span>🍳 Bếp nấu riêng</span>
+            </label>
           </div>
         </div>
 

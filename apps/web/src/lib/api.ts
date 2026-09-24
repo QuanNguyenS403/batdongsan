@@ -40,6 +40,8 @@ export interface Listing {
   verificationStatus?: 'chua_xac_thuc' | 'cho_xac_thuc' | 'da_xac_thuc';
   verifiedAt?: string | null;
   publishedAt: string | null;
+  refreshedAt?: string | null;
+  createdAt?: string;
   viewCount: number;
   images: { imageUrl: string; sortOrder: number }[];
   location: { id: number; name: string; slug: string; level: string };

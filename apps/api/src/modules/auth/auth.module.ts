@@ -9,6 +9,7 @@ import { OtpService } from './otp.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { CapabilitiesGuard } from '../../common/guards/capabilities.guard';
 
 @Module({
   imports: [PassportModule, JwtModule.register({})],
@@ -21,6 +22,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard }, // toàn bộ API yêu cầu JWT trừ route @Public()
     { provide: APP_GUARD, useClass: RolesGuard }, // kiểm tra vai trò nếu route có @Roles()
+    { provide: APP_GUARD, useClass: CapabilitiesGuard }, // F12: kiểm tra capability và admin MFA nếu có @RequireCapabilities/@RequireAdminMfa
   ],
   exports: [OtpService],
 })

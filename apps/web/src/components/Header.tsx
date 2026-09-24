@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { authFetch, clearTokens, getAccessToken } from '@/lib/auth-client';
+import { SITE_CONFIG } from '@/lib/constants';
 
 interface CurrentUser {
   id: string;
@@ -64,13 +65,24 @@ export function Header() {
       setChecked(true);
       return;
     }
+    // FE-N11: Đồng bộ auth state, chỉ xóa token khi server trả về 401 Unauthorized thật, không xóa khi lỗi mạng tạm thời
     authFetch('/auth/me')
       .then((res) => {
-        if (!res.ok) throw new Error('unauthorized');
+        if (res.status === 401) {
+          clearTokens();
+          setUser(null);
+          return null;
+        }
+        if (!res.ok) return null; // Lỗi 5xx hoặc timeout tạm thời: giữ token
         return res.json();
       })
-      .then((data) => setUser(data))
-      .catch(() => clearTokens())
+      .then((data) => {
+        if (data) setUser(data);
+      })
+      .catch((err) => {
+        // Lỗi mạng hoặc circuit breaker: giữ token, không tự ý đăng xuất người dùng
+        console.warn('Lỗi kết nối /auth/me tạm thời:', err);
+      })
       .finally(() => setChecked(true));
   }, []);
 
@@ -94,21 +106,21 @@ export function Header() {
         <div className="container-max flex h-14 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-base font-bold text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-base font-black text-white ring-1 ring-white/20">
               Q
             </span>
             <span className="text-base font-bold tracking-tight text-white">
-              QNS&apos;bds<span className="font-normal opacity-80">.vn</span>
+              QNS <span className="font-normal opacity-90">Thuê</span>
             </span>
           </Link>
 
           <div className="flex items-center gap-5 text-sm text-white/90">
             <a
-              href="tel:0981753082"
+              href={`tel:${SITE_CONFIG.hotline.replace(/\s+/g, '')}`}
               className="hidden sm:inline-flex items-center gap-1.5 hover:text-white transition-colors"
             >
               <span>📞</span>
-              <span>Hotline/Zalo: <strong className="text-white">0981 753 082</strong></span>
+              <span>Hotline: <strong className="text-white">{SITE_CONFIG.hotline}</strong></span>
             </a>
             {!checked ? (
               <div className="h-5 w-20 skeleton rounded" />

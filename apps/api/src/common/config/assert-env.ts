@@ -54,6 +54,46 @@ export function assertRequiredSecrets(): void {
           `khi biến này chưa được đổi sang giá trị bí mật thật.`,
       );
     }
+
+    if (isProduction && value.length < 32) {
+      throw new Error(
+        `[BẢO MẬT YẾU] Biến môi trường ${key} có độ dài quá ngắn (${value.length} ký tự).\n` +
+          `→ Trong môi trường production, secret ký JWT phải có độ dài tối thiểu 32 ký tự để chống brute-force.`,
+      );
+    }
+  }
+
+  // BẮT BUỘC có DATABASE_URL
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      `[CẤU HÌNH THIẾU] Biến DATABASE_URL chưa được thiết lập. Ứng dụng không thể kết nối tới cơ sở dữ liệu PostgreSQL.`,
+    );
+  }
+
+  // BẢO MẬT BOOTSTRAP ADMIN (RB-14)
+  if (isProduction && process.env.ADMIN_BOOTSTRAP_PASSWORD) {
+    const adminPass = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+    if (adminPass === 'Admin123456!@#' || adminPass.length < 12) {
+      throw new Error(
+        `[BẢO MẬT NGUY HIỂM] ADMIN_BOOTSTRAP_PASSWORD đang sử dụng mật khẩu mặc định hoặc quá ngắn trong môi trường production.\n` +
+          `→ Vui lòng sử dụng mật khẩu ngẫu nhiên phức tạp tối thiểu 12 ký tự hoặc bỏ cấu hình tự động bootstrap trên production.`,
+      );
+    }
+  }
+
+  // BẢO MẬT MFA ADMIN (F12)
+  if (process.env.ADMIN_MFA_ENFORCED === 'true') {
+    const mfaSecret = process.env.ADMIN_MFA_SECRET;
+    if (!mfaSecret) {
+      throw new Error(
+        `[CẤU HÌNH MFA THIẾU] ADMIN_MFA_ENFORCED=true nhưng ADMIN_MFA_SECRET chưa được thiết lập trong .env.`,
+      );
+    }
+    if (isProduction && (mfaSecret === '123456' || mfaSecret.length < 8)) {
+      throw new Error(
+        `[BẢO MẬT MFA YẾU] ADMIN_MFA_SECRET không được dùng giá trị mặc định "123456" và phải có tối thiểu 8 ký tự trong môi trường production.`,
+      );
+    }
   }
 
   // BẢO MẬT & VẬN HÀNH (P0-06): Trong môi trường production, BẮT BUỘC có nhà cung cấp SMS thật và API key hợp lệ
@@ -74,11 +114,28 @@ export function assertRequiredSecrets(): void {
           `Ứng dụng sẽ dừng khởi động để tránh người dùng bị kẹt không nhận được OTP.`,
       );
     }
-    if (!process.env.SMS_API_KEY && !process.env.TWILIO_ACCOUNT_SID) {
-      throw new Error(
-        `[CẤU HÌNH PRODUCTION THIẾU SECRET] SMS_PROVIDER="${provider}" nhưng thiếu SMS_API_KEY hoặc TWILIO_ACCOUNT_SID trong .env.\n` +
-          `→ Vui lòng điền API credentials thật của nhà mạng SMS trước khi deploy production.`,
-      );
+    if (provider === 'esms') {
+      if (!process.env.SMS_API_KEY || !process.env.SMS_SECRET_KEY) {
+        throw new Error(
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="esms" yêu cầu cả SMS_API_KEY và SMS_SECRET_KEY trong .env.`,
+        );
+      }
+    } else if (provider === 'twilio') {
+      if (
+        !process.env.TWILIO_ACCOUNT_SID ||
+        !process.env.TWILIO_AUTH_TOKEN ||
+        !process.env.TWILIO_PHONE_NUMBER
+      ) {
+        throw new Error(
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="twilio" yêu cầu đầy đủ TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN và TWILIO_PHONE_NUMBER trong .env.`,
+        );
+      }
+    } else if (provider === 'speedsms') {
+      if (!process.env.SMS_API_KEY) {
+        throw new Error(
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="speedsms" yêu cầu SMS_API_KEY trong .env.`,
+        );
+      }
     }
   }
 }

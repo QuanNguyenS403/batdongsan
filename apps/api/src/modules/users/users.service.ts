@@ -14,14 +14,14 @@ export class UsersService {
       where: { id },
       select: { id: true, fullName: true, avatarUrl: true, role: true, createdAt: true, isIdVerified: true },
     });
-    if (!user) throw new NotFoundException('Không tìm thấy người dùng.');
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
     return { ...user, id: user.id.toString() };
   }
 
   /** Cập nhật thông tin tài khoản (fullName, avatarUrl) */
   async updateProfile(id: bigint, dto: UpdateUserDto) {
     const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('Không tìm thấy người dùng.');
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 
     const updated = await this.prisma.user.update({
       where: { id },
@@ -39,20 +39,24 @@ export class UsersService {
   async changePassword(id: bigint, dto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user || !user.passwordHash) {
-      throw new UnauthorizedException('Không tìm thấy tài khoản.');
+      throw new UnauthorizedException('Không tìm thấy tài khoản');
     }
 
     const matches = await bcrypt.compare(dto.currentPassword, user.passwordHash);
     if (!matches) {
-      throw new BadRequestException('Mật khẩu hiện tại không chính xác.');
+      throw new BadRequestException('Mật khẩu hiện tại không chính xác');
     }
 
     const newHash = await bcrypt.hash(dto.newPassword, 10);
+    // RB-01 & BE-02: Tăng tokenVersion để lập tức thu hồi mọi JWT token cũ của user
     await this.prisma.user.update({
       where: { id },
-      data: { passwordHash: newHash },
+      data: {
+        passwordHash: newHash,
+        tokenVersion: { increment: 1 },
+      },
     });
 
-    return { message: 'Đổi mật khẩu thành công.' };
+    return { message: 'Đổi mật khẩu thành công' };
   }
 }

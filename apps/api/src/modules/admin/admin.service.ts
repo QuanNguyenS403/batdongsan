@@ -25,15 +25,43 @@ export class AdminService {
     private readonly outboxService: OutboxService,
   ) {}
 
-  /** Thống kê số liệu trang Dashboard quản trị */
+  /** Thống kê số liệu trang Dashboard quản trị (3 bảng MONEY / GROWTH / RISK theo §8.1) */
   async getDashboard() {
+    const now = new Date();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     const [
+      // Basic counts & listings
       pendingListingsCount,
       newReportsCount,
       activeListingsCount,
       totalUsersCount,
       recentPendingListings,
       recentReports,
+
+      // MONEY §8.1
+      cashInAgg,
+      refundsAgg,
+      pendingQuotedAgg,
+      unverifiedLedgerCount,
+
+      // GROWTH §8.1
+      verifiedActiveListings,
+      newListingsLast7Days,
+      activeLandlordsCount,
+      totalLeadsCount,
+      leadsLast7Days,
+      contactedLeadsCount,
+      paidMembershipsCount,
+      phoneRevealsCount,
+      verifiedSupplyLast7DaysCount,
+
+      // RISK §8.1
+      expiredListingsCount,
+      rejectedListingsCount,
+      blockedUsersCount,
+      outboxDlqCount,
+      recentAuditEvents,
     ] = await this.prisma.$transaction([
       this.prisma.listing.count({ where: { status: ListingStatus.pending } }),
       this.prisma.listingReport.count({ where: { status: 'pending' } }),
@@ -72,9 +100,145 @@ export class AdminService {
           },
         },
       }),
+
+      // MONEY §8.1
+      this.prisma.financeLedger.aggregate({
+        where: { transactionType: 'cash_in' },
+        _sum: { amount: true },
+      }),
+      this.prisma.financeLedger.aggregate({
+        where: { transactionType: 'refund' },
+        _sum: { amount: true },
+      }),
+      this.prisma.userMembership.aggregate({
+        where: { status: 'pending' },
+        _sum: { quotedAmount: true },
+      }),
+      this.prisma.financeLedger.count({
+        where: { externalTransactionId: { startsWith: 'UNVERIFIED' } },
+      }),
+
+      // GROWTH §8.1
+      this.prisma.listing.count({
+        where: { status: ListingStatus.active, verificationStatus: 'da_xac_thuc' },
+      }),
+      this.prisma.listing.count({
+        where: { createdAt: { gte: sevenDaysAgo } },
+      }),
+      this.prisma.user.count({
+        where: { listings: { some: { status: ListingStatus.active } } },
+      }),
+      this.prisma.lead.count(),
+      this.prisma.lead.count({
+        where: { createdAt: { gte: sevenDaysAgo } },
+      }),
+      this.prisma.lead.count({
+        where: { status: { in: ['contacted', 'converted'] } },
+      }),
+      this.prisma.userMembership.count({
+        where: { status: 'active' },
+      }),
+      this.prisma.phoneRevealLog.count(),
+      this.prisma.listing.count({
+        where: {
+          status: ListingStatus.active,
+          expiresAt: { gt: now },
+          owner: { isBlocked: false },
+          OR: [
+            { refreshedAt: { gte: sevenDaysAgo } },
+            { AND: [{ refreshedAt: null }, { publishedAt: { gte: sevenDaysAgo } }] },
+          ],
+        },
+      }),
+
+      // RISK §8.1
+      this.prisma.listing.count({ where: { status: ListingStatus.expired } }),
+      this.prisma.listing.count({ where: { status: ListingStatus.rejected } }),
+      this.prisma.user.count({ where: { isBlocked: true } }),
+      this.prisma.outboxEvent.count({ where: { status: 'FAILED' } }),
+      this.prisma.auditEvent.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+      }),
     ]);
 
+    const confirmedCashIn = cashInAgg._sum?.amount ?? BigInt(0);
+    const refundsPaid = refundsAgg._sum?.amount ?? BigInt(0);
+    const netCashFlow = confirmedCashIn - refundsPaid;
+    const pendingQuotedTotal = pendingQuotedAgg._sum?.quotedAmount ?? BigInt(0);
+
+    const totalProcessed = activeListingsCount + rejectedListingsCount + pendingListingsCount;
+    const rejectionRate =
+      totalProcessed > 0 ? ((rejectedListingsCount / totalProcessed) * 100).toFixed(1) + '%' : '0.0%';
+
     return {
+      // 1. BẢNG TIỀN TỆ (MONEY) — Thu/chi thực ở đâu, lệch gì?
+      money: {
+        confirmedCashIn: confirmedCashIn.toString(),
+        confirmedCashInFormatted: Number(confirmedCashIn).toLocaleString('vi-VN') + ' đ',
+        refundsPaid: refundsPaid.toString(),
+        refundsPaidFormatted: Number(refundsPaid).toLocaleString('vi-VN') + ' đ',
+        netCashFlow: netCashFlow.toString(),
+        netCashFlowFormatted: Number(netCashFlow).toLocaleString('vi-VN') + ' đ',
+        pendingQuotedTotal: pendingQuotedTotal.toString(),
+        pendingQuotedTotalFormatted: Number(pendingQuotedTotal).toLocaleString('vi-VN') + ' đ',
+        pendingRefundObligations: '0 đ',
+        unverifiedTransactionsCount: unverifiedLedgerCount,
+        operationalCosts: 'Chưa đo được - Chi phí đối tác chưa trừ',
+        disclaimer: 'Tiền vào ròng ≠ Lợi nhuận; Gói pending ≠ Doanh thu.',
+      },
+
+      // 2. BẢNG TĂNG TRƯỞNG (GROWTH) — Nguồn cung tốt và kết nối có tăng không?
+      growth: {
+        totalActiveListings: activeListingsCount,
+        verifiedActiveListings,
+        verifiedSupplyLast7DaysCount,
+        newListingsLast7Days,
+        activeLandlordsCount,
+        totalLeadsCount,
+        leadsLast7Days,
+        contactedLeadsCount,
+        paidMembershipsCount,
+        conversionFunnel: {
+          activeListings: activeListingsCount,
+          phoneReveals: phoneRevealsCount,
+          leadsCreated: totalLeadsCount,
+          leadsContacted: contactedLeadsCount,
+        },
+        disclaimer: 'Lead ≠ Hợp đồng; Bấm xem SĐT ≠ Khách đủ điều kiện.',
+      },
+
+      // PILOT KPI §4.5 & §8.1
+      pilot: {
+        verifiedSupplyCount: verifiedSupplyLast7DaysCount,
+        verifiedSupplyRatio: (activeListingsCount > 0 ? ((verifiedSupplyLast7DaysCount / activeListingsCount) * 100).toFixed(1) : '100.0') + '%',
+        targetVerifiedSupplyRatio: '≥ 90%',
+        isVerifiedSupplyMet: activeListingsCount === 0 || (verifiedSupplyLast7DaysCount / activeListingsCount) >= 0.9,
+
+        leadResponseRate: (totalLeadsCount > 0 ? ((contactedLeadsCount / totalLeadsCount) * 100).toFixed(1) : '100.0') + '%',
+        targetLeadResponseRate: '≥ 80%',
+        isLeadResponseMet: totalLeadsCount === 0 || (contactedLeadsCount / totalLeadsCount) >= 0.8,
+
+        violationRate: (activeListingsCount > 0 ? ((newReportsCount / activeListingsCount) * 100).toFixed(1) : '0.0') + '%',
+        targetViolationRate: '< 2%',
+        isViolationRateMet: activeListingsCount === 0 || (newReportsCount / activeListingsCount) < 0.02,
+
+        disclaimer: 'Chỉ số đo lường thực tế giai đoạn Pilot theo §4.5 & §8.1. Không dùng số liệu giả định.',
+      },
+
+      // 3. BẢNG RỦI RO & BẢO VỆ (RISK) — Có vấn đề gì cần xử lý ngay?
+      risk: {
+        pendingReportsCount: newReportsCount,
+        expiredListingsCount,
+        rejectedListingsCount,
+        rejectionRate,
+        outboxDlqCount,
+        blockedUsersCount,
+        recentAuditEvents: recentAuditEvents.map(serialize),
+        disclaimer: 'Kiểm soát rủi ro dựa trên dữ liệu đối soát thực tế; hệ thống giám sát và đối soát liên tục theo tiêu chuẩn.',
+      },
+
+      // Tương thích ngược với các trường cũ của frontend
       stats: {
         pendingListingsCount,
         newReportsCount,
@@ -276,13 +440,13 @@ export class AdminService {
       },
     });
     if (!listing) {
-      throw new NotFoundException('Không tìm thấy tin đăng.');
+      throw new NotFoundException('Không tìm thấy tin đăng');
     }
 
     // BE-13 / CAS check: Chỉ duyệt tin đang ở trạng thái pending
     if (listing.status !== ListingStatus.pending) {
       throw new ConflictException(
-        `Tin đăng không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${listing.status}). Có thể đã được xử lý bởi quản trị viên khác.`,
+        `Tin đăng không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${listing.status}), có thể đã được xử lý bởi quản trị viên khác`,
       );
     }
 
@@ -311,32 +475,79 @@ export class AdminService {
       }
     }
 
-    const currentActiveCount = await this.prisma.listing.count({
+    // BR-05 & AT-04: Cổng kiểm tra hợp đồng dịch vụ môi giới HĐ-01
+    // Tin đăng bắt buộc phải có HĐ-01 hiệu lực của chủ trước khi được duyệt nhận khách thật
+    const activeAgreement = await this.prisma.ownerServiceAgreement.findFirst({
       where: {
         ownerId: listing.ownerId,
-        status: ListingStatus.active,
+        status: 'active',
+      },
+      include: {
+        ownerProfile: true,
+        agreementUnits: true,
       },
     });
 
-    if (currentActiveCount >= maxAllowedListings) {
+    if (!activeAgreement) {
       throw new BadRequestException(
-        `Người dùng [${listing.owner.fullName ?? listing.owner.phone}] đã đạt giới hạn tối đa ${maxAllowedListings} tin active của ${planName}. Người dùng cần nâng cấp gói để tiếp tục duyệt tin này lên sàn!`,
+        'Tin đăng chưa có Hợp đồng dịch vụ môi giới (HĐ-01) có hiệu lực, không thể duyệt nhận khách thật',
       );
+    }
+
+    if (activeAgreement.ownerProfile && !activeAgreement.ownerProfile.isVerified) {
+      throw new BadRequestException(
+        'Hồ sơ thẩm quyền cho thuê của người ký chưa được xác thực, không thể duyệt nhận khách thật',
+      );
+    }
+
+    if (listing.unitId && activeAgreement.agreementUnits.length > 0) {
+      const hasUnit = activeAgreement.agreementUnits.some(
+        (u) => u.unitId === listing.unitId && u.status === 'active',
+      );
+      if (!hasUnit) {
+        throw new BadRequestException(
+          'Phòng này chưa được bổ sung vào phụ lục danh mục phòng (PL-01) của Hợp đồng dịch vụ môi giới',
+        );
+      }
     }
 
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 ngày
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.listing.update({
-        where: { id },
+    // RB-05: Atomic CAS trong transaction: Quota count + updateMany status: 'pending'
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const currentActiveCount = await tx.listing.count({
+        where: {
+          ownerId: listing.ownerId,
+          status: ListingStatus.active,
+        },
+      });
+
+      if (currentActiveCount >= maxAllowedListings) {
+        throw new BadRequestException(
+          `Người dùng [${listing.owner.fullName ?? listing.owner.phone}] đã đạt giới hạn tối đa ${maxAllowedListings} tin active của ${planName}. Người dùng cần nâng cấp gói để tiếp tục duyệt tin này lên sàn!`,
+        );
+      }
+
+      const updateResult = await tx.listing.updateMany({
+        where: {
+          id,
+          status: ListingStatus.pending,
+        },
         data: {
           status: ListingStatus.active,
           publishedAt: now,
           expiresAt,
           rejectionReason: null,
         },
-      }),
-      this.prisma.auditEvent.create({
+      });
+
+      if (updateResult.count === 0) {
+        throw new ConflictException(
+          'Tin đăng đã được xử lý bởi quản trị viên khác hoặc không còn ở trạng thái chờ duyệt.',
+        );
+      }
+
+      await tx.auditEvent.create({
         data: {
           actorId: adminId,
           action: 'listing.approve',
@@ -344,25 +555,53 @@ export class AdminService {
           entityId: id.toString(),
           beforeState: { status: listing.status },
           afterState: { status: ListingStatus.active, publishedAt: now.toISOString(), expiresAt: expiresAt.toISOString() },
-          reason: 'Admin phê duyệt tin đăng lên sàn thành công',
+          reason: 'Admin phê duyệt tin đăng lên sàn thành công (CAS atomic)',
         },
-      }),
-    ]);
+      });
 
-    // Thông báo email cho chủ tin
-    try {
-      void this.emailService.sendListingApprovedToLandlord(listing, listing.owner.phone);
-    } catch {
-      // Safe-fail
+      // RB-06: Ghi nhận sự kiện duyệt tin vào Transactional Outbox trong cùng transaction
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: id.toString(),
+          eventType: 'EMAIL_LISTING_APPROVED',
+          payload: {
+            listing: { id: id.toString(), title: listing.title },
+            landlordPhone: listing.owner.phone,
+          },
+        },
+        tx,
+      );
+
+      return tx.listing.findUnique({
+        where: { id },
+        include: {
+          images: { select: { imageUrl: true, sortOrder: true }, orderBy: { sortOrder: 'asc' } },
+          location: { select: { id: true, name: true, slug: true, level: true } },
+          project: { select: { id: true, name: true } },
+          owner: { select: { id: true, fullName: true, phone: true, avatarUrl: true, createdAt: true } },
+          nearbyUniversities: {
+            select: {
+              distanceMeters: true,
+              travelTimeMinutes: true,
+              university: { select: { id: true, name: true, abbreviation: true, slug: true } },
+            },
+          },
+        },
+      });
+    });
+
+    if (!updated) {
+      throw new NotFoundException('Không thể tìm thấy tin đăng sau khi cập nhật');
     }
 
     return {
-      message: 'Đã duyệt tin đăng thành công.',
+      message: 'Đã duyệt tin đăng thành công',
       listing: serialize(updated),
     };
   }
 
-  /** Từ chối tin đăng (BE-13: CAS + AF-12: AuditEvent) */
+  /** Từ chối tin đăng (RB-05 & BE-13: CAS updateMany where pending + AF-12: AuditEvent + RB-06: Outbox) */
   async rejectListing(id: bigint, reason: string, adminId?: bigint) {
     const listing = await this.prisma.listing.findUnique({
       where: { id },
@@ -371,24 +610,35 @@ export class AdminService {
       },
     });
     if (!listing) {
-      throw new NotFoundException('Không tìm thấy tin đăng.');
+      throw new NotFoundException('Không tìm thấy tin đăng');
     }
 
     if (listing.status !== ListingStatus.pending) {
       throw new ConflictException(
-        `Tin đăng không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${listing.status}). Không thể từ chối.`,
+        `Tin đăng không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${listing.status}), không thể từ chối`,
       );
     }
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.listing.update({
-        where: { id },
+    // RB-05: CAS updateMany where status: pending
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updateResult = await tx.listing.updateMany({
+        where: {
+          id,
+          status: ListingStatus.pending,
+        },
         data: {
           status: ListingStatus.rejected,
           rejectionReason: reason,
         },
-      }),
-      this.prisma.auditEvent.create({
+      });
+
+      if (updateResult.count === 0) {
+        throw new ConflictException(
+          'Tin đăng đã được xử lý bởi quản trị viên khác hoặc không còn ở trạng thái chờ duyệt.',
+        );
+      }
+
+      await tx.auditEvent.create({
         data: {
           actorId: adminId,
           action: 'listing.reject',
@@ -398,18 +648,40 @@ export class AdminService {
           afterState: { status: ListingStatus.rejected, rejectionReason: reason },
           reason,
         },
-      }),
-    ]);
+      });
 
-    // Thông báo email cho chủ tin kèm lý do
-    try {
-      void this.emailService.sendListingRejectedToLandlord(listing, listing.owner.phone, reason);
-    } catch {
-      // Safe-fail
+      // RB-06: Ghi nhận sự kiện từ chối tin vào Transactional Outbox
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: id.toString(),
+          eventType: 'EMAIL_LISTING_REJECTED',
+          payload: {
+            listing: { id: id.toString(), title: listing.title },
+            landlordPhone: listing.owner.phone,
+            reason,
+          },
+        },
+        tx,
+      );
+
+      return tx.listing.findUnique({
+        where: { id },
+        include: {
+          images: { select: { imageUrl: true, sortOrder: true }, orderBy: { sortOrder: 'asc' } },
+          location: { select: { id: true, name: true, slug: true, level: true } },
+          project: { select: { id: true, name: true } },
+          owner: { select: { id: true, fullName: true, phone: true, avatarUrl: true, createdAt: true } },
+        },
+      });
+    });
+
+    if (!updated) {
+      throw new NotFoundException('Không thể tìm thấy tin đăng sau khi từ chối');
     }
 
     return {
-      message: 'Đã từ chối tin đăng.',
+      message: 'Đã từ chối tin đăng',
       listing: serialize(updated),
     };
   }
@@ -417,7 +689,7 @@ export class AdminService {
   /** Đánh dấu tin là "Đã xác thực thực tế" (Giai đoạn 2 Trust-as-a-Service + Audit) */
   async verifyListing(id: bigint, adminId: bigint) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
 
     const now = new Date();
     const [updated] = await this.prisma.$transaction([
@@ -443,7 +715,7 @@ export class AdminService {
     ]);
 
     return {
-      message: 'Đã xác thực thực tế tin đăng thành công.',
+      message: 'Đã xác thực thực tế tin đăng thành công',
       listing: serialize(updated),
     };
   }
@@ -451,7 +723,7 @@ export class AdminService {
   /** Gỡ bỏ huy hiệu xác thực thực tế */
   async unverifyListing(id: bigint, adminId: bigint) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.listing.update({
@@ -476,7 +748,7 @@ export class AdminService {
     ]);
 
     return {
-      message: 'Đã gỡ bỏ huy hiệu xác thực thực tế.',
+      message: 'Đã gỡ bỏ huy hiệu xác thực thực tế',
       listing: serialize(updated),
     };
   }
@@ -533,7 +805,7 @@ export class AdminService {
   async resolveReport(id: bigint, action: 'remove_listing' | 'dismiss') {
     const report = await this.prisma.listingReport.findUnique({ where: { id } });
     if (!report) {
-      throw new NotFoundException('Không tìm thấy báo cáo.');
+      throw new NotFoundException('Không tìm thấy báo cáo');
     }
 
     const now = new Date();
@@ -549,13 +821,13 @@ export class AdminService {
           data: { status: 'resolved', resolvedAt: now },
         }),
       ]);
-      return { message: 'Đã gỡ bỏ tin đăng vi phạm và hoàn tất xử lý báo cáo.' };
+      return { message: 'Đã gỡ bỏ tin đăng vi phạm và hoàn tất xử lý báo cáo' };
     } else {
       await this.prisma.listingReport.update({
         where: { id },
         data: { status: 'dismissed', resolvedAt: now },
       });
-      return { message: 'Đã bỏ qua báo cáo vi phạm.' };
+      return { message: 'Đã bỏ qua báo cáo vi phạm' };
     }
   }
 
@@ -626,12 +898,12 @@ export class AdminService {
   /** Khóa hoặc Mở khóa tài khoản */
   async toggleBlockUser(id: bigint, adminId: bigint) {
     if (id === adminId) {
-      throw new BadRequestException('Bạn không thể tự khóa tài khoản của chính mình.');
+      throw new BadRequestException('Bạn không thể tự khóa tài khoản của chính mình');
     }
 
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException('Không tìm thấy người dùng.');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     const nextState = !user.isBlocked;
@@ -665,8 +937,8 @@ export class AdminService {
 
     return {
       message: nextState
-        ? `Đã khóa tài khoản của người dùng ${user.fullName ?? user.phone}.`
-        : `Đã mở khóa tài khoản của người dùng ${user.fullName ?? user.phone}.`,
+        ? `Đã khóa tài khoản của người dùng ${user.fullName ?? user.phone}`
+        : `Đã mở khóa tài khoản của người dùng ${user.fullName ?? user.phone}`,
       user: serialize(updated),
     };
   }
@@ -680,5 +952,100 @@ export class AdminService {
   async retryOutboxDlq(id: bigint) {
     const ok = await this.outboxService.retryDlqEvent(id);
     return { success: ok, message: ok ? 'Đã kích hoạt thử lại sự kiện' : 'Không tìm thấy sự kiện FAILED' };
+  }
+
+  /**
+   * DEV-06: Tạo Hợp đồng dịch vụ môi giới (HĐ-01) cho chủ nhà
+   */
+  async createOwnerAgreement(data: {
+    ownerId: bigint;
+    agreementCode: string;
+    commissionRateBps?: number;
+    termsVersion?: string;
+    status?: string;
+    validFrom?: Date;
+    validUntil?: Date;
+    unitIds?: bigint[];
+  }) {
+    const owner = await this.prisma.user.findUnique({ where: { id: data.ownerId } });
+    if (!owner) throw new NotFoundException('Không tìm thấy chủ nhà');
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const agreement = await tx.ownerServiceAgreement.create({
+        data: {
+          agreementCode: data.agreementCode,
+          ownerId: data.ownerId,
+          status: data.status || 'active',
+          commissionRateBps: data.commissionRateBps || 4000,
+          termsVersion: data.termsVersion || '1.0',
+          validFrom: data.validFrom || new Date(),
+          validUntil: data.validUntil,
+        },
+      });
+
+      if (data.unitIds && data.unitIds.length > 0) {
+        for (const unitId of data.unitIds) {
+          const unit = await tx.rentalUnit.findUnique({ where: { id: unitId } });
+          await tx.agreementUnit.create({
+            data: {
+              agreementId: agreement.id,
+              unitId,
+              baseMonthlyRent: BigInt(unit?.areaM2 ? Number(unit.areaM2) * 100000 : 3000000),
+              status: 'active',
+            },
+          });
+        }
+      }
+
+      return agreement;
+    });
+
+    return serialize(created);
+  }
+
+  /**
+   * DEV-06: Lấy danh sách hợp đồng dịch vụ môi giới của một chủ nhà
+   */
+  async getOwnerAgreements(ownerId: bigint) {
+    const agreements = await this.prisma.ownerServiceAgreement.findMany({
+      where: { ownerId },
+      include: {
+        agreementUnits: {
+          include: { unit: true },
+        },
+        ownerProfile: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return agreements.map(serialize);
+  }
+
+  /**
+   * DEV-06: Cập nhật xác thực hồ sơ thẩm quyền cho thuê (OwnerProfile)
+   */
+  async verifyOwnerProfile(userId: bigint, isVerified: boolean) {
+    let profile = await this.prisma.ownerProfile.findUnique({ where: { userId } });
+    if (!profile) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+      profile = await this.prisma.ownerProfile.create({
+        data: {
+          userId,
+          legalFullName: user.fullName || 'Chủ nhà chưa đặt tên',
+          authorityType: 'owner',
+          isVerified,
+          verifiedAt: isVerified ? new Date() : null,
+        },
+      });
+    } else {
+      profile = await this.prisma.ownerProfile.update({
+        where: { userId },
+        data: {
+          isVerified,
+          verifiedAt: isVerified ? new Date() : null,
+        },
+      });
+    }
+    return serialize(profile);
   }
 }

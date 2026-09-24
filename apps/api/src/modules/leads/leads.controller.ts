@@ -17,6 +17,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ParseBigIntPipe } from '../../common/pipes/parse-bigint.pipe';
+import { AdminCapability, RequireCapabilities } from '../../common/decorators/capabilities.decorator';
 
 interface AuthUser {
   id: bigint;
@@ -45,6 +46,7 @@ export class LeadsController {
 
   @ApiBearerAuth()
   @Roles('admin')
+  @RequireCapabilities(AdminCapability.LEADS_SUPPORT)
   @ApiOperation({ summary: 'Admin quản lý toàn bộ lead queue của sàn' })
   @Get('admin')
   findAdminLeads(@Query() query: QueryLeadsDto) {

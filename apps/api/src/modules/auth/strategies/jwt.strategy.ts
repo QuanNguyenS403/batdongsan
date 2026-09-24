@@ -28,8 +28,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const user = await this.prisma.user.findUnique({ where: { id: BigInt(payload.sub) } });
     if (!user || user.isBlocked) return null;
 
-    // BE-02: Instant session revocation — nếu tokenVersion trong JWT không khớp phiên hiện tại của User, từ chối ngay lập tức
-    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.tokenVersion) {
+    // RB-01 & BE-02: Instant session revocation — bắt buộc token phải có tokenVersion và khớp chính xác phiên hiện tại
+    if (payload.tokenVersion === undefined || payload.tokenVersion !== user.tokenVersion) {
       return null;
     }
 

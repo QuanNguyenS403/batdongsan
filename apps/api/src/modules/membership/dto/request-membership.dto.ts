@@ -15,4 +15,13 @@ export class RequestMembershipDto {
   @IsString()
   @MaxLength(500, { message: 'Ghi chú không được vượt quá 500 ký tự' })
   paymentNote?: string;
+
+  @ApiPropertyOptional({
+    description: 'Khóa chống gửi trùng lặp (Idempotency Key)',
+    example: 'idem-mb-req-abc12345',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128, { message: 'idempotencyKey không được vượt quá 128 ký tự' })
+  idempotencyKey?: string;
 }

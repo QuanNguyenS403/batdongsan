@@ -18,6 +18,10 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { MembershipModule } from './modules/membership/membership.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
+import { ViewingsModule } from './modules/viewings/viewings.module';
+import { DealsModule } from './modules/deals/deals.module';
+import { CommissionsModule } from './modules/commissions/commissions.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -52,6 +56,10 @@ import { AppController } from './app.controller';
     MembershipModule,
     LeadsModule,
     OutboxModule,
+    ViewingsModule,
+    DealsModule,
+    CommissionsModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

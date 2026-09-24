@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authFetch, isLoggedIn } from '@/lib/auth-client';
+import { SITE_CONFIG } from '@/lib/constants';
 
 interface SellerLead {
   id: string;
@@ -15,6 +16,13 @@ interface SellerLead {
   status: string;
   createdAt: string;
   notes: string | null;
+  isPhoneMasked?: boolean;
+  assignedAgent?: {
+    id?: string;
+    fullName?: string;
+    phone?: string;
+    role?: string;
+  };
   listing?: {
     id: string;
     title: string;
@@ -23,12 +31,32 @@ interface SellerLead {
   };
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  new: { label: 'Khách mới', color: 'bg-emerald-100 text-emerald-800' },
-  contacted: { label: 'Đã liên hệ', color: 'bg-blue-100 text-blue-800' },
-  qualified: { label: 'Hẹn xem phòng', color: 'bg-purple-100 text-purple-800' },
-  completed: { label: 'Đã thuê xong', color: 'bg-teal-100 text-teal-800' },
-  spam: { label: 'Spam / Không nhu cầu', color: 'bg-gray-100 text-gray-700' },
+const STATUS_LABELS: Record<string, { label: string; color: string; desc: string }> = {
+  new: {
+    label: 'Khách mới',
+    color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    desc: 'Đức Quân đang tiếp nhận nhu cầu',
+  },
+  contacted: {
+    label: 'Đang tư vấn',
+    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    desc: 'Đức Quân đã liên hệ và sàng lọc nhu cầu',
+  },
+  qualified: {
+    label: 'Đang xếp lịch xem',
+    color: 'bg-purple-100 text-purple-800 border-purple-200',
+    desc: 'Đang sắp xếp lịch hẹn dẫn khách xem phòng',
+  },
+  completed: {
+    label: 'Đã thuê thành công',
+    color: 'bg-teal-100 text-teal-800 border-teal-200',
+    desc: 'Giao dịch thuê đã hoàn tất và bàn giao phòng',
+  },
+  spam: {
+    label: 'Hủy / Spam',
+    color: 'bg-gray-100 text-gray-700 border-gray-200',
+    desc: 'Nhu cầu không phù hợp hoặc khách hủy lịch',
+  },
 };
 
 export default function MyLeadsPage() {
@@ -38,7 +66,6 @@ export default function MyLeadsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -65,26 +92,6 @@ export default function MyLeadsPage() {
     loadMyLeads();
   }, [page, router]);
 
-  async function handleStatusChange(id: string, newStatus: string) {
-    setUpdatingId(id);
-    try {
-      const res = await authFetch(`/leads/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        setLeads((prev) =>
-          prev.map((lead) => (lead.id === id ? { ...lead, status: newStatus } : lead)),
-        );
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUpdatingId(null);
-    }
-  }
-
   return (
     <div className="min-h-screen bg-surface-muted py-8">
       <div className="container-max">
@@ -92,14 +99,14 @@ export default function MyLeadsPage() {
         <nav className="mb-4 flex items-center gap-2 text-xs text-text-muted">
           <Link href="/" className="hover:text-brand transition-colors">Trang chủ</Link>
           <span>›</span>
-          <span className="text-text-secondary font-medium">Khách thuê liên hệ</span>
+          <span className="text-text-secondary font-medium">Khách thuê quan tâm phòng</span>
         </nav>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">Khách thuê liên hệ trực tiếp</h1>
+            <h1 className="text-2xl font-bold text-text-primary">Tiến độ khách thuê quan tâm phòng</h1>
             <p className="text-sm text-text-muted mt-1">
-              Bạn có <span className="font-semibold text-brand">{total}</span> khách thuê đã để lại thông tin liên hệ cho các phòng của bạn.
+              Có <span className="font-semibold text-brand">{total}</span> yêu cầu đang được {SITE_CONFIG.agentName} ({SITE_CONFIG.agentRole}) trực tiếp điều phối và dẫn xem
             </p>
           </div>
           <Link
@@ -119,17 +126,20 @@ export default function MyLeadsPage() {
           ) : leads.length === 0 ? (
             <div className="rounded-2xl border border-surface-border bg-white p-12 text-center">
               <span className="text-4xl">📬</span>
-              <p className="mt-3 font-semibold text-text-primary">Chưa có khách thuê nào để lại liên hệ</p>
+              <p className="mt-3 font-semibold text-text-primary">Chưa có khách thuê nào gửi yêu cầu</p>
               <p className="mt-1 text-xs text-text-secondary">
-                Khi khách hàng xem tin của bạn và bấm "Liên hệ môi giới / chủ trọ", thông tin của họ sẽ xuất hiện tại đây.
+                Khi có khách để lại nhu cầu xem phòng, chuyên viên tư vấn sẽ tiếp nhận và cập nhật tiến độ tại đây
               </p>
             </div>
           ) : (
             leads.map((lead) => {
               const statusInfo = STATUS_LABELS[lead.status] || {
                 label: lead.status,
-                color: 'bg-gray-100 text-gray-800',
+                color: 'bg-gray-100 text-gray-800 border-gray-200',
+                desc: 'Đang xử lý',
               };
+              const agentName = lead.assignedAgent?.fullName || SITE_CONFIG.agentName;
+
               return (
                 <div
                   key={lead.id}
@@ -137,31 +147,27 @@ export default function MyLeadsPage() {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
                     <div>
-                      <span className="text-base font-bold text-text-primary">{lead.fullName}</span>
-                      <span className="ml-2 text-xs text-text-muted font-normal">
-                        ({new Date(lead.createdAt).toLocaleString('vi-VN')})
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-bold text-text-primary">{lead.fullName}</span>
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-mono text-slate-600">
+                          {lead.phone}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        Gửi lúc: {new Date(lead.createdAt).toLocaleString('vi-VN')}
+                      </p>
                     </div>
+
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-text-muted">Trạng thái:</span>
-                      <select
-                        value={lead.status}
-                        disabled={updatingId === lead.id}
-                        onChange={(e) => handleStatusChange(lead.id, e.target.value)}
-                        className={`text-xs font-semibold rounded-lg px-2.5 py-1 border transition-colors cursor-pointer ${statusInfo.color}`}
-                      >
-                        <option value="new">Khách mới</option>
-                        <option value="contacted">Đã liên hệ</option>
-                        <option value="qualified">Hẹn xem phòng</option>
-                        <option value="completed">Đã thuê xong</option>
-                        <option value="spam">Spam / Hủy</option>
-                      </select>
+                      <span className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold ${statusInfo.color}`}>
+                        {statusInfo.label}
+                      </span>
                     </div>
                   </div>
 
                   {lead.listing && (
                     <div className="text-xs text-text-secondary">
-                      <span>Phòng quan tâm: </span>
+                      <span className="text-text-muted">Phòng quan tâm: </span>
                       <Link
                         href={`/tin/${lead.listing.slug}`}
                         target="_blank"
@@ -178,26 +184,48 @@ export default function MyLeadsPage() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 pt-1">
-                    <a
-                      href={`tel:${lead.phone}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm"
-                    >
-                      <span>📞 Gọi ngay:</span>
-                      <span className="font-mono font-bold">{lead.phone}</span>
-                    </a>
-                    {lead.email && (
-                      <a
-                        href={`mailto:${lead.email}`}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                      >
-                        ✉️ Gửi Email
-                      </a>
-                    )}
+                  {/* Thông tin điều phối bởi người môi giới (Đức Quân) */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
+                    <div className="flex items-center gap-1.5 text-text-secondary">
+                      <span className="font-semibold text-brand">👤 Người phụ trách dẫn khách:</span>
+                      <span>{agentName}</span>
+                      <span className="text-text-muted">• Hotline {SITE_CONFIG.hotline}</span>
+                    </div>
+
+                    <div className="text-[11px] text-text-muted italic">
+                      {statusInfo.desc}
+                    </div>
                   </div>
                 </div>
               );
             })
+          )}
+
+          {/* Phân trang */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between rounded-2xl border border-surface-border bg-white px-6 py-4 shadow-sm">
+              <p className="text-xs text-text-muted">
+                Hiển thị trang <strong>{page}</strong> / <strong>{totalPages}</strong> (tổng số {total} yêu cầu)
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="px-3.5 py-1.5 bg-white border border-surface-border text-text-primary text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-surface-muted transition-colors"
+                >
+                  ← Trang trước
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-3.5 py-1.5 bg-white border border-surface-border text-text-primary text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-surface-muted transition-colors"
+                >
+                  Trang sau →
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

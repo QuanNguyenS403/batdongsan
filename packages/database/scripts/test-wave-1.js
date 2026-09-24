@@ -58,6 +58,16 @@ class InMemoryDatabase {
     });
   }
 
+  async $transaction(arg) {
+    if (typeof arg === 'function') {
+      return arg(this);
+    }
+    if (Array.isArray(arg)) {
+      return Promise.all(arg);
+    }
+    return arg;
+  }
+
   get listing() {
     return {
       findUnique: async ({ where }) => {
@@ -187,7 +197,10 @@ async function runWave1Tests() {
   console.log('====================================================\n');
 
   const db = new InMemoryDatabase();
-  const leadsService = new LeadsService(db);
+  const mockOutboxService = {
+    recordEvent: async () => {},
+  };
+  const leadsService = new LeadsService(db, mockOutboxService);
 
   // ── Test 1: P0-02 Submit lead thành công & Persist DB ──
   await itAsync('P0-02: Submit lead hợp lệ lưu thành công vào CSDL và trả về ID', async () => {

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma, ListingStatus, TransactionType } from '@batdongsan/database';
 import slugify from 'slugify';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -7,6 +7,7 @@ import { UpdateListingDto } from './dto/update-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { EmailService } from '../email/email.service';
 import { GoogleSheetsService } from '../google-sheets/google-sheets.service';
+import { OutboxService } from '../outbox/outbox.service';
 
 const PUBLIC_LISTING_SELECT = {
   id: true,
@@ -36,11 +37,21 @@ const PUBLIC_LISTING_SELECT = {
   verifiedAt: true,
   publishedAt: true,
   expiresAt: true,
+  refreshedAt: true,
   viewCount: true,
   createdAt: true,
   images: { select: { imageUrl: true, sortOrder: true }, orderBy: { sortOrder: 'asc' as const } },
   location: { select: { id: true, name: true, slug: true, level: true } },
   project: { select: { id: true, name: true, slug: true } },
+  contactAgent: {
+    select: {
+      id: true,
+      displayName: true,
+      workPhone: true,
+      avatarUrl: true,
+      bio: true,
+    },
+  },
   owner: { select: { id: true, fullName: true, avatarUrl: true, createdAt: true, isPhoneVerified: true, isIdVerified: true, isBlocked: true } },
   nearbyUniversities: {
     select: {
@@ -52,7 +63,7 @@ const PUBLIC_LISTING_SELECT = {
     },
     orderBy: { distanceMeters: 'asc' as const },
   },
-  // CHÚ Ý: KHÔNG select owner.phone ở đây — số điện thoại chỉ trả qua endpoint reveal-phone.
+  // CHÚ Ý: Tuyệt đối KHÔNG select owner.phone — số điện thoại riêng của chủ không công khai (GAP-02, BR-01).
 } satisfies Prisma.ListingSelect;
 
 function serialize<T extends Record<string, any>>(obj: T): any {
@@ -65,6 +76,7 @@ export class ListingsService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly googleSheetsService: GoogleSheetsService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   /**
@@ -620,7 +632,7 @@ export class ListingsService {
     }
 
     const match = idOrSlug.match(/-id(\d+)$/) ?? idOrSlug.match(/^(\d+)$/);
-    if (!match) throw new NotFoundException('Đường dẫn tin đăng không hợp lệ.');
+    if (!match) throw new NotFoundException('Đường dẫn tin đăng không hợp lệ');
     const id = BigInt(match[1]);
 
     const listing = await this.prisma.listing.findUnique({
@@ -636,7 +648,7 @@ export class ListingsService {
       (listing.expiresAt && listing.expiresAt <= now) ||
       (listing as any).owner?.isBlocked
     ) {
-      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn.');
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn');
     }
 
     // Tăng view count (fire-and-forget, không chặn response)
@@ -654,7 +666,7 @@ export class ListingsService {
   async findOneForOwner(id: bigint, requester: { id: bigint; role: string }) {
     await this.assertOwnership(id, requester);
     const listing = await this.prisma.listing.findUnique({ where: { id }, select: PUBLIC_LISTING_SELECT });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
     return serialize(listing);
   }
 
@@ -690,120 +702,165 @@ export class ListingsService {
   }
 
   async create(ownerId: bigint, dto: CreateListingDto) {
-    // 1. Kiểm tra hạn mức số tin đăng theo gói thành viên của người dùng
-    const now = new Date();
-    const activeMembership = await this.prisma.userMembership.findFirst({
-      where: {
-        userId: ownerId,
-        status: 'active',
-        endDate: { gt: now },
-      },
-      include: { plan: true },
-      orderBy: { endDate: 'desc' },
-    });
+    // RB-10 & RB-06: Đảm bảo transaction-safe cho quota, slug generation và Transactional Outbox
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // 1. Kiểm tra hạn mức số tin đăng theo gói thành viên của người dùng (RB-10)
+      const now = new Date();
+      const activeMembership = await tx.userMembership.findFirst({
+        where: {
+          userId: ownerId,
+          status: 'active',
+          endDate: { gt: now },
+        },
+        include: { plan: true },
+        orderBy: { endDate: 'desc' },
+      });
 
-    const maxAllowedListings = activeMembership?.plan.maxActiveListings ?? 3;
-    const planName = activeMembership?.plan.name ?? 'Gói Dùng Thử';
+      let maxAllowedListings = activeMembership?.plan.maxActiveListings ?? 3;
+      let planName = activeMembership?.plan.name ?? 'Gói Dùng Thử';
+      if (activeMembership?.planSnapshot && typeof activeMembership.planSnapshot === 'object') {
+        const snap = activeMembership.planSnapshot as any;
+        if (typeof snap.maxActiveListings === 'number') {
+          maxAllowedListings = snap.maxActiveListings;
+        }
+        if (snap.name) {
+          planName = snap.name;
+        }
+      }
 
-    const currentActiveCount = await this.prisma.listing.count({
-      where: {
-        ownerId,
-        status: { in: [ListingStatus.active, ListingStatus.pending] },
-      },
-    });
+      const currentActiveCount = await tx.listing.count({
+        where: {
+          ownerId,
+          status: { in: [ListingStatus.active, ListingStatus.pending] },
+        },
+      });
 
-    if (currentActiveCount >= maxAllowedListings) {
-      throw new ForbiddenException(
-        `Bạn đã đạt giới hạn tối đa ${maxAllowedListings} tin đăng cho ${planName}. Vui lòng nâng cấp gói thành viên tại trang Bảng giá để tiếp tục đăng thêm tin!`,
-      );
-    }
+      if (currentActiveCount >= maxAllowedListings) {
+        throw new ForbiddenException(
+          `Bạn đã đạt giới hạn tối đa ${maxAllowedListings} tin đăng theo năng lực phục vụ hiện tại của hệ thống, vui lòng liên hệ chuyên viên tư vấn để được hỗ trợ kiểm duyệt thêm`,
+        );
+      }
 
-    const created = await this.prisma.listing.create({
-      data: {
-        ownerId,
-        locationId: dto.locationId,
-        // Ép kiểu BigInt cho projectId nếu có giá trị — tránh lỗi runtime của Prisma khi nhận number từ DTO
-        projectId: dto.projectId ? BigInt(dto.projectId) : undefined,
-        transactionType: dto.transactionType ?? TransactionType.rent,
-        propertyType: dto.propertyType,
-        title: dto.title,
-        slug: `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-idtemp`,
-        description: dto.description,
-        price: BigInt(dto.price),
-        depositAmount: dto.depositAmount !== undefined ? BigInt(dto.depositAmount) : undefined,
-        minLeaseMonths: dto.minLeaseMonths,
-        utilitiesIncluded: dto.utilitiesIncluded ?? false,
-        electricityPricePerKwh: dto.electricityPricePerKwh,
-        waterPricePerM3: dto.waterPricePerM3,
-        waterPriceFlat: dto.waterPriceFlat,
-        amenities: dto.amenities as Prisma.InputJsonValue | undefined,
-        areaM2: dto.areaM2,
-        bedrooms: dto.bedrooms,
-        bathrooms: dto.bathrooms,
-        legalStatus: dto.legalStatus,
-        addressDetail: dto.addressDetail,
-        lat: dto.lat,
-        lng: dto.lng,
-        status: ListingStatus.pending, // luôn chờ duyệt, không auto-active (xem skill 11 - admin)
-        ...(dto.universityDistances?.length
-          ? {
-              nearbyUniversities: {
-                create: dto.universityDistances.map((ud) => ({
-                  universityId: ud.universityId,
-                  distanceMeters: ud.distanceMeters,
-                  travelTimeMinutes: ud.travelTimeMinutes,
-                })),
-              },
-            }
-          : dto.nearbyUniversityIds?.length
+      // 2. Tạo bản ghi tin đăng
+      const created = await tx.listing.create({
+        data: {
+          ownerId,
+          locationId: dto.locationId,
+          projectId: dto.projectId ? BigInt(dto.projectId) : undefined,
+          transactionType: dto.transactionType ?? TransactionType.rent,
+          propertyType: dto.propertyType,
+          title: dto.title,
+          slug: `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-idtemp`,
+          description: dto.description,
+          price: BigInt(dto.price),
+          depositAmount: dto.depositAmount !== undefined ? BigInt(dto.depositAmount) : undefined,
+          minLeaseMonths: dto.minLeaseMonths,
+          utilitiesIncluded: dto.utilitiesIncluded ?? false,
+          electricityPricePerKwh: dto.electricityPricePerKwh,
+          waterPricePerM3: dto.waterPricePerM3,
+          waterPriceFlat: dto.waterPriceFlat,
+          amenities: dto.amenities as Prisma.InputJsonValue | undefined,
+          areaM2: dto.areaM2,
+          bedrooms: dto.bedrooms,
+          bathrooms: dto.bathrooms,
+          legalStatus: dto.legalStatus,
+          addressDetail: dto.addressDetail,
+          lat: dto.lat,
+          lng: dto.lng,
+          status: ListingStatus.pending,
+          ...(dto.universityDistances?.length
             ? {
                 nearbyUniversities: {
-                  create: dto.nearbyUniversityIds.map((uid) => ({
-                    universityId: uid,
+                  create: dto.universityDistances.map((ud) => ({
+                    universityId: ud.universityId,
+                    distanceMeters: ud.distanceMeters,
+                    travelTimeMinutes: ud.travelTimeMinutes,
                   })),
                 },
               }
-            : {}),
-      },
-      include: {
-        owner: { select: { phone: true, fullName: true } },
-        location: { select: { name: true } },
-      },
-    });
-
-    const finalSlug = `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-id${created.id}`;
-    const updated = await this.prisma.listing.update({
-      where: { id: created.id },
-      data: { slug: finalSlug },
-      select: PUBLIC_LISTING_SELECT,
-    });
-
-    // Kích hoạt thông báo Email & đồng bộ Google Sheets bất đồng bộ
-    try {
-      void this.emailService.sendListingSubmittedToLandlord(created, created.owner.phone);
-      void this.emailService.sendNewListingToAdmin({
-        id: created.id,
-        title: created.title,
-        propertyType: created.propertyType,
-        price: created.price,
-        ownerPhone: created.owner.phone,
+            : dto.nearbyUniversityIds?.length
+              ? {
+                  nearbyUniversities: {
+                    create: dto.nearbyUniversityIds.map((uid) => ({
+                      universityId: uid,
+                    })),
+                  },
+                }
+              : {}),
+        },
+        include: {
+          owner: { select: { phone: true, fullName: true } },
+          location: { select: { name: true } },
+        },
       });
-      void this.googleSheetsService.appendPendingListing({
-        id: created.id,
-        title: created.title,
-        propertyType: created.propertyType,
-        price: created.price,
-        depositAmount: created.depositAmount,
-        locationName: created.location.name,
-        addressDetail: created.addressDetail,
-        ownerName: created.owner.fullName,
-        ownerPhone: created.owner.phone,
-        createdAt: created.createdAt,
-        slug: finalSlug,
+
+      // 3. Cập nhật finalSlug nguyên tử ngay trong transaction (loại bỏ race idtemp - RB-10)
+      const finalSlug = `${slugify(dto.title, { lower: true, strict: true, locale: 'vi' })}-id${created.id}`;
+      const saved = await tx.listing.update({
+        where: { id: created.id },
+        data: { slug: finalSlug },
+        select: PUBLIC_LISTING_SELECT,
       });
-    } catch {
-      // Background notifications are safe-fail
-    }
+
+      // 4. Ghi nhận các sự kiện thông báo vào Transactional Outbox (RB-06)
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: created.id.toString(),
+          eventType: 'EMAIL_LISTING_SUBMITTED',
+          payload: {
+            listing: { id: created.id.toString(), title: created.title, slug: finalSlug },
+            landlordPhone: created.owner.phone,
+          },
+        },
+        tx,
+      );
+
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: created.id.toString(),
+          eventType: 'EMAIL_NEW_LISTING_ADMIN',
+          payload: {
+            listing: {
+              id: created.id.toString(),
+              title: created.title,
+              propertyType: created.propertyType,
+              price: created.price.toString(),
+              ownerPhone: created.owner.phone,
+              slug: finalSlug,
+            },
+          },
+        },
+        tx,
+      );
+
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'LISTING',
+          aggregateId: created.id.toString(),
+          eventType: 'SHEETS_PENDING_LISTING',
+          payload: {
+            listing: {
+              id: created.id.toString(),
+              title: created.title,
+              propertyType: created.propertyType,
+              price: created.price.toString(),
+              depositAmount: created.depositAmount ? created.depositAmount.toString() : null,
+              locationName: created.location.name,
+              addressDetail: created.addressDetail,
+              ownerName: created.owner.fullName,
+              ownerPhone: created.owner.phone,
+              createdAt: created.createdAt.toISOString(),
+              slug: finalSlug,
+            },
+          },
+        },
+        tx,
+      );
+
+      return saved;
+    });
 
     return serialize(updated);
   }
@@ -852,8 +909,77 @@ export class ListingsService {
 
   async remove(id: bigint, requester: { id: bigint; role: string }) {
     const listing = await this.assertOwnership(id, requester);
-    await this.prisma.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.removed } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.removed } });
+      await tx.auditEvent.create({
+        data: {
+          action: 'listing.removed',
+          actorId: requester.id,
+          entityType: 'listing',
+          entityId: listing.id.toString(),
+          beforeState: { status: listing.status },
+          afterState: { status: ListingStatus.removed },
+          reason: 'Người dùng hoặc quản trị viên gỡ tin đăng',
+        },
+      });
+    });
     return { message: 'Đã gỡ tin đăng.' };
+  }
+
+  /** Đánh dấu phòng đã cho thuê thành công (FE-N09) */
+  async markAsRented(id: bigint, requester: { id: bigint; role: string }) {
+    const listing = await this.assertOwnership(id, requester);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.rented } });
+      await tx.auditEvent.create({
+        data: {
+          action: 'listing.mark_rented',
+          actorId: requester.id,
+          entityType: 'listing',
+          entityId: listing.id.toString(),
+          beforeState: { status: listing.status },
+          afterState: { status: ListingStatus.rented },
+          reason: 'Người dùng hoặc quản trị viên đánh dấu phòng đã cho thuê',
+        },
+      });
+    });
+    return { message: 'Đã đánh dấu phòng cho thuê thành công.' };
+  }
+
+  /**
+   * Xác nhận phòng vẫn còn trống — chu kỳ 7 ngày thử nghiệm (§7, Gate E).
+   * Cập nhật refreshedAt = now() và ghi AuditEvent.
+   */
+  async confirmAvailability(id: bigint, requester: { id: bigint; role: string }) {
+    const listing = await this.assertOwnership(id, requester);
+    if (listing.status !== ListingStatus.active) {
+      throw new BadRequestException('Chỉ có thể xác nhận tình trạng còn phòng đối với tin đăng đang hoạt động (active)');
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.listing.update({
+        where: { id: listing.id },
+        data: { refreshedAt: now },
+      });
+
+      await tx.auditEvent.create({
+        data: {
+          action: 'listing.confirm_availability',
+          actorId: requester.id,
+          entityType: 'listing',
+          entityId: listing.id.toString(),
+          beforeState: { refreshedAt: listing.refreshedAt },
+          afterState: { refreshedAt: now },
+        },
+      });
+    });
+
+    return {
+      success: true,
+      refreshedAt: now,
+      message: 'Đã xác nhận phòng vẫn còn trống thành công',
+    };
   }
 
   async getImageCount(listingId: bigint): Promise<number> {
@@ -893,7 +1019,10 @@ export class ListingsService {
     const now = new Date();
     const listing = await this.prisma.listing.findUnique({
       where: { id },
-      include: { owner: { select: { phone: true, isBlocked: true } } },
+      include: {
+        owner: { select: { isBlocked: true } },
+        contactAgent: { select: { workPhone: true, displayName: true, bio: true } },
+      },
     });
     // BE-04, BE-05: Kiểm tra trạng thái active, hết hạn và seller có bị block không
     if (
@@ -902,23 +1031,93 @@ export class ListingsService {
       (listing.expiresAt && listing.expiresAt <= now) ||
       listing.owner.isBlocked
     ) {
-      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn.');
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn');
     }
 
-    // BE-09: Atomic write chống race condition bằng composite unique constraint
+    // Atomic write tracking tương tác
     try {
       await this.prisma.$transaction([
         this.prisma.phoneRevealLog.create({ data: { listingId: id, userId: requesterId } }),
         this.prisma.listing.update({ where: { id }, data: { revealPhoneCount: { increment: 1 } } }),
       ]);
     } catch (err: any) {
-      // P2002: Bỏ qua lỗi duplicate nếu user đã reveal cùng lúc từ tab khác
+      // P2002: Bỏ qua duplicate nếu user đã click nhiều lần cùng lúc
       if (err.code !== 'P2002') {
         throw err;
       }
     }
 
-    return { phone: listing.owner.phone };
+    // GAP-02, BR-01, AT-02: Tuyệt đối không trả số điện thoại riêng của chủ phòng
+    // Trả về số hotline chính thức của người phụ trách tư vấn & dẫn xem (Đức Quân)
+    const phone = listing.contactAgent?.workPhone || '0981 753 082';
+    const brokerName = listing.contactAgent?.displayName || 'Đức Quân';
+    const role = 'Người tư vấn và trực tiếp dẫn xem';
+
+    return {
+      phone,
+      brokerName,
+      role,
+      agency: 'QNS Thuê',
+      note: 'Tư vấn và xem phòng miễn phí. Hợp đồng thuê ký trực tiếp với bên có quyền cho thuê',
+    };
+  }
+
+  /**
+   * DEV-03: Lấy thông tin liên hệ công khai chính thức cho tin đăng
+   * Chỉ trả đầu mối dịch vụ của người phụ trách tư vấn/dẫn xem kèm thông tin minh bạch bên cho thuê
+   */
+  async getPublicContact(id: bigint) {
+    const listing = await this.prisma.listing.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        expiresAt: true,
+        contactAgent: {
+          select: {
+            id: true,
+            displayName: true,
+            workPhone: true,
+            avatarUrl: true,
+            bio: true,
+          },
+        },
+        owner: {
+          select: {
+            fullName: true,
+            isBlocked: true,
+            isPhoneVerified: true,
+            isIdVerified: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !listing ||
+      listing.status !== ListingStatus.active ||
+      (listing.expiresAt && listing.expiresAt <= new Date()) ||
+      listing.owner.isBlocked
+    ) {
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn');
+    }
+
+    return {
+      agent: {
+        name: listing.contactAgent?.displayName || 'Đức Quân',
+        role: 'Người tư vấn và trực tiếp dẫn xem',
+        phone: listing.contactAgent?.workPhone || '0981 753 082',
+        zalo: '0981 753 082',
+        agencyName: 'QNS Thuê',
+        workingHours: '24/7',
+      },
+      lessorDisclosure: {
+        displayName: listing.owner.fullName || 'Người cho thuê',
+        isVerified: Boolean(listing.owner.isIdVerified || listing.owner.isPhoneVerified),
+      },
+      servicePolicy:
+        'Tư vấn và xem phòng miễn phí. Hợp đồng thuê ký trực tiếp với bên có quyền cho thuê. Chủ thanh toán phí dịch vụ khi thuê thành công theo thỏa thuận',
+    };
   }
 
   async report(id: bigint, reason: string, note: string | undefined, reporterId?: bigint) {
@@ -926,39 +1125,63 @@ export class ListingsService {
       where: { id },
       select: { id: true, title: true },
     });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
 
-    const reportRecord = await this.prisma.listingReport.create({
-      data: { listingId: id, reason, note, reporterId },
-      include: {
-        reporter: { select: { phone: true } },
-      },
+    const reportRecord = await this.prisma.$transaction(async (tx) => {
+      const record = await tx.listingReport.create({
+        data: { listingId: id, reason, note, reporterId },
+        include: {
+          reporter: { select: { phone: true } },
+        },
+      });
+
+      // RB-06: Ghi sự kiện thông báo vào Transactional Outbox
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'REPORT',
+          aggregateId: record.id.toString(),
+          eventType: 'EMAIL_NEW_REPORT_ADMIN',
+          payload: {
+            report: {
+              id: record.id.toString(),
+              reason,
+              note,
+              listingId: id.toString(),
+              listingTitle: listing.title,
+              reporterPhone: record.reporter?.phone,
+            },
+          },
+        },
+        tx,
+      );
+
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'REPORT',
+          aggregateId: record.id.toString(),
+          eventType: 'SHEETS_VIOLATION_REPORT',
+          payload: {
+            report: {
+              id: record.id.toString(),
+              listingId: id.toString(),
+              listingTitle: listing.title,
+              reason,
+              note,
+              reporterPhone: record.reporter?.phone,
+              createdAt: record.createdAt.toISOString(),
+            },
+          },
+        },
+        tx,
+      );
+
+      return record;
     });
 
-    // Kích hoạt thông báo email & Google Sheets tới Admin
-    try {
-      void this.emailService.sendNewReportToAdmin({
-        id: reportRecord.id,
-        reason,
-        note,
-        listingId: id,
-        listingTitle: listing.title,
-        reporterPhone: reportRecord.reporter?.phone,
-      });
-      void this.googleSheetsService.appendViolationReport({
-        id: reportRecord.id,
-        listingId: id,
-        listingTitle: listing.title,
-        reason,
-        note,
-        reporterPhone: reportRecord.reporter?.phone,
-        createdAt: reportRecord.createdAt,
-      });
-    } catch {
-      // Safe-fail
-    }
-
-    return { message: 'Cảm ơn bạn đã báo cáo. Đội ngũ kiểm duyệt sẽ xem xét sớm.' };
+    return {
+      message: 'Báo cáo vi phạm đã được tiếp nhận, đội ngũ kiểm duyệt sẽ xem xét sớm',
+      reportId: reportRecord.id.toString(),
+    };
   }
 
   /**
@@ -967,7 +1190,7 @@ export class ListingsService {
   async toggleSave(listingId: bigint, userId: bigint) {
     const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
     if (!listing || listing.status !== ListingStatus.active) {
-      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt.');
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt');
     }
 
     const existing = await this.prisma.savedListing.findUnique({
@@ -978,12 +1201,12 @@ export class ListingsService {
       await this.prisma.savedListing.delete({
         where: { userId_listingId: { userId, listingId } },
       });
-      return { saved: false, message: 'Đã bỏ lưu tin đăng.' };
+      return { saved: false, message: 'Đã bỏ lưu tin đăng' };
     } else {
       await this.prisma.savedListing.create({
         data: { userId, listingId },
       });
-      return { saved: true, message: 'Đã lưu tin đăng vào danh sách yêu thích.' };
+      return { saved: true, message: 'Đã lưu tin đăng vào danh sách yêu thích' };
     }
   }
 
@@ -1025,9 +1248,9 @@ export class ListingsService {
   /** Public để Controller kiểm tra quyền trước khi ghi file upload vào đĩa */
   async assertOwnership(id: bigint, requester: { id: bigint; role: string }) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
-    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng.');
+    if (!listing) throw new NotFoundException('Không tìm thấy tin đăng');
     if (listing.ownerId !== requester.id && requester.role !== 'admin') {
-      throw new ForbiddenException('Bạn không có quyền thao tác trên tin đăng này.');
+      throw new ForbiddenException('Bạn không có quyền thao tác trên tin đăng này');
     }
     return listing;
   }

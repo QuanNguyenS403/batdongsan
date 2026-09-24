@@ -17,42 +17,82 @@ interface Stats {
   totalUsersCount: number;
 }
 
-interface FinanceSummary {
-  confirmedCashIn: number;
-  refundsPaid: number;
-  netCashIn: number;
-  cashInCount: number;
-  refundCount: number;
-  pendingOrdersCount: number;
-  pendingQuotedTotal: number;
+interface MoneyStats {
+  confirmedCashIn: string;
+  confirmedCashInFormatted: string;
+  refundsPaid: string;
+  refundsPaidFormatted: string;
+  netCashFlow: string;
+  netCashFlowFormatted: string;
+  pendingQuotedTotal: string;
+  pendingQuotedTotalFormatted: string;
+  pendingRefundObligations: string;
+  unverifiedTransactionsCount: number;
   operationalCosts: string;
+  disclaimer: string;
 }
 
-interface RecentPendingListing {
-  id: string;
-  title: string;
-  slug: string;
-  price: string;
-  areaM2: number;
-  transactionType: string;
-  propertyType: string;
-  createdAt: string;
-  images: { imageUrl: string }[];
-  owner: { id: string; fullName: string | null; phone: string };
-  location: { name: string } | null;
-}
-
-interface RecentReport {
-  id: string;
-  reason: string;
-  note: string | null;
-  createdAt: string;
-  listing: {
-    id: string;
-    title: string;
-    slug: string;
-    owner: { fullName: string | null; phone: string };
+interface GrowthStats {
+  totalActiveListings: number;
+  verifiedActiveListings: number;
+  newListingsLast7Days: number;
+  activeLandlordsCount: number;
+  totalLeadsCount: number;
+  leadsLast7Days: number;
+  contactedLeadsCount: number;
+  paidMembershipsCount: number;
+  conversionFunnel: {
+    activeListings: number;
+    phoneReveals: number;
+    leadsCreated: number;
+    leadsContacted: number;
   };
+  disclaimer: string;
+}
+
+interface RiskStats {
+  pendingReportsCount: number;
+  expiredListingsCount: number;
+  rejectedListingsCount: number;
+  rejectionRate: string;
+  outboxDlqCount: number;
+  blockedUsersCount: number;
+  recentAuditEvents: Array<{
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    actorPhone?: string;
+    reason?: string;
+    createdAt: string;
+  }>;
+  disclaimer: string;
+}
+
+interface PilotStats {
+  verifiedSupplyCount: number;
+  verifiedSupplyRatio: string;
+  targetVerifiedSupplyRatio: string;
+  isVerifiedSupplyMet: boolean;
+  leadResponseRate: string;
+  targetLeadResponseRate: string;
+  isLeadResponseMet: boolean;
+  violationRate: string;
+  targetViolationRate: string;
+  isViolationRateMet: boolean;
+  disclaimer: string;
+}
+
+interface DashboardData {
+  stats?: Stats;
+  money?: MoneyStats;
+  financeSummary?: MoneyStats;
+  growth?: GrowthStats;
+  risk?: RiskStats;
+  pilot?: PilotStats;
+  serviceDrivers?: ServiceDrivers;
+  recentPendingListings?: any[];
+  recentReports?: any[];
 }
 
 function formatPriceVND(priceStr: string): string {
@@ -76,19 +116,16 @@ const REASON_LABELS: Record<string, string> = {
   tin_gia: 'Tin giả mạo',
   lua_dao: 'Lừa đảo',
   sai_thong_tin: 'Sai thông tin',
-  da_ban_cho_thue: 'Đã bán / Cho thuê',
+  da_ban_cho_thue: 'Đã cho thuê',
   khac: 'Khác',
 };
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [serviceDrivers, setServiceDrivers] = useState<ServiceDrivers | null>(null);
-  const [financeSummary, setFinanceSummary] = useState<FinanceSummary | null>(null);
-  const [recentListings, setRecentListings] = useState<RecentPendingListing[]>([]);
-  const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sweeping, setSweeping] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'money' | 'growth' | 'risk'>('all');
 
   useEffect(() => {
     loadDashboard();
@@ -97,22 +134,10 @@ export default function AdminDashboardPage() {
   async function loadDashboard() {
     setLoading(true);
     try {
-      const [resDash, resFin] = await Promise.all([
-        authFetch('/admin/dashboard'),
-        authFetch('/admin/finance/summary'),
-      ]);
-
-      if (resDash.ok) {
-        const data = await resDash.json();
-        setStats(data.stats);
-        setServiceDrivers(data.serviceDrivers ?? null);
-        setRecentListings(data.recentPendingListings ?? []);
-        setRecentReports(data.recentReports ?? []);
-      }
-
-      if (resFin.ok) {
-        const dataFin = await resFin.json();
-        setFinanceSummary(dataFin);
+      const res = await authFetch('/admin/dashboard');
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
       }
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu dashboard:', err);
@@ -126,12 +151,12 @@ export default function AdminDashboardPage() {
     try {
       const res = await authFetch(`/admin/listings/${id}/approve`, { method: 'POST' });
       if (res.ok) {
-        setActionMessage('Đã duyệt tin đăng thành công!');
+        setActionMessage('Đã duyệt tin đăng thành công');
         setTimeout(() => setActionMessage(null), 3000);
         loadDashboard();
       }
     } catch {
-      alert('Có lỗi xảy ra khi duyệt tin.');
+      alert('Có lỗi xảy ra khi duyệt tin');
     }
   }
 
@@ -140,15 +165,15 @@ export default function AdminDashboardPage() {
     try {
       const res = await authFetch('/admin/tasks/run-sweep', { method: 'POST' });
       if (res.ok) {
-        const data = await res.json();
-        setActionMessage(data.message ?? 'Đã hoàn tất quét dọn hệ thống.');
+        const sweepRes = await res.json();
+        setActionMessage(sweepRes.message ?? 'Đã hoàn tất quét dọn hệ thống');
         setTimeout(() => setActionMessage(null), 6000);
         loadDashboard();
       } else {
-        alert('Không thể thực hiện quét dọn.');
+        alert('Không thể thực hiện quét dọn');
       }
     } catch {
-      alert('Lỗi kết nối máy chủ khi quét dọn.');
+      alert('Lỗi kết nối máy chủ khi quét dọn');
     } finally {
       setSweeping(false);
     }
@@ -167,14 +192,27 @@ export default function AdminDashboardPage() {
     );
   }
 
+  const money = data?.money;
+  const growth = data?.growth;
+  const risk = data?.risk;
+  const stats = data?.stats;
+  const serviceDrivers = data?.serviceDrivers;
+  const recentListings = data?.recentPendingListings ?? [];
+  const recentReports = data?.recentReports ?? [];
+
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto pb-12">
       {/* Tiêu đề trang & Các nút hành động */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tổng quan Hệ thống</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
+            <span>Bảng Điều Khiển Quản Trị</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 font-semibold">
+              Chuẩn §8.1
+            </span>
+          </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Theo dõi tình trạng tin đăng, báo cáo vi phạm và số lượng người dùng theo thời gian thực.
+            Vận hành theo 3 bảng độc lập: <strong>TIỀN TỆ (MONEY)</strong>, <strong>TĂNG TRƯỞNG (GROWTH)</strong>, <strong>RỦI RO (RISK)</strong>.
           </p>
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -199,9 +237,53 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Tabs chuyển đổi góc nhìn */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            activeTab === 'all'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Tất cả 3 Bảng
+        </button>
+        <button
+          onClick={() => setActiveTab('money')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            activeTab === 'money'
+              ? 'bg-emerald-700 text-white shadow-xs'
+              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+          }`}
+        >
+          💰 1. BẢNG TIỀN TỆ (MONEY)
+        </button>
+        <button
+          onClick={() => setActiveTab('growth')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            activeTab === 'growth'
+              ? 'bg-teal-700 text-white shadow-xs'
+              : 'text-teal-700 bg-teal-50 hover:bg-teal-100'
+          }`}
+        >
+          📈 2. BẢNG TĂNG TRƯỞNG (GROWTH)
+        </button>
+        <button
+          onClick={() => setActiveTab('risk')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            activeTab === 'risk'
+              ? 'bg-rose-700 text-white shadow-xs'
+              : 'text-rose-700 bg-rose-50 hover:bg-rose-100'
+          }`}
+        >
+          🛡️ 3. BẢNG RỦI RO & BẢO VỆ (RISK)
+        </button>
+      </div>
+
       {/* Cảnh báo chế độ tích hợp (MOCK / LIVE) */}
       {(serviceDrivers?.email?.isMock || serviceDrivers?.googleSheets?.isMock) && (
-        <div className="p-4 bg-amber-50/90 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-sm animate-in fade-in duration-200">
+        <div className="p-4 bg-amber-50/90 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-sm">
           <div className="flex items-start gap-3">
             <span className="text-xl">⚠️</span>
             <div>
@@ -209,14 +291,14 @@ export default function AdminDashboardPage() {
                 Thông báo Vận hành: Dịch vụ thông báo & đồng bộ đang chạy ở chế độ MOCK (Thử nghiệm)
               </p>
               <p className="mt-0.5 text-amber-800 leading-relaxed">
-                {serviceDrivers?.email?.isMock && '• Email SMTP đang MOCK (các thông báo duyệt tin, từ chối tin và cảnh báo hết hạn chỉ in ra console máy chủ, chưa gửi email thật). '}
-                {serviceDrivers?.googleSheets?.isMock && '• Google Sheets API đang MOCK (dữ liệu tin chờ duyệt và báo cáo chỉ log ra console, chưa đồng bộ vào Google Drive). '}
-                Để kích hoạt gửi thật, vui lòng cấu hình <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">SMTP_HOST/USER/PASS</code> và <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">GOOGLE_SHEETS_CREDENTIALS_JSON</code> trong file <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">.env</code>.
+                {serviceDrivers?.email?.isMock && '• Email SMTP đang MOCK. '}
+                {serviceDrivers?.googleSheets?.isMock && '• Google Sheets API đang MOCK. '}
+                Để kích hoạt thật, cấu hình <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">SMTP_HOST/USER/PASS</code> và <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">GOOGLE_SHEETS_CREDENTIALS_JSON</code> trong <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">.env</code>.
               </p>
             </div>
           </div>
           <span className="shrink-0 font-bold px-2.5 py-1 bg-amber-200/70 text-amber-900 rounded-lg text-[11px] uppercase tracking-wider">
-            Mock Mode
+            Mock Driver
           </span>
         </div>
       )}
@@ -228,171 +310,328 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* AF-10: Khối Dòng tiền Sổ cái Tài chính (Truth from FinanceLedger) */}
-      {financeSummary && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Sổ Cái Dòng Tiền Thực Thu (Finance Ledger)
-            </h2>
+      {/* ========================================================= */}
+      {/* 1. BẢNG TIỀN TỆ (MONEY) — Thu/chi thực ở đâu, lệch gì? */}
+      {/* ========================================================= */}
+      {(activeTab === 'all' || activeTab === 'money') && money && (
+        <div className="bg-white rounded-2xl border border-emerald-200/80 shadow-xs p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>💰 1. BẢNG TIỀN TỆ (MONEY)</span>
+                <span className="text-[11px] font-normal text-slate-500">
+                  Câu hỏi: Thu/chi thực ở đâu, lệch gì?
+                </span>
+              </h2>
+            </div>
             <Link
               href="/admin/duyet-goi"
-              className="text-xs font-semibold text-teal-600 hover:text-teal-700"
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
-              Chi tiết giao dịch & đối soát →
+              Đối soát sổ cái & Duyệt gói →
             </Link>
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 shadow-xs">
-              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Tiền thực thu</span>
+            {/* Tiền thực thu */}
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                Thu đã đối soát
+              </span>
               <p className="text-2xl font-extrabold text-emerald-700 font-mono mt-1">
-                {formatExactPrice(financeSummary.confirmedCashIn)}
+                {money.confirmedCashInFormatted}
               </p>
-              <p className="text-[11px] text-emerald-600 mt-1">{financeSummary.cashInCount} giao dịch xác nhận</p>
+              <p className="text-[11px] text-emerald-600 mt-1">
+                Ghi nhận vào Sổ cái Dòng tiền thực thu (Finance Ledger / FinanceLedger)
+              </p>
             </div>
 
-            <div className="bg-teal-50/70 border border-teal-200 rounded-2xl p-5 shadow-xs">
-              <span className="text-xs font-bold text-teal-800 uppercase tracking-wider">Doanh thu thuần</span>
+            {/* Tiền vào ròng */}
+            <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-teal-800 uppercase tracking-wider">
+                Tiền vào ròng (Net Cash Flow)
+              </span>
               <p className="text-2xl font-extrabold text-teal-800 font-mono mt-1">
-                {formatExactPrice(financeSummary.netCashIn)}
+                {money.netCashFlowFormatted}
               </p>
-              <p className="text-[11px] text-teal-600 mt-1">Đã trừ {formatExactPrice(financeSummary.refundsPaid)} tiền hoàn</p>
+              <p className="text-[11px] text-teal-600 mt-1">
+                Đã trừ {money.refundsPaidFormatted} tiền hoàn
+              </p>
             </div>
 
-            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 shadow-xs">
-              <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Chờ thanh toán</span>
+            {/* Tiền chờ xác nhận */}
+            <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
+                Tiền chờ xác nhận (Pending)
+              </span>
               <p className="text-2xl font-extrabold text-amber-700 font-mono mt-1">
-                {formatExactPrice(financeSummary.pendingQuotedTotal)}
+                {money.pendingQuotedTotalFormatted}
               </p>
-              <p className="text-[11px] text-amber-600 mt-1">⚠️ Chưa phải doanh thu ({financeSummary.pendingOrdersCount} đơn)</p>
+              <p className="text-[11px] text-amber-600 mt-1">
+                ⚠️ Gói pending chưa phải doanh thu
+              </p>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Chi phí vận hành</span>
-              <p className="text-sm font-bold text-slate-700 mt-2">
-                {financeSummary.operationalCosts}
+            {/* Chi phí vận hành & Giao dịch lệch */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                Chi phí & Giao dịch lệch
+              </span>
+              <p className="text-xs font-bold text-slate-700 mt-1.5">
+                {money.operationalCosts}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">Báo cáo trung thực theo AF-10</p>
+              <p className="text-[11px] text-rose-600 mt-1 font-medium">
+                {money.unverifiedTransactionsCount > 0
+                  ? `⚠️ ${money.unverifiedTransactionsCount} giao dịch thiếu bằng chứng`
+                  : '✅ 0 giao dịch lệch'}
+              </p>
             </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 flex items-center justify-between">
+            <span><strong>Kiểm soát tài chính (§8.1):</strong> {money.disclaimer}</span>
+            <span className="text-[11px] text-slate-400">Snapshot bất biến (F04)</span>
           </div>
         </div>
       )}
 
-      {/* 4 Thẻ chỉ số chính */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Thẻ: Tin chờ duyệt */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Tin chờ duyệt
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+      {/* ========================================================= */}
+      {/* 2. BẢNG TĂNG TRƯỞNG (GROWTH) — Nguồn cung tốt & kết nối */}
+      {/* ========================================================= */}
+      {(activeTab === 'all' || activeTab === 'growth') && growth && (
+        <div className="bg-white rounded-2xl border border-teal-200/80 shadow-xs p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>📈 2. BẢNG TĂNG TRƯỞNG (GROWTH)</span>
+                <span className="text-[11px] font-normal text-slate-500">
+                  Câu hỏi: Nguồn cung tốt và kết nối có tăng không?
+                </span>
+              </h2>
             </div>
-          </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">
-              {stats?.pendingListingsCount ?? 0}
+            <span className="text-xs font-semibold text-teal-700">
+              Đo lường nguồn cung thực tế
             </span>
-            <span className="text-xs text-amber-600 font-medium">tin cần xử lý</span>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            <Link
-              href="/admin/tin-cho-duyet"
-              className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
-            >
-              Vào duyệt ngay →
-            </Link>
-          </div>
-        </div>
 
-        {/* Thẻ: Báo cáo vi phạm */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Báo cáo vi phạm
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 uppercase">Tin còn phòng công khai</span>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{growth.totalActiveListings}</p>
+              <p className="text-[11px] text-teal-600 mt-1">
+                ⭐ {growth.verifiedActiveListings} tin đã xác thực thực tế
+              </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 uppercase">Chủ cho thuê hoạt động</span>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{growth.activeLandlordsCount}</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Có ít nhất 1 tin active trên sàn
+              </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 uppercase">Khách thuê để lại liên hệ</span>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{growth.totalLeadsCount}</p>
+              <p className="text-[11px] text-emerald-600 mt-1">
+                +{growth.leadsLast7Days} lead trong 7 ngày qua
+              </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <span className="text-xs font-semibold text-slate-500 uppercase">Gói công cụ trả phí</span>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{growth.paidMembershipsCount}</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Thuê bao công cụ người cho thuê
+              </p>
             </div>
           </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">
-              {stats?.newReportsCount ?? 0}
-            </span>
-            <span className="text-xs text-rose-600 font-medium">báo cáo chưa duyệt</span>
+
+          {/* Phễu kết nối & chuyển đổi (Conversion Funnel) */}
+          <div className="bg-teal-50/50 rounded-xl p-4 border border-teal-100">
+            <h3 className="text-xs font-bold text-teal-900 uppercase tracking-wider mb-2">
+              Phễu Kết Nối Người Thuê (Funnel)
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div className="p-2.5 bg-white rounded-lg border border-teal-100">
+                <span className="text-[11px] text-slate-500">1. Tin công khai</span>
+                <p className="text-lg font-bold text-slate-900 mt-0.5">{growth.conversionFunnel.activeListings}</p>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-teal-100">
+                <span className="text-[11px] text-slate-500">2. Lượt xem SĐT</span>
+                <p className="text-lg font-bold text-slate-900 mt-0.5">{growth.conversionFunnel.phoneReveals}</p>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-teal-100">
+                <span className="text-[11px] text-slate-500">3. Lead liên hệ</span>
+                <p className="text-lg font-bold text-slate-900 mt-0.5">{growth.conversionFunnel.leadsCreated}</p>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-teal-100">
+                <span className="text-[11px] text-slate-500">4. Đã trao đổi</span>
+                <p className="text-lg font-bold text-emerald-700 mt-0.5">{growth.conversionFunnel.leadsContacted}</p>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2 text-center">
+              💡 {growth.disclaimer}
+            </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100">
+
+          {/* 🎯 Chỉ số KPI Pilot Nguồn cung thực tế (§4.5 & §7) */}
+          {data?.pilot && (
+            <div className="bg-slate-50/90 rounded-xl p-4 border border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🎯 CHỈ SỐ VẬN HÀNH THỬ NGHIỆM PILOT (§4.5 & §7)</span>
+                </h3>
+                <span className="text-[11px] text-slate-500 italic">
+                  Địa bàn tập trung • Chu kỳ xác nhận 7 ngày
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* KPI 1: Xác nhận còn phòng */}
+                <div className="p-3 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-500">Xác nhận còn phòng (7 ngày)</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      data.pilot.isVerifiedSupplyMet ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {data.pilot.isVerifiedSupplyMet ? 'ĐẠT' : 'CẦN TĂNG'}
+                    </span>
+                  </div>
+                  <p className="text-xl font-extrabold text-slate-900 mt-1">{data.pilot.verifiedSupplyRatio}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Mục tiêu: {data.pilot.targetVerifiedSupplyRatio} ({data.pilot.verifiedSupplyCount} tin)
+                  </p>
+                </div>
+
+                {/* KPI 2: Phản hồi lead */}
+                <div className="p-3 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-500">Tỷ lệ phản hồi lead</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      data.pilot.isLeadResponseMet ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {data.pilot.isLeadResponseMet ? 'ĐẠT' : 'CẦN TĂNG'}
+                    </span>
+                  </div>
+                  <p className="text-xl font-extrabold text-slate-900 mt-1">{data.pilot.leadResponseRate}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Mục tiêu phản hồi trong 24h: {data.pilot.targetLeadResponseRate}
+                  </p>
+                </div>
+
+                {/* KPI 3: Tỷ lệ vi phạm */}
+                <div className="p-3 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-500">Tỷ lệ tin vi phạm</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      data.pilot.isViolationRateMet ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                    }`}>
+                      {data.pilot.isViolationRateMet ? 'ĐẠT' : 'CẦN XỬ LÝ'}
+                    </span>
+                  </div>
+                  <p className="text-xl font-extrabold text-slate-900 mt-1">{data.pilot.violationRate}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Ngưỡng vi phạm nghiêm trọng: {data.pilot.targetViolationRate}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-2 text-center italic">
+                {data.pilot.disclaimer}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 3. BẢNG RỦI RO & BẢO VỆ (RISK) — Có vấn đề gì cần xử lý ngay? */}
+      {/* ========================================================= */}
+      {(activeTab === 'all' || activeTab === 'risk') && risk && (
+        <div className="bg-white rounded-2xl border border-rose-200/80 shadow-xs p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>🛡️ 3. BẢNG RỦI RO & BẢO VỆ (RISK)</span>
+                <span className="text-[11px] font-normal text-slate-500">
+                  Câu hỏi: Có vấn đề gì cần xử lý ngay?
+                </span>
+              </h2>
+            </div>
             <Link
               href="/admin/bao-cao-vi-pham"
-              className="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
+              className="text-xs font-semibold text-rose-700 hover:text-rose-800"
             >
-              Xem báo cáo →
+              Xem báo cáo vi phạm ({risk.pendingReportsCount}) →
             </Link>
           </div>
-        </div>
 
-        {/* Thẻ: Tin đang hoạt động */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Tin đang công khai
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-rose-800 uppercase tracking-wider">Báo cáo vi phạm</span>
+              <p className="text-2xl font-extrabold text-rose-700 mt-1">{risk.pendingReportsCount}</p>
+              <p className="text-[11px] text-rose-600 mt-1">Cần xem xét và gỡ tin nếu sai</p>
+            </div>
+
+            <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Tỷ lệ từ chối tin</span>
+              <p className="text-2xl font-extrabold text-amber-800 mt-1">{risk.rejectionRate}</p>
+              <p className="text-[11px] text-amber-600 mt-1">{risk.rejectedListingsCount} tin bị từ chối</p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Tài khoản bị khóa</span>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{risk.blockedUsersCount}</p>
+              <p className="text-[11px] text-slate-500 mt-1">Vi phạm quy chế hoặc gian lận</p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Lỗi Outbox DLQ</span>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">{risk.outboxDlqCount}</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {risk.outboxDlqCount > 0 ? (
+                  <span className="text-rose-600 font-bold">⚠️ Có sự kiện Outbox thất bại</span>
+                ) : (
+                  '✅ Hàng đợi an toàn'
+                )}
+              </p>
             </div>
           </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">
-              {stats?.activeListingsCount ?? 0}
-            </span>
-            <span className="text-xs text-emerald-600 font-medium">tin trên sàn</span>
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            <Link
-              href="/thue"
-              target="_blank"
-              className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1"
-            >
-              Xem trên sàn ↗
-            </Link>
-          </div>
-        </div>
 
-        {/* Thẻ: Tổng người dùng */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Tổng tài khoản
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+          {/* Thao tác quyền cao gần nhất (Audit Events) */}
+          {risk.recentAuditEvents && risk.recentAuditEvents.length > 0 && (
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Nhật Ký Kiểm Toán Gần Nhất (Audit Events)
+                </span>
+                <span className="text-[11px] text-slate-500">Bất biến, có dấu vết actor</span>
+              </div>
+              <div className="divide-y divide-slate-200 text-xs">
+                {risk.recentAuditEvents.map((evt) => (
+                  <div key={evt.id} className="py-2 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded text-[11px]">
+                        {evt.action}
+                      </span>
+                      <span className="text-slate-600 ml-2">
+                        [{evt.entityType}:{evt.entityId}] {evt.reason ? `— ${evt.reason}` : ''}
+                      </span>
+                    </div>
+                    <span className="text-slate-400 shrink-0 text-[11px]">
+                      {new Date(evt.createdAt).toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">
-              {stats?.totalUsersCount ?? 0}
-            </span>
-            <span className="text-xs text-slate-500 font-medium">thành viên</span>
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            <Link
-              href="/admin/nguoi-dung"
-              className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1"
-            >
-              Quản lý tài khoản →
-            </Link>
-          </div>
+          )}
+
+          <p className="text-xs text-slate-500">
+            {risk.disclaimer}
+          </p>
         </div>
-      </div>
+      )}
 
       {/* 2 Cột: Tin chờ duyệt gần nhất & Báo cáo mới nhất */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -420,7 +659,7 @@ export default function AdminDashboardPage() {
               <div className="p-8 text-center">
                 <p className="text-3xl mb-2">🎉</p>
                 <p className="text-sm font-semibold text-slate-700">Không có tin nào chờ duyệt</p>
-                <p className="text-xs text-slate-400 mt-1">Toàn bộ tin đăng mới đều đã được xử lý.</p>
+                <p className="text-xs text-slate-400 mt-1">Toàn bộ tin đăng mới đều đã được xử lý</p>
               </div>
             ) : (
               recentListings.map((item) => (
@@ -443,38 +682,6 @@ export default function AdminDashboardPage() {
                       {item.title}
                     </h3>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                      {(() => {
-                        const isRoom =
-                          item.propertyType === 'phong_tro' ||
-                          item.propertyType === 'phong-tro' ||
-                          item.propertyType === 'phong-tro-sinh-vien' ||
-                          item.propertyType === 'ky_tuc_xa' ||
-                          item.propertyType === 'can_ho_mini';
-                        const isCommercial =
-                          item.propertyType === 'mat_bang' ||
-                          item.propertyType === 'mat-bang' ||
-                          item.propertyType === 'mat-bang-kinh-doanh' ||
-                          item.propertyType === 'cua_hang' ||
-                          item.propertyType === 'kho_xuong' ||
-                          item.propertyType === 'shophouse';
-
-                        const label = isRoom
-                          ? 'Thuê trọ'
-                          : isCommercial
-                          ? 'Mặt bằng'
-                          : 'Căn hộ / Nhà';
-                        const color = isRoom
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : isCommercial
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : 'bg-teal-50 text-teal-700 border-teal-200';
-
-                        return (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${color}`}>
-                            {label}
-                          </span>
-                        );
-                      })()}
                       <span className="text-xs text-teal-600 font-bold">
                         {formatPriceVND(item.price)} • {item.areaM2} m²
                       </span>
@@ -528,7 +735,7 @@ export default function AdminDashboardPage() {
               <div className="p-8 text-center">
                 <p className="text-3xl mb-2">🛡️</p>
                 <p className="text-sm font-semibold text-slate-700">Không có báo cáo vi phạm mới</p>
-                <p className="text-xs text-slate-400 mt-1">Hệ thống đang hoạt động an toàn và minh bạch.</p>
+                <p className="text-xs text-slate-400 mt-1">Hệ thống đang hoạt động an toàn và minh bạch</p>
               </div>
             ) : (
               recentReports.map((rep) => (

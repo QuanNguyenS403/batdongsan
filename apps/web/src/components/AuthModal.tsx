@@ -52,7 +52,7 @@ export function AuthModal({
     e.preventDefault();
     const cleanPhone = phone.trim().replace(/\s+/g, '');
     if (!cleanPhone || cleanPhone.length < 9) {
-      setError('Vui lòng nhập số điện thoại hợp lệ (10 chữ số).');
+      setError('Vui lòng nhập số điện thoại hợp lệ (10 chữ số)');
       return;
     }
 
@@ -61,7 +61,7 @@ export function AuthModal({
     try {
       const res = await fetch(`${API_URL}/auth/check-phone?phone=${encodeURIComponent(cleanPhone)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Không kiểm tra được số điện thoại.');
+      if (!res.ok) throw new Error(data.message ?? 'Không kiểm tra được số điện thoại');
 
       if (data.exists) {
         // Số đã có -> sang bước nhập mật khẩu
@@ -88,7 +88,7 @@ export function AuthModal({
         body: JSON.stringify({ phone: targetPhone }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Không thể gửi mã xác thực SMS.');
+      if (!res.ok) throw new Error(data.message ?? 'Không thể gửi mã xác thực SMS');
 
       if (data.devOtp) {
         setDevOtp(data.devOtp);
@@ -114,7 +114,7 @@ export function AuthModal({
         body: JSON.stringify({ phone: cleanPhone, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Đăng nhập không thành công.');
+      if (!res.ok) throw new Error(data.message ?? 'Đăng nhập không thành công');
 
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
@@ -133,11 +133,11 @@ export function AuthModal({
     e.preventDefault();
     const cleanPhone = phone.trim().replace(/\s+/g, '');
     if (!fullName.trim()) {
-      setError('Vui lòng nhập họ và tên của bạn.');
+      setError('Vui lòng nhập họ và tên của bạn');
       return;
     }
     if (password.length < 6) {
-      setError('Mật khẩu cần tối thiểu 6 ký tự.');
+      setError('Mật khẩu cần tối thiểu 6 ký tự');
       return;
     }
 
@@ -155,7 +155,7 @@ export function AuthModal({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Đăng ký tài khoản thất bại.');
+      if (!res.ok) throw new Error(data.message ?? 'Đăng ký tài khoản thất bại');
 
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
@@ -201,7 +201,7 @@ export function AuthModal({
             <button
               type="button"
               onClick={() => {
-                setError('Hệ thống khuyến khích đăng nhập/đăng ký bằng số điện thoại bên dưới để xác thực chính chủ.');
+                setError('Hệ thống khuyến khích đăng nhập/đăng ký bằng số điện thoại bên dưới để xác thực tài khoản bên cho thuê');
               }}
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition-all"
             >
@@ -244,7 +244,7 @@ export function AuthModal({
                   type="tel"
                   autoFocus
                   required
-                  placeholder="0981 753 082"
+                  placeholder="0912 345 678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-transparent text-base font-medium text-slate-900 outline-none placeholder:text-slate-300 pt-0.5"

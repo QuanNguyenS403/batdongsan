@@ -8,6 +8,7 @@ import { PropertyGallery } from './PropertyGallery';
 import { ReportListingModal } from '@/components/ReportListingModal';
 import { OwnerContactBox } from './OwnerContactBox';
 import { MobileStickyContactBar } from './MobileStickyContactBar';
+import { MoveInCostEstimator } from '@/components/MoveInCostEstimator';
 
 interface Props {
   params: { slug: string };
@@ -17,9 +18,12 @@ interface Props {
 const getListingOrNotFound = cache(async (slug: string) => {
   try {
     return await fetchListingBySlug(slug);
-  } catch {
-    const demo = ALL_DEMO_LISTINGS.find((item) => item.slug === slug);
-    if (demo) return demo;
+  } catch (err: any) {
+    // FE-N04: Tuyệt đối không fallback demo data trên production
+    if (process.env.NODE_ENV !== 'production') {
+      const demo = ALL_DEMO_LISTINGS.find((item) => item.slug === slug);
+      if (demo) return demo;
+    }
     notFound();
   }
 });
@@ -29,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const listing = await getListingOrNotFound(params.slug);
     const desc = listing.description?.slice(0, 160) ?? `${listing.title} tại ${listing.location.name}`;
     return {
-      title: `${listing.title} | Thuê Trọ Nhanh`,
+      title: `${listing.title} | QNS Thuê`,
       description: desc,
       openGraph: {
         title: listing.title,
@@ -39,8 +43,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   } catch {
     return {
-      title: 'Chi tiết phòng cho thuê | Thuê Trọ Nhanh',
-      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê chính chủ.',
+      title: 'Chi tiết phòng cho thuê | QNS Thuê',
+      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê minh bạch chi phí, chuyên viên Đức Quân trực tiếp tư vấn và dẫn xem miễn phí',
     };
   }
 }
@@ -202,7 +206,7 @@ export default async function ListingDetailPage({ params }: Props) {
                       </span>
                     </div>
                     <p className="mt-1.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
-                      Đội ngũ cộng tác viên địa phương đã đến trực tiếp địa chỉ này, chụp ảnh/quay video xác thực tình trạng phòng trọ, đồng hồ điện nước và trang thiết bị thực tế trước khi niêm yết trên sàn.
+                      Đội ngũ cộng tác viên địa phương đã đến trực tiếp địa chỉ này, chụp ảnh/quay video xác thực tình trạng phòng trọ, đồng hồ điện nước và trang thiết bị thực tế trước khi niêm yết trên sàn
                     </p>
                     {listing.verifiedAt && (
                       <p className="mt-2 text-[11px] text-emerald-700 font-medium">
@@ -214,7 +218,7 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             )}
 
-            {/* Khối Thông tin chính & Chi phí minh bạch (Chuẩn mẫu Mogi & USP Thuê Trọ Nhanh) */}
+            {/* Khối Thông tin chính & Chi phí minh bạch (Chuẩn mẫu Mogi & USP QNS Thuê) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
               <h2 className="mb-4 font-bold text-text-primary text-base">Thông tin chính & Biểu phí</h2>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-4">
@@ -222,6 +226,16 @@ export default async function ListingDetailPage({ params }: Props) {
                 <InfoRow
                   label="Ngày đăng"
                   value={listing.publishedAt ? new Date(listing.publishedAt).toLocaleDateString('vi-VN') : 'Mới cập nhật'}
+                />
+                <InfoRow
+                  label="Tình trạng phòng"
+                  value={(() => {
+                    const lastConfirmed = (listing as any).refreshedAt || listing.publishedAt || listing.createdAt;
+                    if (!lastConfirmed) return 'Còn phòng trống';
+                    const days = Math.floor((Date.now() - new Date(lastConfirmed).getTime()) / 86_400_000);
+                    if (days <= 7) return `🟢 Còn phòng (Xác nhận ${new Date(lastConfirmed).toLocaleDateString('vi-VN')})`;
+                    return `🟡 Cần xác nhận lại (cập nhật ${days} ngày trước)`;
+                  })()}
                 />
                 <InfoRow
                   label="Pháp lý"
@@ -263,11 +277,21 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             </div>
 
+            {/* Khối Ước tính chi phí dọn vào ở (MoveInCostEstimator) */}
+            <MoveInCostEstimator
+              initialRentPrice={listing.price}
+              depositAmount={listing.depositAmount}
+              electricityPricePerKwh={listing.electricityPricePerKwh}
+              waterPricePerM3={listing.waterPricePerM3}
+              waterPriceFlat={listing.waterPriceFlat}
+              utilitiesIncluded={listing.utilitiesIncluded}
+            />
+
             {/* Khối Giới thiệu (Chuẩn mẫu Mogi) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-4">
               <h2 className="font-bold text-text-primary text-base">Giới thiệu</h2>
               <div className="whitespace-pre-line text-sm leading-relaxed text-text-secondary">
-                {listing.description || 'Chưa có thông tin mô tả chi tiết cho bất động sản này.'}
+                {listing.description || 'Chưa có thông tin mô tả chi tiết cho bất động sản này'}
               </div>
 
               {/* Báo vi phạm */}
@@ -380,7 +404,7 @@ export default async function ListingDetailPage({ params }: Props) {
           {/* Cột phải — Sidebar người đăng & an toàn (1/3 chiều rộng) */}
           <aside>
             <div className="sticky top-24 space-y-4">
-              {/* Box liên hệ người đăng */}
+              {/* Box liên hệ người tư vấn & dẫn xem (BR-01, BR-02) */}
               <OwnerContactBox
                 listingId={listing.id}
                 ownerName={cleanOwnerName}
@@ -388,6 +412,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 listingTitle={displayTitle}
                 isPhoneVerified={listing.owner.isPhoneVerified}
                 isIdVerified={listing.owner.isIdVerified}
+                contactAgent={(listing as any).contactAgent}
               />
 
               {/* Khối Lưu ý an toàn khi thuê trọ */}
@@ -399,15 +424,15 @@ export default async function ListingDetailPage({ params }: Props) {
                 <ul className="mt-2 space-y-1.5 text-xs text-text-secondary">
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
-                    <span>Luôn đến xem phòng trực tiếp trước khi quyết định đặt cọc.</span>
+                    <span>Luôn đến xem phòng trực tiếp trước khi quyết định đặt cọc</span>
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
-                    <span>Kiểm tra thực tế đồng hồ điện nước, công tơ riêng từng phòng.</span>
+                    <span>Kiểm tra thực tế đồng hồ điện nước, công tơ riêng từng phòng</span>
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="text-brand font-bold">•</span>
-                    <span>Ký hợp đồng thuê bằng văn bản có đầy đủ chữ ký của hai bên.</span>
+                    <span>Ký hợp đồng thuê bằng văn bản có đầy đủ chữ ký của hai bên</span>
                   </li>
                 </ul>
               </div>

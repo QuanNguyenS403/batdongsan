@@ -17,6 +17,7 @@ Bảng tra cứu: người dùng gõ lệnh/từ khoá nào → AI agent (Gemini
 | 11 | `skills/11-admin-kiem-duyet.md` | "làm trang admin", "kiểm duyệt tin" | 8 | 03, 04 |
 | 12 | `skills/12-seo-nang-cao-sitemap-structured-data.md` | "tối ưu SEO", "làm sitemap", "structured data" | 9 | 06, 07 |
 | 13 | `skills/13-docker-cicd-trien-khai.md` | "deploy", "lên production", "setup CI/CD" | 10 | tất cả trên |
+| 14 | `skills/06-full-system-audit-harness.md` | "rà soát hệ thống", "audit toàn bộ", "kiểm tra độc lập", "tự sửa lỗi" | 11 | tất cả trên |
 
 ## Quy trình khi nhận lệnh
 ```

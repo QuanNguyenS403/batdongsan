@@ -41,7 +41,7 @@ export default function ThongTinTaiKhoanPage() {
     }
     authFetch('/auth/me')
       .then((res) => {
-        if (!res.ok) throw new Error('Không tải được thông tin tài khoản.');
+        if (!res.ok) throw new Error('Không tải được thông tin tài khoản');
         return res.json();
       })
       .then((data: Profile) => {
@@ -66,7 +66,7 @@ export default function ThongTinTaiKhoanPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message?.toString() ?? 'Cập nhật thất bại.');
+      if (!res.ok) throw new Error(data.message?.toString() ?? 'Cập nhật thất bại');
 
       setProfile((prev) => (prev ? { ...prev, fullName: data.fullName } : null));
       setProfileSuccess('Cập nhật họ và tên thành công!');
@@ -84,12 +84,12 @@ export default function ThongTinTaiKhoanPage() {
     setPasswordSuccess(null);
 
     if (newPassword.length < 6) {
-      setPasswordError('Mật khẩu mới phải có tối thiểu 6 ký tự.');
+      setPasswordError('Mật khẩu mới phải có tối thiểu 6 ký tự');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('Mật khẩu xác nhận không khớp.');
+      setPasswordError('Mật khẩu xác nhận không khớp');
       return;
     }
 
@@ -102,7 +102,7 @@ export default function ThongTinTaiKhoanPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message?.toString() ?? 'Đổi mật khẩu thất bại.');
+      if (!res.ok) throw new Error(data.message?.toString() ?? 'Đổi mật khẩu thất bại');
 
       setPasswordSuccess('Đổi mật khẩu thành công!');
       setCurrentPassword('');

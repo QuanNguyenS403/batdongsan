@@ -8,7 +8,7 @@ export class BootstrapAdminDto {
   secret!: string;
 
   @ApiProperty({ description: 'Số điện thoại quản trị viên (10 chữ số VN)' })
-  @Matches(/^0[3|5|7|8|9][0-9]{8}$/, { message: 'Số điện thoại không đúng định dạng Việt Nam (10 chữ số).' })
+  @Matches(/^0[35789][0-9]{8}$/, { message: 'Số điện thoại không đúng định dạng di động Việt Nam (10 chữ số, đầu 03, 05, 07, 08, 09).' })
   phone!: string;
 
   @ApiProperty({ description: 'Mật khẩu quản trị viên mới' })

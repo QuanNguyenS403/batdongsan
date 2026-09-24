@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { ListingStatus, Prisma } from '@batdongsan/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { OutboxService } from '../outbox/outbox.service';
 import { CreateMembershipPlanDto } from './dto/create-membership-plan.dto';
 import { UpdateMembershipPlanDto } from './dto/update-membership-plan.dto';
 import { RequestMembershipDto } from './dto/request-membership.dto';
@@ -17,6 +18,7 @@ export class MembershipService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   /**
@@ -178,114 +180,13 @@ export class MembershipService {
 
   /**
    * Người dùng gửi yêu cầu mua / nâng cấp gói thành viên
-   * AF-01 & P0-07: Pending chỉ ghi quotedAmount, pricePaid = 0!
-   * AF-05: Lưu planSnapshot bất biến.
+   * DEV-11 / GAP-07: ĐÓNG BÁN MỚI MEMBERSHIP trong mô hình môi giới 40%
+   * Giữ nguyên quyền lợi của các gói cũ đã mua (planSnapshot bất biến)
    */
   async requestUpgrade(userId: bigint, dto: RequestMembershipDto) {
-    const plan = await this.prisma.membershipPlan.findUnique({
-      where: { id: dto.planId, isActive: true },
-    });
-    if (!plan) {
-      throw new NotFoundException('Gói thành viên không tồn tại hoặc đã ngừng cung cấp.');
-    }
-
-    const now = new Date();
-    // Quét mùa cao điểm để tính giá chuẩn tại thời điểm gửi yêu cầu
-    const activeSeason = await this.prisma.pricingSeason.findFirst({
-      where: {
-        isActive: true,
-        startDate: { lte: now },
-        endDate: { gte: now },
-      },
-      orderBy: { priceMultiplier: 'desc' },
-    });
-    const multiplier = activeSeason ? Number(activeSeason.priceMultiplier) : 1.0;
-    const basePrice = Number(plan.price);
-    const finalPrice = basePrice === 0 ? 0 : Math.round(basePrice * multiplier);
-
-    const planSnapshot = {
-      id: plan.id,
-      name: plan.name,
-      code: plan.code,
-      basePrice: plan.price.toString(),
-      finalPrice: finalPrice.toString(),
-      priceMultiplier: multiplier,
-      durationDays: plan.durationDays,
-      maxActiveListings: plan.maxActiveListings,
-      regionScope: plan.regionScope,
-      snapshotAt: now.toISOString(),
-    };
-
-    // Nếu là gói miễn phí (trial 0đ)
-    if (finalPrice === 0) {
-      const existingTrial = await this.prisma.userMembership.findFirst({
-        where: { userId, plan: { code: 'trial' } },
-      });
-      if (existingTrial) {
-        throw new BadRequestException('Bạn đã từng sử dụng gói Dùng thử miễn phí. Vui lòng chọn gói nâng cấp có phí.');
-      }
-
-      // Kích hoạt ngay lập tức gói dùng thử
-      const endDate = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
-      const created = await this.prisma.userMembership.create({
-        data: {
-          userId,
-          planId: plan.id,
-          status: 'active',
-          quotedAmount: BigInt(0),
-          pricePaid: BigInt(0),
-          confirmedPaymentAmount: BigInt(0),
-          planSnapshot,
-          startDate: now,
-          endDate,
-          paymentNote: 'Kích hoạt gói dùng thử miễn phí tự động',
-        },
-      });
-
-      return {
-        message: 'Kích hoạt gói Dùng thử thành công!',
-        membership: serialize(created),
-        autoActivated: true,
-      };
-    }
-
-    // Với gói có phí: Lưu yêu cầu ở trạng thái pending chờ admin xác nhận chuyển khoản
-    // TUYỆT ĐỐI KHÔNG GHI NHẬN pricePaid KHI PENDING (P0-07 / AF-01)
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { phone: true, fullName: true },
-    });
-
-    const created = await this.prisma.userMembership.create({
-      data: {
-        userId,
-        planId: plan.id,
-        status: 'pending',
-        quotedAmount: BigInt(finalPrice),
-        pricePaid: BigInt(0), // Không ghi nhận doanh thu khi pending!
-        confirmedPaymentAmount: BigInt(0),
-        planSnapshot,
-        paymentNote: dto.paymentNote,
-      },
-    });
-
-    // Kích hoạt thông báo Email tới Admin
-    if (user) {
-      void this.emailService.sendMembershipUpgradeRequestToAdmin({
-        id: created.id,
-        userPhone: user.phone,
-        userName: user.fullName,
-        planName: plan.name,
-        price: BigInt(finalPrice),
-        paymentNote: dto.paymentNote,
-      });
-    }
-
-    return {
-      message: 'Đã gửi yêu cầu đăng ký gói thành công. Vui lòng hoàn tất chuyển khoản theo hướng dẫn để Admin kích hoạt!',
-      membership: serialize(created),
-      autoActivated: false,
-    };
+    throw new BadRequestException(
+      'Hệ thống đã chuyển sang mô hình môi giới phòng cho thuê thu phí thành công 40%, đã ngừng bán gói thành viên mới'
+    );
   }
 
   // ================= ADMIN MANAGEMENT & FINANCE =================
@@ -351,6 +252,7 @@ export class MembershipService {
     requestId: bigint,
     externalTransactionId?: string,
     confirmedAmount?: number,
+    adminNote?: string,
   ) {
     const request = await this.prisma.userMembership.findUnique({
       where: { id: requestId },
@@ -361,57 +263,83 @@ export class MembershipService {
     });
 
     if (!request) {
-      throw new NotFoundException('Yêu cầu nâng cấp gói không tồn tại.');
+      throw new NotFoundException('Yêu cầu nâng cấp gói không tồn tại');
     }
 
     // AF-03 / BE-13: Compare-And-Set check
     if (request.status !== 'pending') {
       throw new ConflictException(
-        `Yêu cầu này không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${request.status}). Có thể một quản trị viên khác vừa xử lý xong.`,
+        `Yêu cầu này không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${request.status}), có thể một quản trị viên khác vừa xử lý xong`,
       );
     }
 
+    // F02 / FIN-01: Bắt buộc mã giao dịch ngân hàng thật & số tiền xác nhận hợp lệ
+    const extTxId = externalTransactionId?.trim();
+    if (!extTxId) {
+      throw new BadRequestException('Bắt buộc phải có mã giao dịch ngân hàng / mã chứng từ sao kê (externalTransactionId)');
+    }
+
+    if (!confirmedAmount || confirmedAmount <= 0) {
+      throw new BadRequestException('Số tiền thực nhận vào tài khoản phải là số nguyên dương lớn hơn 0');
+    }
+
     // Chống nạp trùng externalTransactionId
-    const extTxId = externalTransactionId?.trim() || `BANK_MANUAL_${requestId}_${Date.now()}`;
     const existingTx = await this.prisma.financeLedger.findUnique({
       where: { externalTransactionId: extTxId },
     });
-    if (existingTx) {
-      throw new BadRequestException(`Mã giao dịch ngân hàng [${extTxId}] đã tồn tại trong sổ cái. Vui lòng kiểm tra lại!`);
-    }
-
+    const finalPaidAmount = BigInt(confirmedAmount);
     const now = new Date();
-    const durationDays = request.plan.durationDays;
 
-    // AF-04 Renewal Policy: Kiểm tra gói active hiện tại của user
-    const currentActivePlan = await this.prisma.userMembership.findFirst({
-      where: {
-        userId: request.userId,
-        status: 'active',
-        endDate: { gt: now },
-        id: { not: requestId },
-      },
-      orderBy: { endDate: 'desc' },
-    });
+    // Thực thi atomic interactive transaction (FIN-03: Khóa chuỗi thời gian khi duyệt nối tiếp)
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Chống nạp trùng externalTransactionId trong transaction
+      const existingTx = await tx.financeLedger.findUnique({
+        where: { externalTransactionId: extTxId },
+      });
+      if (existingTx) {
+        throw new BadRequestException(`Mã giao dịch ngân hàng [${extTxId}] đã tồn tại trong sổ cái, vui lòng kiểm tra lại`);
+      }
 
-    let startDate: Date;
-    let endDate: Date;
+      // FIN-04 & FIN-05: Đọc quyền lợi gói bất biến từ planSnapshot thay vì đọc live catalog
+      let durationDays = request.plan.durationDays;
+      let planName = request.plan.name;
+      let maxActiveListings = request.plan.maxActiveListings;
+      if (request.planSnapshot && typeof request.planSnapshot === 'object') {
+        const snap = request.planSnapshot as any;
+        if (typeof snap.durationDays === 'number' && snap.durationDays > 0) {
+          durationDays = snap.durationDays;
+        }
+        if (snap.name) {
+          planName = snap.name;
+        }
+        if (typeof snap.maxActiveListings === 'number') {
+          maxActiveListings = snap.maxActiveListings;
+        }
+      }
 
-    if (currentActivePlan && currentActivePlan.endDate) {
-      // Còn hạn -> Nối tiếp từ ngày hết hạn cũ
-      startDate = now;
-      endDate = new Date(currentActivePlan.endDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
-    } else {
-      // Hết hạn hoặc chưa có -> Tính từ bây giờ
-      startDate = now;
-      endDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
-    }
+      // FIN-03 Renewal Policy: Đọc gói active hiện tại trong transaction để nối tiếp chính xác ngày hết hạn
+      const currentActivePlan = await tx.userMembership.findFirst({
+        where: {
+          userId: request.userId,
+          status: 'active',
+          endDate: { gt: now },
+          id: { not: requestId },
+        },
+        orderBy: { endDate: 'desc' },
+      });
 
-    const finalPaidAmount = confirmedAmount !== undefined ? BigInt(confirmedAmount) : request.quotedAmount;
+      let startDate: Date = now;
+      let endDate: Date;
 
-    // Thực thi atomic transaction
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.userMembership.update({
+      if (currentActivePlan && currentActivePlan.endDate && currentActivePlan.endDate > now) {
+        // Còn hạn -> Nối tiếp từ ngày hết hạn cũ
+        endDate = new Date(currentActivePlan.endDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+      } else {
+        // Hết hạn hoặc chưa có -> Tính từ bây giờ
+        endDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+      }
+
+      const updatedMem = await tx.userMembership.update({
         where: {
           id: requestId,
           version: request.version, // CAS version check
@@ -428,21 +356,23 @@ export class MembershipService {
           version: { increment: 1 },
         },
         include: { plan: true },
-      }),
+      });
+
       // Ghi Sổ cái tài chính (P0-07 / AF-01)
-      this.prisma.financeLedger.create({
+      await tx.financeLedger.create({
         data: {
           transactionType: 'cash_in',
           amount: finalPaidAmount,
           userMembershipId: requestId,
           userId: request.userId,
           externalTransactionId: extTxId,
-          note: `Xác nhận chuyển khoản mua gói: ${request.plan.name}`,
+          note: `Xác nhận chuyển khoản mua gói: ${planName}`,
           recordedByUserId: adminId,
         },
-      }),
+      });
+
       // Ghi Nhật ký kiểm toán bất biến (AF-12)
-      this.prisma.auditEvent.create({
+      await tx.auditEvent.create({
         data: {
           actorId: adminId,
           action: 'membership.approve',
@@ -458,16 +388,29 @@ export class MembershipService {
           },
           reason: `Admin xác nhận chuyển khoản ngân hàng thành công (${extTxId})`,
         },
-      }),
-    ]);
+      });
 
-    // Gửi email chúc mừng tới người dùng
-    void this.emailService.sendMembershipActivatedToUser({
-      userPhone: request.user.phone,
-      userName: request.user.fullName,
-      planName: request.plan.name,
-      maxActiveListings: request.plan.maxActiveListings,
-      expiresAt: endDate,
+      // RB-06: Ghi nhận sự kiện thông báo vào Transactional Outbox
+      await this.outboxService.recordEvent(
+        {
+          aggregateType: 'MEMBERSHIP',
+          aggregateId: requestId.toString(),
+          eventType: 'EMAIL_MEMBERSHIP_ACTIVATED_USER',
+          payload: {
+            membership: {
+              id: requestId.toString(),
+              planName,
+              maxActiveListings,
+              expiresAt: endDate.toISOString(),
+            },
+            userPhone: request.user.phone,
+            userName: request.user.fullName,
+          },
+        },
+        tx,
+      );
+
+      return updatedMem;
     });
 
     return serialize(updated);
@@ -481,16 +424,16 @@ export class MembershipService {
       where: { id: requestId },
     });
     if (!request) {
-      throw new NotFoundException('Yêu cầu nâng cấp gói không tồn tại.');
+      throw new NotFoundException('Yêu cầu nâng cấp gói không tồn tại');
     }
 
     if (request.status !== 'pending') {
       throw new ConflictException(
-        `Yêu cầu này không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${request.status}). Không thể từ chối.`,
+        `Yêu cầu này không ở trạng thái chờ duyệt (Trạng thái hiện tại: ${request.status}), không thể từ chối`,
       );
     }
 
-    const reason = note?.trim() || 'Không nhận được chuyển khoản hoặc thông tin không khớp.';
+    const reason = note?.trim() || 'Không nhận được chuyển khoản hoặc thông tin không khớp';
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.userMembership.update({
@@ -519,25 +462,56 @@ export class MembershipService {
   }
 
   /**
-   * Admin hoàn tiền gói thành viên (Refund)
+   * Admin hoàn tiền gói thành viên (Refund - F03 / FIN-01)
    */
-  async refundRequest(adminId: bigint, requestId: bigint, reason: string, refundAmount?: number) {
+  async refundRequest(
+    adminId: bigint,
+    requestId: bigint,
+    reason: string,
+    refundAmount?: number,
+    externalTransactionId?: string,
+  ) {
     const request = await this.prisma.userMembership.findUnique({
       where: { id: requestId },
       include: { plan: true },
     });
 
     if (!request) {
-      throw new NotFoundException('Gói thành viên không tồn tại.');
+      throw new NotFoundException('Gói thành viên không tồn tại');
     }
 
     if (request.status !== 'active') {
-      throw new BadRequestException('Chỉ có thể hoàn tiền cho gói đang hoạt động (active).');
+      throw new BadRequestException('Chỉ có thể hoàn tiền cho gói đang hoạt động (active)');
+    }
+
+    // F03 / FIN-01: Bắt buộc mã chứng từ chi tiền hoàn thật
+    const extTxId = externalTransactionId?.trim();
+    if (!extTxId) {
+      throw new BadRequestException('Bắt buộc phải có mã giao dịch/chứng từ chi hoàn tiền (externalTransactionId)');
+    }
+
+    const maxRefundable = Number(request.confirmedPaymentAmount);
+    if (refundAmount !== undefined) {
+      if (refundAmount <= 0) {
+        throw new BadRequestException('Số tiền hoàn lại phải là số nguyên dương lớn hơn 0');
+      }
+      if (refundAmount > maxRefundable) {
+        throw new BadRequestException(
+          `Số tiền hoàn (${refundAmount.toLocaleString('vi-VN')} đ) không được vượt quá số tiền đã thực thu (${maxRefundable.toLocaleString('vi-VN')} đ)`,
+        );
+      }
+    }
+
+    // Chống trùng mã chứng từ chi
+    const existingRefundTx = await this.prisma.financeLedger.findUnique({
+      where: { externalTransactionId: extTxId },
+    });
+    if (existingRefundTx) {
+      throw new BadRequestException(`Mã giao dịch chi hoàn [${extTxId}] đã tồn tại trong sổ cái. Vui lòng kiểm tra lại!`);
     }
 
     const finalRefund = refundAmount !== undefined ? BigInt(refundAmount) : request.confirmedPaymentAmount;
     const now = new Date();
-    const refundTxId = `REFUND_${requestId}_${Date.now()}`;
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.userMembership.update({
@@ -545,7 +519,7 @@ export class MembershipService {
         data: {
           status: 'expired',
           endDate: now,
-          paymentNote: `${request.paymentNote ?? ''} | Đã hoàn tiền: ${reason}`,
+          paymentNote: `${request.paymentNote ?? ''} | Đã hoàn tiền (${extTxId}): ${reason}`,
           version: { increment: 1 },
         },
       }),
@@ -555,8 +529,8 @@ export class MembershipService {
           amount: finalRefund,
           userMembershipId: requestId,
           userId: request.userId,
-          externalTransactionId: refundTxId,
-          note: `Hoàn tiền gói ${request.plan.name}: ${reason}`,
+          externalTransactionId: extTxId,
+          note: `Hoàn tiền gói ${request.plan.name} (${extTxId}): ${reason}`,
           recordedByUserId: adminId,
         },
       }),
@@ -567,7 +541,7 @@ export class MembershipService {
           entityType: 'user_membership',
           entityId: requestId.toString(),
           beforeState: { status: request.status, confirmedPaymentAmount: request.confirmedPaymentAmount.toString() },
-          afterState: { status: 'expired', refundAmount: finalRefund.toString() },
+          afterState: { status: 'expired', refundAmount: finalRefund.toString(), externalTransactionId: extTxId },
           reason,
         },
       }),
@@ -602,20 +576,27 @@ export class MembershipService {
       _count: { id: true },
     });
 
-    const cashInTotal = Number(cashInAgg._sum.amount ?? 0);
-    const refundTotal = Number(refundAgg._sum.amount ?? 0);
-    const netCashIn = cashInTotal - refundTotal;
-    const pendingQuotedTotal = Number(pendingAgg._sum.quotedAmount ?? 0);
+    const cashInBig = cashInAgg._sum.amount ?? BigInt(0);
+    const refundBig = refundAgg._sum.amount ?? BigInt(0);
+    const netCashFlowBig = cashInBig - refundBig;
+    const pendingQuotedBig = pendingAgg._sum.quotedAmount ?? BigInt(0);
 
     return {
-      confirmedCashIn: cashInTotal,
-      refundsPaid: refundTotal,
-      netCashIn,
+      confirmedCashIn: Number(cashInBig),
+      confirmedCashInFormatted: `${cashInBig.toLocaleString('vi-VN')} đ`,
+      refundsPaid: Number(refundBig),
+      refundsPaidFormatted: `${refundBig.toLocaleString('vi-VN')} đ`,
+      netCashFlow: Number(netCashFlowBig),
+      netCashFlowFormatted: `${netCashFlowBig.toLocaleString('vi-VN')} đ`,
+      netCashIn: Number(netCashFlowBig), // backward compatibility
       cashInCount: cashInAgg._count.id,
       refundCount: refundAgg._count.id,
       pendingOrdersCount: pendingAgg._count.id,
-      pendingQuotedTotal,
-      operationalCosts: 'Chưa đo được (Chưa cấu hình bảng chi phí đối tác)',
+      pendingQuotedTotal: Number(pendingQuotedBig),
+      pendingQuotedTotalFormatted: `${pendingQuotedBig.toLocaleString('vi-VN')} đ`,
+      netProfit: 'Chưa đo được',
+      netProfitStatus: 'Chưa đo được (Dòng tiền ròng thực thu ≠ Lợi nhuận do chi phí đối tác/hạ tầng chưa được trừ)',
+      operationalCosts: 'Chưa đo được (Chưa cấu hình bảng chi phí đối tác SMS/Email/Server)',
       notes: 'Doanh thu thuần dựa 100% trên các giao dịch thực tế đã ghi vào Sổ cái tài chính (FinanceLedger). Tiền pending được theo dõi riêng biệt.',
     };
   }
@@ -668,7 +649,7 @@ export class MembershipService {
     const end = new Date(dto.endDate);
 
     if (start >= end) {
-      throw new BadRequestException('Ngày bắt đầu mùa vụ phải nhỏ hơn ngày kết thúc.');
+      throw new BadRequestException('Ngày bắt đầu mùa vụ phải nhỏ hơn ngày kết thúc');
     }
 
     const created = await this.prisma.pricingSeason.create({
@@ -693,14 +674,14 @@ export class MembershipService {
   async updatePricingSeason(id: number, dto: UpdatePricingSeasonDto) {
     const season = await this.prisma.pricingSeason.findUnique({ where: { id } });
     if (!season) {
-      throw new NotFoundException('Cấu hình mùa cao điểm không tồn tại.');
+      throw new NotFoundException('Cấu hình mùa cao điểm không tồn tại');
     }
 
     const start = dto.startDate ? new Date(dto.startDate) : season.startDate;
     const end = dto.endDate ? new Date(dto.endDate) : season.endDate;
 
     if (start >= end) {
-      throw new BadRequestException('Ngày bắt đầu mùa vụ phải nhỏ hơn ngày kết thúc.');
+      throw new BadRequestException('Ngày bắt đầu mùa vụ phải nhỏ hơn ngày kết thúc');
     }
 
     const data: Prisma.PricingSeasonUpdateInput = {};

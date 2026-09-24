@@ -2,7 +2,183 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
-## 🛡️ ĐỢT AUDIT ĐỘC LẬP 3468454: THỰC THI GATE 0 — SỬA BỘ CÔNG CỤ XÁC MINH & CI INTEGRITY (12/09/2026)
+## 🚀 ĐỢT 7: CHUYỂN ĐỔI MÔ HÌNH MÔI GIỚI CHO THUÊ 40% CÓ ĐẦU MỐI DUY NHẤT (PIVOT 24/09/2026)
+
+Thực thi theo kế hoạch tại `docs/audit/ke-hoach-thuc-thi-moi-gioi-cho-thue.md`:
+1. **Chuyển đổi Mô hình Cốt lõi**:
+   - Thay thế toàn bộ mô hình marketplace bán gói membership đăng tin sang mô hình môi giới có người thật (Quan) điều phối độc quyền.
+   - Quan tiếp nhận và trực tiếp dẫn khách; Chủ ký hợp đồng thuê trực tiếp với khách (HĐ-02); Nền tảng thu phí thành công 40% (một lần) từ chủ nhà khi đủ điều kiện thành công (§6.2); Khách thuê 0 đồng phí.
+2. **DEV-01 (Chốt đặc tả & Đồng bộ tài liệu - verified)**:
+   - Đồng bộ `CLAUDE.md`, `README.md`, `TRANG-THAI-TRIEN-KHAI.md`, `RUNBOOK.md` và `EXECUTION-STATUS.md`.
+   - Triệt tiêu hoàn toàn mâu thuẫn giữa 2 mô hình cũ và mới.
+   - Thêm đầy đủ mã GAP-01→16, DEV-01→17, AT-01→30 vào bảng theo dõi trung tâm.
+
+## 🚀 ĐỢT 6: BÀN GIAO, RUNBOOK & SẴN SÀNG PHÁT HÀNH / GATE F (21/09/2026)
+
+Hoàn thiện toàn bộ hồ sơ bàn giao chuyên đề và đối chiếu 10/10 mục của "Bộ nghiệm thu tối thiểu" (§11):
+1. **Hoàn Thiện 10 Hồ Sơ Bàn Giao Chuyên Đề (§12.1 - verified)**:
+   - `CURRENT-STATE.md`, `BUSINESS-MODEL.md`, `BRAND-AND-TRUST.md`, `api-inventory.csv`, `ISSUE-REGISTER.md`, `PERMISSION-MATRIX.md`, `DATA-AND-FINANCE-RULES.md`, `TEST-EVIDENCE.md`, `RUNBOOK.md`, `RELEASE-READINESS.md`.
+2. **Đáp Ứng 10/10 Tiêu Chí Nghiệm Thu Tối Thiểu (§11 - verified)**:
+   - Toàn bộ 10 cổng nghiệm thu đều đạt trạng thái `VERIFIED`.
+3. **Rà Soát Zero Từ Cấm (T23 - verified)**:
+   - 0 kết quả đối với các cụm: `"100% chính chủ"`, `"không lừa đảo"`, `"an toàn tuyệt đối"`, `"chắc chắn có khách"`.
+4. **Monorepo Production Build (T26 - verified)**:
+   - Build 3/3 packages thành công (52.0s), 31/31 routes Next.js pass, Typecheck API 0 lỗi, Web 0 lỗi.
+
+## 🚀 ĐỢT 5: PILOT, ĐO LƯỜNG NGUỒN CUNG THỰC & QUẢN LÝ BẰNG CHỨNG / GATE E (21/09/2026)
+
+Triển khai quy trình kiểm chứng nguồn cung thực tế và đo lường Pilot theo §7, §4.5 và §8.1:
+1. **SUPPLY-01 (Chu Kỳ Xác Nhận Còn Phòng 7 Ngày - verified)**:
+   - Backend `listings.service.ts`: Phương thức `confirmAvailability` cập nhật `refreshedAt = now()`, ghi nhận `AuditEvent` (`action: listing.confirm_availability`).
+   - Backend `listings.controller.ts`: Endpoint `POST /listings/:id/confirm-availability`.
+   - Frontend `/tai-khoan/quan-ly-tin`: Hiển thị ngày xác nhận phòng gần nhất, cảnh báo `"⚠️ > 7 ngày"` khi quá hạn, và nút thao tác nhanh `"🔄 Còn phòng"`.
+2. **SUPPLY-02 (Minh Bạch Tình Trạng Còn Phòng Trên Chi Tiết Tin - verified)**:
+   - Frontend `/tin/[slug]/page.tsx`: InfoRow hiển thị minh bạch: `"🟢 Còn phòng (Xác nhận dd/mm/yyyy)"` trong vòng 7 ngày, hoặc cảnh báo `"🟡 Cần xác nhận lại"` khi quá 7 ngày.
+3. **REPORT-01 (Báo Cáo Vi Phạm Nâng Cao Khớp Định Vị §3.2 & §7 - verified)**:
+   - Backend `report-listing.dto.ts`: Bổ sung các lý do vi phạm trọng tâm: `da_het_phong`, `gia_thuc_te_khac`, `khong_phai_chinh_chu`.
+   - Frontend `ReportListingModal.tsx`: Đưa 3 lý do trọng tâm lên đầu danh sách lựa chọn cho người thuê.
+4. **PILOT-01 (Đo Lường Chỉ Số Pilot KPI Theo §4.5 & §8.1 - verified)**:
+   - Backend `admin.service.ts#getDashboard`: Tính toán và cung cấp khối `pilot` gồm `verifiedSupplyRatio` (mục tiêu $\ge 90\%$), `leadResponseRate` (mục tiêu $\ge 80\%$), và `violationRate` (mục tiêu $< 2\%$) kèm cờ đạt ngưỡng tự động.
+   - Frontend `admin/page.tsx`: Thẻ KPI Pilot trực quan tại tab GROWTH kèm disclaimers trung thực.
+
+## 🚀 ĐỢT 4: ADMIN, PHÂN QUYỀN CAPABILITY & TRẢI NGHIỆM / GATE D (21/09/2026)
+
+Hoàn thiện toàn diện hệ thống phân quyền Admin Capability, bảo vệ MFA, bộ 3 bảng điều khiển MONEY/GROWTH/RISK chuẩn §8.1 và nâng cao trải nghiệm người dùng / người đăng:
+1. **F12 / PERMISSION-MATRIX (Admin Capability & MFA Protection - verified)**:
+   - Tạo enum `AdminCapability` (`LISTINGS_MODERATE`, `LEADS_SUPPORT`, `FINANCE_MANAGE`, `SYSTEM_ADMIN`) và decorator `@RequireCapabilities(...)`, `@RequireAdminMfa()` tại `apps/api/src/common/decorators/capabilities.decorator.ts`.
+   - Tạo `CapabilitiesGuard` (`apps/api/src/common/guards/capabilities.guard.ts`) và đăng ký toàn cục làm `APP_GUARD` trong `AuthModule`.
+   - Bổ sung xác thực Admin MFA qua header `x-admin-mfa-code` cho các hành động tài chính và quản trị nhạy cảm (`approveRequest`, `refundRequest`, `toggleBlockUser`).
+2. **Admin 3 Bảng Điều Khiển §8.1 (MONEY / GROWTH / RISK - verified)**:
+   - Backend `admin.service.ts#getDashboard`: Cung cấp đủ 3 khối dữ liệu chuẩn §8.1:
+     - Khối `money`: Dòng tiền ròng thực thu (`netCashFlow = cashIn - refund`), tổng thu thực tế, tổng hoàn tiền, pending quoted amount (tách bạch khỏi doanh thu), và các khoản chưa đối soát.
+     - Khối `growth`: Tin công khai đang hoạt động, tin đã qua kiểm tra, số chủ tin hoạt động, tổng leads tiếp nhận, và phễu 4 bước (View -> Detail -> Lead -> Connect).
+     - Khối `risk`: Báo cáo vi phạm chờ xử lý, tin hết hạn, tin bị từ chối, hàng đợi lỗi Outbox DLQ (`FAILED`), người dùng bị khóa, và nhật ký kiểm toán hệ thống `auditEvents`.
+   - Frontend `apps/web/src/app/admin/page.tsx`: Giao diện 3 tab chuyên biệt kèm các disclaimer minh bạch theo định nghĩa chỉ số §8.1.
+3. **FE-N04 (Trang Chi Tiết Tin An Toàn Trên Production - verified)**:
+   - `apps/web/src/app/tin/[slug]/page.tsx`: Tắt hoàn toàn fallback demo data trên môi trường production. Ném `notFound()` nếu 404 thật; chuẩn hóa brand "QNS Thuê".
+4. **FE-N05 & FE-N19 (Khôi Phục & Validate Upload Ảnh - verified)**:
+   - `apps/web/src/app/dang-tin/page.tsx`: Validate client tối đa 20 ảnh và mỗi ảnh <= 10MB; cơ chế banner cảnh báo hỗ trợ người dùng tiếp tục nếu tải ảnh gặp sự cố nhưng tin đã được tạo.
+5. **FE-N06 & FE-N07 (Minh Bạch Điện Nước & Taxonomy Đăng Tin - verified)**:
+   - Bổ sung biểu phí điện nước chi tiết (`electricityPricePerKwh`, `waterPricePerM3`, `waterPriceFlat`, `utilitiesIncluded`) và 10 tiện ích tiêu chuẩn vào form đăng tin.
+6. **FE-N08 & FE-N09 (Phân Trang Lead/Tin Đã Lưu & Trạng Thái Đã Cho Thuê - verified)**:
+   - Frontend: Bổ sung thanh phân trang `Pagination` cho cả `/tai-khoan/leads` và `/tai-khoan/tin-da-luu`.
+   - Backend `listings.service.ts` & `listings.controller.ts`: Endpoint `PATCH /listings/:id/rented` với method `markAsRented` an toàn.
+   - Frontend `/tai-khoan/quan-ly-tin`: Thêm nút "✓ Đã cho thuê" (status: `rented`) tách biệt khỏi "Gỡ tin" (status: `removed`).
+7. **FE-N10 & FE-N11 (Giữ Location Filter & Token Auth Toàn Cục - verified)**:
+   - `SearchFilterBar.tsx`: Giữ nguyên `locationSlug` và `locationId` khi người dùng chuyển đổi bộ lọc.
+   - `Header.tsx`: Chỉ clear token khi gặp lỗi 401 Unauthorized thật, tránh logout nhầm khi gặp sự cố mạng tạm thời.
+8. **FE-N17 / F11 (Minh Bạch MoveInCostEstimator - verified)**:
+   - `MoveInCostEstimator.tsx`: Phân biệt cọc 0đ (không yêu cầu cọc) với trường hợp chưa rõ; tách biệt đơn vị nước khoán theo người và nước theo m³.
+9. **Xác Minh Chất Lượng**:
+   - Static lint check: 5/5 PASS.
+   - `tsc --noEmit` API & Web: PASS 100% (0 errors).
+   - Rà soát từ cấm: 0 kết quả trên toàn bộ mã nguồn.
+   - Monorepo production build: PASS 3/3 packages (44.8s).
+
+## 🚀 ĐỢT 3: OUTBOX, TÀI CHÍNH & VẬN HÀNH / GATE C (21/09/2026)
+
+Hoàn thiện toàn diện hạ tầng vận hành, Transactional Outbox và hệ thống tài chính theo chỉ thị Gate C:
+1. **RB-06 (Nối 100% Transactional Outbox Vào Mutation Cốt Lõi - verified)**:
+   - `listings.service.ts`: `create` và `report` đều ghi Outbox (`EMAIL_LISTING_SUBMITTED`, `EMAIL_NEW_LISTING_ADMIN`, `SHEETS_PENDING_LISTING`, `EMAIL_NEW_REPORT_ADMIN`, `SHEETS_VIOLATION_REPORT`) bên trong cùng DB transaction `tx`.
+   - `admin.service.ts`: `approveListing` (`EMAIL_LISTING_APPROVED`) và `rejectListing` (`EMAIL_LISTING_REJECTED`) ghi Outbox trong CAS transaction.
+   - `membership.service.ts`: `requestUpgrade` (`EMAIL_MEMBERSHIP_UPGRADE_ADMIN`) và `approveRequest` (`EMAIL_MEMBERSHIP_ACTIVATED_USER`) ghi Outbox trong transaction.
+   - `leads.service.ts`: `createLead` ghi sự kiện `LEAD_CREATED` (RB-13) vào Outbox trong transaction.
+2. **RB-07 & RB-15 (Cơ Chế Lease/Reclaim & Phân Định 3 Trạng Thái Outbox - verified)**:
+   - `outbox.service.ts`: Cơ chế lease 5 phút (`lockedUntil`), gắn `workerId`. Tự động quét claim cả events `PENDING` và `PROCESSING` hết hạn lease để phục hồi tác vụ bị treo vĩnh viễn khi worker gặp sự cố.
+   - Phân định rõ 3 trạng thái `OutboxDispatchResult`: `SENT` / `SKIPPED` / `RETRYABLE_FAILURE`. Chỉ `SENT`/`SKIPPED` mới đánh dấu `COMPLETED`. `RETRYABLE_FAILURE` kích hoạt exponential backoff và chuyển vào DLQ (`FAILED`) sau 5 lần retry. Bổ sung handler `LEAD_CREATED`.
+3. **RB-08 (Advisory Lock An Toàn Connection Pool - verified)**:
+   - `outbox.service.ts` & `tasks.service.ts`: Loại bỏ hoàn toàn fallback in-memory nguy hiểm khi DB query gặp lỗi raw; abort chu kỳ an toàn để bảo vệ tính nhất quán dữ liệu.
+4. **RB-10 (Quota Create & Slug Generation Transaction-Safe - verified)**:
+   - `listings.service.ts`: Đưa kiểm tra hạn mức gói (đọc từ `planSnapshot`), tạo tin, và sinh final slug `${slug}-id${id}` vào 1 interactive transaction `prisma.$transaction`. Triệt tiêu hoàn toàn race condition `-idtemp` và quota bypass.
+5. **FIN-02 (Nâng Cấp Script Kiểm Toán & Backfill Sổ Cái - verified)**:
+   - `packages/database/scripts/backfill-finance-ledgers.ts`: Chỉ ghi nhận Sổ cái khi có mã giao dịch ngân hàng thật `externalTransactionId`. Tuyệt đối không tự bịa mã chứng từ giả; tự động gắn flag `UNVERIFIED_PENDING_MANUAL_PROOF` và ghi nhật ký `AuditEvent` cho các trường hợp thiếu chứng từ.
+6. **FIN-03, FIN-04, FIN-05, FIN-08, FIN-09 (Hoàn Thiện Nghiệp Vụ Tài Chính - verified)**:
+   - `FIN-03`: `approveRequest` chuyển sang interactive transaction, query `currentActivePlan` bên trong transaction để nối tiếp chính xác ngày hết hạn khi gia hạn gói.
+   - `FIN-04 & FIN-05`: Ưu tiên đọc quyền lợi `durationDays`, `maxActiveListings`, `name` từ `planSnapshot` bất biến, bảo toàn quyền lợi đã bán.
+   - `FIN-08`: Khẳng định `ON DELETE RESTRICT` giữa User và FinanceLedger.
+   - `FIN-09`: `RequestMembershipDto` hỗ trợ `idempotencyKey`; `requestUpgrade` xử lý idempotent response; `TasksService.sweepPendingMemberships` tự động hủy đơn pending quá 7 ngày.
+7. **FIN-06 & FIN-07 (Sửa Dashboard Tài Chính & Giới Hạn Boundary - verified)**:
+   - `getFinanceSummary`: Tách bạch rõ `netCashFlow` (dòng tiền ròng thực thu = cash_in - refund) với `netProfit` ("Chưa đo được - Chi phí đối tác chưa trừ"); cung cấp định dạng chuỗi VNĐ an toàn trước `MAX_SAFE_INTEGER`.
+8. **Xác Minh Chất Lượng**:
+   - `tsc --noEmit` API & Web: PASS 100% (0 errors).
+   - Static structure lint: 5/5 PASS.
+   - Monorepo production build: PASS 3/3 packages (50.8s).
+
+## 🚀 ĐỢT 2: SỬA TÍNH NHẤT QUÁN & BẢO MẬT / GATE B (21/09/2026)
+
+Khắc phục triệt để các bất cập về tính nhất quán, bảo mật và khả năng phục hồi theo chỉ thị Gate B:
+1. **RB-01 (Session Revocation & Token Version Sync - verified)**:
+   - `jwt.strategy.ts`: Từ chối lập tức JWT nếu thiếu `tokenVersion` hoặc `tokenVersion !== user.tokenVersion`.
+   - `users.service.ts`: Tăng `tokenVersion` khi người dùng đổi mật khẩu.
+   - `auth.service.ts`: Tăng `tokenVersion` khi refresh token và admin bootstrap.
+2. **RB-02 / F06 (CSPRNG OTP & Tách Store Rate Limit - verified)**:
+   - `otp.service.ts`: Dùng CSPRNG `crypto.randomInt(100000, 1000000)` sinh mã OTP 6 số an toàn.
+   - Tách 2 store bộ nhớ riêng biệt: `activeOtps` (lưu mã xác thực) và `rateLimits` (đếm 5 lần/giờ). Khi verify xong xóa mã OTP nhưng bảo toàn rate limit chống spam.
+   - Chuẩn hóa tin nhắn SMS: `[QNS Thue] Ma xac thuc OTP...`.
+3. **RB-03 (Assert-env Theo SMS Provider Thật - verified)**:
+   - `assert-env.ts`: Validate từng biến bắt buộc tương ứng theo cấu hình `SMS_PROVIDER` (eSMS, Twilio, SpeedSMS).
+4. **RB-04 (Admin Bootstrap One-Shot & Regex SĐT - verified)**:
+   - `bootstrap-admin.dto.ts`: Regex SĐT Việt Nam hợp lệ `^0[35789][0-9]{8}$`.
+   - `auth.service.ts`: `bootstrapAdmin` ném `BadRequestException` 400 nếu hệ thống đã có admin; ghi log vào `AuditEvent`.
+5. **RB-05 (CAS DB Atomic Cho Duyệt Tin - verified)**:
+   - `admin.service.ts`: `approveListing` và `rejectListing` dùng CAS nguyên tử tại tầng DB (`updateMany` với `where: { id, status: 'pending' }`), ném `ConflictException 409` nếu có race condition; đếm quota nằm trong transaction.
+6. **RB-09 / F14 (Khóa SSRF Trong Next.js Images - verified)**:
+   - `next.config.mjs`: Loại bỏ wildcard `**`, siết danh sách domain tin cậy (`images.unsplash.com`, `res.cloudinary.com`, `localhost`, `127.0.0.1`).
+7. **RB-11 (Leads Validation Hợp Lệ - verified)**:
+   - `leads.service.ts`: Từ chối tạo lead nếu tin đã hết hạn (`expiresAt <= now()`) hoặc chủ tin bị khóa (`owner.isBlocked === true`).
+8. **RB-12 (Global BigInt Serializer Interceptor - verified)**:
+   - Tạo `bigint.interceptor.ts`, kết hợp monkey-patch `BigInt.prototype.toJSON`, đăng ký toàn cục trong `main.ts` loại trừ lỗi 500 BigInt serialization.
+9. **FE-N12 & FE-N14 (Đồng Bộ Token Key & Sửa Sitemap - verified)**:
+   - Đồng bộ token key sang `accessToken` xuyên suốt frontend (`auth-client.ts`, `dang-nhap/page.tsx`).
+   - Sửa `sitemap.ts`: đọc field `items` (fallback `data`), query `pageSize=100&status=active`, lọc bỏ tin demo.
+10. **Xác Minh Chất Lượng**:
+    - `tsc --noEmit` API & Web: PASS 100% (0 errors).
+    - Static structure lint: 5/5 PASS.
+    - Monorepo production build: PASS 3/3 packages (49.4s).
+
+## 🚀 ĐỢT 1: CHẶN RỦI RO TRỌNG YẾU / GATE A (21/09/2026)
+
+
+Khắc phục triệt để các rủi ro P0, tiền bạc và bảo vệ thương hiệu theo chỉ thị §11:
+1. **FE-N01 (Rules of Hooks & Auth Token - verified)**:
+   - Sửa `ContactBrokerModal.tsx`: bọc `handleCloseModal` bằng `useCallback`, chuyển early return `!isOpen` xuống sau toàn bộ hooks, đọc token qua `getAccessToken()`.
+2. **FE-N02 (Tắt Fallback Giá Ở Production - verified)**:
+   - Sửa `gia-thanh-vien/page.tsx`: khi `NODE_ENV === 'production'`, nếu API rỗng/lỗi, set `plans = []` (không fallback sang mock).
+   - Thêm banner cảnh báo ở dev mode; xử lý Empty State trong `MembershipPricingClient.tsx`: hiển thị "Bảng giá đang được cập nhật", ẩn form chuyển khoản nạp tiền.
+3. **F16 / FE-N22 & BR-02 (Promise.allSettled & Hero Slogan - verified)**:
+   - Sửa `apps/web/src/app/page.tsx`: chuyển `Promise.all` sang `Promise.allSettled` cho 4 chuyên mục.
+   - Cập nhật H1: "Tìm chỗ thuê phù hợp, rõ chi phí ngay từ đầu".
+   - Cập nhật Hero slogan: "QNS Thuê — Rõ chi phí. Đúng người cho thuê." Loại bỏ câu chữ du lịch nghỉ dưỡng.
+4. **BR-01 / F15 & SEC-HOTLINE (Dọn Sạch Từ Cấm & Hotline Cá Nhân - verified)**:
+   - Đã rà soát và xóa sạch 100% từ "chính chủ" ở 7 file (`layout.tsx`, `thue/page.tsx`, `tin/[slug]/page.tsx`, `cho-thue-tro/page.tsx`, `cho-thue-mat-bang/page.tsx`, `AuthModal.tsx`, `demo-data.ts`).
+   - Xóa bỏ toàn bộ hotline cá nhân `0981 753 082` và `0981753082`, chuẩn hóa qua `SITE_CONFIG.hotline` (`1900 8868`) và `SITE_CONFIG.bankAccount`.
+5. **F02 / F03 / FIN-01 & RB-14 (DTOs Giao Dịch & Fail-Fast Production - verified)**:
+   - Tạo 3 DTOs có validation: `ApproveMembershipRequestDto`, `RefundMembershipRequestDto`, `RejectMembershipRequestDto`.
+   - Cập nhật `AdminMembershipController` và `MembershipService`: bắt buộc `externalTransactionId`, `confirmedAmount > 0`, chống nạp trùng mã giao dịch, hoàn tiền không vượt số tiền thực thu.
+   - Cập nhật `assert-env.ts`: fail-fast chặn khởi động ở production nếu JWT secret < 32 ký tự, thiếu `DATABASE_URL`, password bootstrap < 12 ký tự hoặc SMS provider là mock.
+6. **Xác Minh Chất Lượng & Build Graph**:
+   - `tsc --noEmit` API: PASS 100% (exit code 0).
+   - `tsc --noEmit` Web: PASS 100% (exit code 0).
+   - Static lint check: 5/5 cấu trúc tệp mã nguồn khớp.
+   - Grep từ cấm: 0 kết quả cho "chính chủ", "không lừa đảo", "an toàn tuyệt đối", "chắc chắn có khách".
+   - `pnpm build`: 3/3 packages build thành công (31/31 routes static generation pass 100%).
+
+## 🚀 ĐỢT 0: CHỤP HIỆN TRẠNG & TẠO HỒ SƠ BÀN GIAO BỔ SUNG CHUYÊN ĐỀ §12.1 (21/09/2026)
+
+Thực thi theo chỉ thị tại `docs/audit/Ban-thu-hoach-va-chi-thi-AI-agent-batdongsan.md` (19/09/2026):
+1. **Xác lập Baseline Kỹ thuật**:
+   - Nhánh: `audit/qns-rental-implementation` từ commit gốc `eb99862d8a6887dae0241d8e7302005d699ea40b`.
+   - Toolchain: Node.js `v24.19.0`, pnpm `9.15.9`.
+   - Kết quả Typecheck: `@batdongsan/api` 0 lỗi, `@batdongsan/web` 0 lỗi.
+   - Kết quả Static structure lint: 5/5 cấu trúc khớp (`node packages/database/scripts/static-lint-check.js`).
+   - Rà soát từ ngữ cấm: Phát hiện từ "chính chủ" tại 7 file (`demo-data.ts`, `thue/page.tsx`, `tin/[slug]/page.tsx`, `layout.tsx`, `AuthModal.tsx`, `cho-thue-tro/page.tsx`, `cho-thue-mat-bang/page.tsx`). Đưa vào backlog Gate A giải quyết triệt để.
+2. **Khởi tạo 10 tài liệu bàn giao chuyên đề §12.1 trong `docs/audit/`**:
+   - `CURRENT-STATE.md`, `BUSINESS-MODEL.md`, `BRAND-AND-TRUST.md`, `api-inventory.csv`, `ISSUE-REGISTER.md`, `PERMISSION-MATRIX.md`, `DATA-AND-FINANCE-RULES.md`, `TEST-EVIDENCE.md`, `RUNBOOK.md`, `RELEASE-READINESS.md`.
+3. **Hợp nhất Sổ theo dõi trung tâm `EXECUTION-STATUS.md`**:
+   - Tích hợp và đối chiếu toàn bộ phát hiện F01–F16 từ báo cáo 19/09/2026 với mã finding hiện có.
+   - Thêm liên kết chéo tới 10 tài liệu chuyên đề.
+
+---
 
 Thực thi theo đặc tả chính thức tại `docs/audit/BATDONGSAN-REVIEW-3468454-COMPLETE.md` và theo dõi tại `docs/audit/EXECUTION-STATUS.md`:
 
@@ -415,5 +591,40 @@ Mở http://localhost:3000 — trang chủ sẽ hiện 2 tin `[MẪU]`. Đăng n
 4. **Điều kiện kích hoạt Giai đoạn 5 (Sản phẩm Dữ liệu B2B — Lớp 5)**:
    - Hệ thống vận hành liên tục tối thiểu **12 - 18 tháng**.
    - Sở hữu lịch sử giá thuê của tối thiểu **2.000+ phòng trọ** theo chuỗi thời gian thật, đủ độ tin cậy để đóng gói thành báo cáo thị trường bán cho nhà đầu tư xây nhà trọ.
+
+---
+
+## 🎯 CHUYỂN ĐỔI MÔ HÌNH KINH DOANH: MÔI GIỚI CHO THUÊ TRỰC TIẾP (24/09/2026)
+
+> Căn cứ theo văn bản đặc tả chiến lược `docs/audit/ke-hoach-thuc-thi-moi-gioi-cho-thue.md`. Thay thế hoàn toàn mô hình marketplace bán gói thành viên sang mô hình môi giới có người thật (Đức Quân) điều phối độc quyền, thu phí thành công 40% (một lần) từ chủ nhà khi giao dịch thành công, khách thuê miễn phí 100%.
+
+### 1. Trạng thái Hoàn thành 14 Hạng mục Kỹ thuật P0 (DEV-01 → DEV-14)
+- **DEV-01 (Đồng bộ đặc tả)**: Hoàn tất cập nhật CLAUDE.md, README.md, TRANG-THAI-TRIEN-KHAI.md, RUNBOOK.md, không còn mâu thuẫn giữa 2 mô hình.
+- **DEV-02 (Schema Prisma 20 models pivot)**: Bổ sung 20 models quản lý môi giới, phòng vật lý, hợp đồng, cọc, bàn giao, hoa hồng, thanh toán, đối soát, sổ cái, tranh chấp, consent.
+- **DEV-03 (Bảo vệ số chủ & Đầu mối công khai)**: Thay thế endpoint `revealPhone` chỉ trả hotline Đức Quân (`0981 753 082`), không rò rỉ số chủ; thêm `GET /listings/:id/contact`; cập nhật web components.
+- **DEV-04 (Tự gán Quan & Bảo vệ thông tin khách)**: LeadsService tự động gán Quan phụ trách; chủ trọ mở dashboard chỉ thấy SĐT/email che bảo mật; cấm chủ đổi status; tạo RentalRequest.
+- **DEV-05 (Củng cố OTP & Xác thực lịch)**: OtpService lưu Redis TTL 300s, CSPRNG `crypto.randomInt`, chống mượn OTP, chống replay, khóa sau 5 lần sai.
+- **DEV-06 (Cổng duyệt tin bắt buộc HĐ-01)**: Admin duyệt tin chỉ active khi có Thỏa thuận dịch vụ môi giới (HĐ-01) active và thẩm quyền cho thuê xác thực (BR-05).
+- **DEV-07 (Quản lý Lịch xem & Giữ phòng)**: ViewingsService chống trùng giờ dẫn Quan, giới hạn tối đa 3 lịch/ngày, chống giữ trùng phòng (UnitReservation), tự hủy lịch khi phòng hết chỗ.
+- **DEV-08 (Giao dịch, Cọc & Bàn giao)**: DealsService quản lý hợp đồng thuê, cọc (held_by_owner), bàn giao (HandoverRecord); điều kiện thuê thành công độc lập với thu phí (§6.2).
+- **DEV-09 (Hoa hồng 40% & Concurrency)**: CommissionsService tính phí 40% bằng BigInt basis points (4000/10000); hạn thanh toán 2 ngày làm việc; DB unique constraint `@unique([dealId])` chống trùng phí tuyệt đối (BR-12, AT-18).
+- **DEV-10 (Đối soát ngân hàng thật & Sổ cái)**: PaymentsService bắt buộc mã giao dịch ngân hàng thật `externalBankTxId` (BR-11, AT-20); xử lý trả thiếu, trả đủ, phân bổ nhiều deal; hoàn phí ghi sổ cái FinanceLedger.
+- **DEV-11 (Đóng bán Membership)**: Dừng bán mới toàn bộ gói thành viên (GAP-07); bỏ gate nâng cấp trả tiền tại ListingsService.create (GAP-08); bảo toàn 100% planSnapshot gói cũ; cập nhật trang giá sang mô hình môi giới 40%.
+- **DEV-12 (Transactional Outbox)**: Ghi lead và sự kiện thông báo nguyên tử trong một transaction (GAP-12); retry exponential backoff và chuyển Dead Letter Queue FAILED (AT-27).
+- **DEV-13 (Đồng bộ nội dung công khai)**: Cập nhật toàn bộ các trang công khai (/dieu-khoan, /gioi-thieu, /chinh-sach, /moi-gioi, /thue, /tin/[slug], /page.tsx); xóa bỏ hoàn toàn lời hứa liên hệ trực tiếp chủ trọ; áp dụng nghiêm ngặt GEMINI.md § 8 (không dấu chấm ở cuối câu).
+- **DEV-14 (Nghiệm thu toàn diện 30 ca AT-01 → AT-30)**: Chạy test scripts tự động trên CSDL thật, 30/30 ca kiểm thử đều đạt PASS 100%.
+
+### 2. Bảng Tổng Hợp 30 Ca Nghiệm Thu Bắt Buộc (AT-01 → AT-30)
+| Nhóm kiểm thử | Các ca kiểm thử | Kết quả | Bằng chứng thực tế |
+|---|---|---|---|
+| **Liên hệ & Nguồn cung (G1)** | AT-01, AT-02, AT-03, AT-04 | **PASS 100%** | `test-dev03-at01-03.js`, `test-dev06-at04.js` |
+| **Lead & Lịch dẫn (G2)** | AT-05, AT-06, AT-07, AT-08, AT-09, AT-10, AT-11, AT-12 | **PASS 100%** | `test-dev04-at06.js`, `test-dev05-at08.js`, `test-dev07-at10-12.js`, `test-dev14-batch1.js` |
+| **Hợp đồng & Tiền (G3)** | AT-13, AT-14, AT-15, AT-16, AT-17, AT-18, AT-19, AT-20, AT-21, AT-22, AT-23 | **PASS 100%** | `test-dev08-at13-14.js`, `test-dev09-at15-18.js`, `test-dev10-at20-23.js`, `test-dev14-batch1.js`, `test-dev14-batch2.js` |
+| **Diễn tập & Bảo mật (G4)** | AT-24, AT-25, AT-26, AT-27, AT-28, AT-29, AT-30 | **PASS 100%** | `test-dev11-at29.js`, `test-dev12-at27.js`, `test-dev14-batch2.js` |
+
+### 3. Cấu hình An toàn Tiền Bạc & Cổng Pháp Lý (Gate LEG)
+- Cấu hình an toàn: Tiếp tục duy trì cờ `payments_enabled=false` cho tới khi Quan xác nhận bằng văn bản việc hoàn tất các gate pháp lý LEG-01/02/03/04/06/07.
+- Không tự động đánh dấu phí PAID nếu không có giao dịch ngân hàng đối soát thật.
+- Quyết định mở Pilot G5 (14 ngày, 10-20 phòng thật) là quyết định kinh doanh của Quan sau khi đóng các cổng pháp lý.
 
 

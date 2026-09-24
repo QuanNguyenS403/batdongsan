@@ -17,9 +17,9 @@ import {
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'Cho thuê Căn hộ & Studio giá tốt chính chủ',
+  title: 'Cho thuê Căn hộ & Studio giá tốt — QNS Thuê',
   description:
-    'Danh sách tin cho thuê căn hộ và studio chính chủ mới nhất. Phân tách rõ ràng chuyên mục Căn hộ và Studio riêng biệt.',
+    'Danh sách tin cho thuê căn hộ và studio minh bạch chi phí mới nhất, phân tách rõ ràng chuyên mục Căn hộ và Studio riêng biệt, tư vấn và trực tiếp dẫn xem tận nơi miễn phí',
 };
 
 const CATEGORY_NAMES: Record<string, string> = {
@@ -108,7 +108,7 @@ export default async function ThuePage({ searchParams }: Props) {
       <div className="container-max py-8">
         {isApiError && isProduction && (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
-            ⚠️ Đang có gián đoạn kết nối tới máy chủ dữ liệu. Danh sách tin đăng tạm thời chưa tải được.
+            ⚠️ Đang có gián đoạn kết nối tới máy chủ dữ liệu. Danh sách tin đăng tạm thời chưa tải được
           </div>
         )}
         {/* Breadcrumb */}
@@ -141,7 +141,7 @@ export default async function ThuePage({ searchParams }: Props) {
             <span className="text-4xl">🔍</span>
             <p className="mt-3 font-semibold text-text-primary">Không tìm thấy tin cho thuê phù hợp</p>
             <p className="mt-1 text-sm text-text-secondary">
-              Thử điều chỉnh bộ lọc giá, trường đại học hoặc tìm kiếm với từ khoá khác.
+              Thử điều chỉnh bộ lọc giá, trường đại học hoặc tìm kiếm với từ khoá khác
             </p>
           </div>
         ) : (
