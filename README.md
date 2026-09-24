@@ -1,6 +1,7 @@
 # README — Phân tích Mogi.vn & Kiến trúc đề xuất cho dự án Bất động sản tương tự
 
-> 🟢 **Cập nhật quan trọng (Pivot 05/09/2026):** Dự án đã chính thức **PIVOT 100% sang mô hình Nền tảng trung gian (broker) chuyên biệt "Cho thuê"** (phòng trọ sinh viên, studio, căn hộ chung cư, nhà nguyên căn, mặt bằng kinh doanh). Loại bỏ hoàn toàn mảng mua bán nhà đất. Nền tảng kết nối trực tiếp Người thuê với Chủ phòng/Môi giới qua SĐT/Zalo; nền tảng KHÔNG xử lý cọc hay tiền thuê. Bổ sung hệ thống thông báo Email và đồng bộ Google Sheets cho quản trị viên. Chi tiết trạng thái thực thi: xem [`TRANG-THAI-TRIEN-KHAI.md`](./TRANG-THAI-TRIEN-KHAI.md).
+> 🟢 **Cập nhật quan trọng (Pivot 24/09/2026):** Dự án chính thức **CHUYỂN ĐỔI SANG MÔ HÌNH MÔI GIỚI CHO THUÊ CÓ ĐẦU MỐI DUY NHẤT (QUAN)** theo văn bản đặc tả [`docs/audit/ke-hoach-thuc-thi-moi-gioi-cho-thue.md`](./docs/audit/ke-hoach-thuc-thi-moi-gioi-cho-thue.md).
+> Quyết định này THAY THẾ toàn bộ mô hình marketplace thuần túy / bán gói membership đăng tin trước đây. Quan là người thật duy nhất tiếp nhận lead, tư vấn và trực tiếp dẫn khách xem phòng; Chủ ký hợp đồng thuê trực tiếp với khách; Nền tảng thu phí dịch vụ thành công 40% từ chủ nhà khi giao dịch đủ điều kiện (§6.2); Khách thuê miễn phí 100%. Nền tảng KHÔNG giữ cọc hay thu hộ tiền thuê. Tên và số điện thoại công khai trên mọi tin là của Quan (`SITE_CONFIG`), không để lộ số riêng của chủ ra ngoài.
 
 > Tài liệu này (1) phân tích toàn diện website tham chiếu **Mogi.vn** (giao diện, nội dung, bố cục, UX, frontend, backend suy luận) và (2) chuyển hóa các phân tích đó thành **bản thiết kế kiến trúc kỹ thuật** để thực thi một dự án website bất động sản (mua bán / cho thuê nhà đất) tương tự.
 >

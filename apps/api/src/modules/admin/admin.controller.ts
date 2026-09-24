@@ -141,5 +141,32 @@ export class AdminController {
   retryOutboxDlq(@Param('id', ParseBigIntPipe) id: bigint) {
     return this.adminService.retryOutboxDlq(id);
   }
+
+  @Post('agreements')
+  createAgreement(@Body() body: any) {
+    return this.adminService.createOwnerAgreement({
+      ownerId: BigInt(body.ownerId),
+      agreementCode: body.agreementCode,
+      commissionRateBps: body.commissionRateBps ? Number(body.commissionRateBps) : undefined,
+      termsVersion: body.termsVersion,
+      status: body.status,
+      validFrom: body.validFrom ? new Date(body.validFrom) : undefined,
+      validUntil: body.validUntil ? new Date(body.validUntil) : undefined,
+      unitIds: body.unitIds?.map((id: string) => BigInt(id)),
+    });
+  }
+
+  @Get('owners/:ownerId/agreements')
+  getOwnerAgreements(@Param('ownerId', ParseBigIntPipe) ownerId: bigint) {
+    return this.adminService.getOwnerAgreements(ownerId);
+  }
+
+  @Patch('owners/:userId/verify-authority')
+  verifyOwnerAuthority(
+    @Param('userId', ParseBigIntPipe) userId: bigint,
+    @Body('isVerified') isVerified: boolean,
+  ) {
+    return this.adminService.verifyOwnerProfile(userId, Boolean(isVerified));
+  }
 }
 

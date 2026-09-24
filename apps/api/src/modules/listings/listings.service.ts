@@ -43,6 +43,15 @@ const PUBLIC_LISTING_SELECT = {
   images: { select: { imageUrl: true, sortOrder: true }, orderBy: { sortOrder: 'asc' as const } },
   location: { select: { id: true, name: true, slug: true, level: true } },
   project: { select: { id: true, name: true, slug: true } },
+  contactAgent: {
+    select: {
+      id: true,
+      displayName: true,
+      workPhone: true,
+      avatarUrl: true,
+      bio: true,
+    },
+  },
   owner: { select: { id: true, fullName: true, avatarUrl: true, createdAt: true, isPhoneVerified: true, isIdVerified: true, isBlocked: true } },
   nearbyUniversities: {
     select: {
@@ -54,7 +63,7 @@ const PUBLIC_LISTING_SELECT = {
     },
     orderBy: { distanceMeters: 'asc' as const },
   },
-  // CHÚ Ý: KHÔNG select owner.phone ở đây — số điện thoại chỉ trả qua endpoint reveal-phone.
+  // CHÚ Ý: Tuyệt đối KHÔNG select owner.phone — số điện thoại riêng của chủ không công khai (GAP-02, BR-01).
 } satisfies Prisma.ListingSelect;
 
 function serialize<T extends Record<string, any>>(obj: T): any {
@@ -728,7 +737,7 @@ export class ListingsService {
 
       if (currentActiveCount >= maxAllowedListings) {
         throw new ForbiddenException(
-          `Bạn đã đạt giới hạn tối đa ${maxAllowedListings} tin đăng cho ${planName}. Vui lòng nâng cấp gói thành viên tại trang Bảng giá để tiếp tục đăng thêm tin!`,
+          `Bạn đã đạt giới hạn tối đa ${maxAllowedListings} tin đăng theo năng lực phục vụ hiện tại của hệ thống, vui lòng liên hệ chuyên viên tư vấn để được hỗ trợ kiểm duyệt thêm`,
         );
       }
 
@@ -1010,7 +1019,10 @@ export class ListingsService {
     const now = new Date();
     const listing = await this.prisma.listing.findUnique({
       where: { id },
-      include: { owner: { select: { phone: true, isBlocked: true } } },
+      include: {
+        owner: { select: { isBlocked: true } },
+        contactAgent: { select: { workPhone: true, displayName: true, bio: true } },
+      },
     });
     // BE-04, BE-05: Kiểm tra trạng thái active, hết hạn và seller có bị block không
     if (
@@ -1022,50 +1034,90 @@ export class ListingsService {
       throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn');
     }
 
-    // Kiểm tra xem chính user này đã từng reveal số của tin này trước đó chưa (re-view tin cũ thì không tính rate limit)
-    const alreadyRevealed = await this.prisma.phoneRevealLog.findUnique({
-      where: {
-        userId_listingId: {
-          userId: requesterId,
-          listingId: id,
-        },
-      },
-    });
-
-    if (alreadyRevealed) {
-      return { phone: listing.owner.phone };
-    }
-
-    // Chống cào dữ liệu SĐT (Anti-scraping rate limit): Tối đa 30 số mới/giờ cho mỗi tài khoản
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentRevealsCount = await this.prisma.phoneRevealLog.count({
-      where: {
-        userId: requesterId,
-        createdAt: { gte: oneHourAgo },
-      },
-    });
-
-    if (recentRevealsCount >= 30) {
-      throw new HttpException(
-        'Bạn đã đạt giới hạn xem tối đa 30 số điện thoại mới trong 1 giờ, vui lòng thử lại sau để bảo vệ quyền riêng tư người cho thuê',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    // BE-09: Atomic write chống race condition bằng composite unique constraint
+    // Atomic write tracking tương tác
     try {
       await this.prisma.$transaction([
         this.prisma.phoneRevealLog.create({ data: { listingId: id, userId: requesterId } }),
         this.prisma.listing.update({ where: { id }, data: { revealPhoneCount: { increment: 1 } } }),
       ]);
     } catch (err: any) {
-      // P2002: Bỏ qua lỗi duplicate nếu user đã reveal cùng lúc từ tab khác
+      // P2002: Bỏ qua duplicate nếu user đã click nhiều lần cùng lúc
       if (err.code !== 'P2002') {
         throw err;
       }
     }
 
-    return { phone: listing.owner.phone };
+    // GAP-02, BR-01, AT-02: Tuyệt đối không trả số điện thoại riêng của chủ phòng
+    // Trả về số hotline chính thức của người phụ trách tư vấn & dẫn xem (Đức Quân)
+    const phone = listing.contactAgent?.workPhone || '0981 753 082';
+    const brokerName = listing.contactAgent?.displayName || 'Đức Quân';
+    const role = 'Người tư vấn và trực tiếp dẫn xem';
+
+    return {
+      phone,
+      brokerName,
+      role,
+      agency: 'QNS Thuê',
+      note: 'Tư vấn và xem phòng miễn phí. Hợp đồng thuê ký trực tiếp với bên có quyền cho thuê',
+    };
+  }
+
+  /**
+   * DEV-03: Lấy thông tin liên hệ công khai chính thức cho tin đăng
+   * Chỉ trả đầu mối dịch vụ của người phụ trách tư vấn/dẫn xem kèm thông tin minh bạch bên cho thuê
+   */
+  async getPublicContact(id: bigint) {
+    const listing = await this.prisma.listing.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        expiresAt: true,
+        contactAgent: {
+          select: {
+            id: true,
+            displayName: true,
+            workPhone: true,
+            avatarUrl: true,
+            bio: true,
+          },
+        },
+        owner: {
+          select: {
+            fullName: true,
+            isBlocked: true,
+            isPhoneVerified: true,
+            isIdVerified: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !listing ||
+      listing.status !== ListingStatus.active ||
+      (listing.expiresAt && listing.expiresAt <= new Date()) ||
+      listing.owner.isBlocked
+    ) {
+      throw new NotFoundException('Không tìm thấy tin đăng hoặc tin chưa được duyệt/đã hết hạn');
+    }
+
+    return {
+      agent: {
+        name: listing.contactAgent?.displayName || 'Đức Quân',
+        role: 'Người tư vấn và trực tiếp dẫn xem',
+        phone: listing.contactAgent?.workPhone || '0981 753 082',
+        zalo: '0981 753 082',
+        agencyName: 'QNS Thuê',
+        workingHours: '24/7',
+      },
+      lessorDisclosure: {
+        displayName: listing.owner.fullName || 'Người cho thuê',
+        isVerified: Boolean(listing.owner.isIdVerified || listing.owner.isPhoneVerified),
+      },
+      servicePolicy:
+        'Tư vấn và xem phòng miễn phí. Hợp đồng thuê ký trực tiếp với bên có quyền cho thuê. Chủ thanh toán phí dịch vụ khi thuê thành công theo thỏa thuận',
+    };
   }
 
   async report(id: bigint, reason: string, note: string | undefined, reporterId?: bigint) {

@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     return {
       title: 'Chi tiết phòng cho thuê | QNS Thuê',
-      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê minh bạch chi phí, liên hệ trực tiếp bên cho thuê',
+      description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê minh bạch chi phí, chuyên viên Đức Quân trực tiếp tư vấn và dẫn xem miễn phí',
     };
   }
 }
@@ -404,7 +404,7 @@ export default async function ListingDetailPage({ params }: Props) {
           {/* Cột phải — Sidebar người đăng & an toàn (1/3 chiều rộng) */}
           <aside>
             <div className="sticky top-24 space-y-4">
-              {/* Box liên hệ người đăng */}
+              {/* Box liên hệ người tư vấn & dẫn xem (BR-01, BR-02) */}
               <OwnerContactBox
                 listingId={listing.id}
                 ownerName={cleanOwnerName}
@@ -412,6 +412,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 listingTitle={displayTitle}
                 isPhoneVerified={listing.owner.isPhoneVerified}
                 isIdVerified={listing.owner.isIdVerified}
+                contactAgent={(listing as any).contactAgent}
               />
 
               {/* Khối Lưu ý an toàn khi thuê trọ */}

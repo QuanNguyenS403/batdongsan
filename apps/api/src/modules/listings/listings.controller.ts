@@ -169,6 +169,12 @@ export class ListingsController {
     return this.listingsService.isSaved(id, user.id);
   }
 
+  @Public()
+  @Get(':id/contact')
+  getContact(@Param('id', ParseBigIntPipe) id: bigint) {
+    return this.listingsService.getPublicContact(id);
+  }
+
   @ApiBearerAuth()
   @Post(':id/reveal-phone')
   revealPhone(@CurrentUser() user: AuthUser, @Param('id', ParseBigIntPipe) id: bigint) {

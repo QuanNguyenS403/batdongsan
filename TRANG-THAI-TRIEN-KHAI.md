@@ -2,6 +2,17 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
+## 🚀 ĐỢT 7: CHUYỂN ĐỔI MÔ HÌNH MÔI GIỚI CHO THUÊ 40% CÓ ĐẦU MỐI DUY NHẤT (PIVOT 24/09/2026)
+
+Thực thi theo kế hoạch tại `docs/audit/ke-hoach-thuc-thi-moi-gioi-cho-thue.md`:
+1. **Chuyển đổi Mô hình Cốt lõi**:
+   - Thay thế toàn bộ mô hình marketplace bán gói membership đăng tin sang mô hình môi giới có người thật (Quan) điều phối độc quyền.
+   - Quan tiếp nhận và trực tiếp dẫn khách; Chủ ký hợp đồng thuê trực tiếp với khách (HĐ-02); Nền tảng thu phí thành công 40% (một lần) từ chủ nhà khi đủ điều kiện thành công (§6.2); Khách thuê 0 đồng phí.
+2. **DEV-01 (Chốt đặc tả & Đồng bộ tài liệu - verified)**:
+   - Đồng bộ `CLAUDE.md`, `README.md`, `TRANG-THAI-TRIEN-KHAI.md`, `RUNBOOK.md` và `EXECUTION-STATUS.md`.
+   - Triệt tiêu hoàn toàn mâu thuẫn giữa 2 mô hình cũ và mới.
+   - Thêm đầy đủ mã GAP-01→16, DEV-01→17, AT-01→30 vào bảng theo dõi trung tâm.
+
 ## 🚀 ĐỢT 6: BÀN GIAO, RUNBOOK & SẴN SÀNG PHÁT HÀNH / GATE F (21/09/2026)
 
 Hoàn thiện toàn bộ hồ sơ bàn giao chuyên đề và đối chiếu 10/10 mục của "Bộ nghiệm thu tối thiểu" (§11):
@@ -580,5 +591,40 @@ Mở http://localhost:3000 — trang chủ sẽ hiện 2 tin `[MẪU]`. Đăng n
 4. **Điều kiện kích hoạt Giai đoạn 5 (Sản phẩm Dữ liệu B2B — Lớp 5)**:
    - Hệ thống vận hành liên tục tối thiểu **12 - 18 tháng**.
    - Sở hữu lịch sử giá thuê của tối thiểu **2.000+ phòng trọ** theo chuỗi thời gian thật, đủ độ tin cậy để đóng gói thành báo cáo thị trường bán cho nhà đầu tư xây nhà trọ.
+
+---
+
+## 🎯 CHUYỂN ĐỔI MÔ HÌNH KINH DOANH: MÔI GIỚI CHO THUÊ TRỰC TIẾP (24/09/2026)
+
+> Căn cứ theo văn bản đặc tả chiến lược `docs/audit/ke-hoach-thuc-thi-moi-gioi-cho-thue.md`. Thay thế hoàn toàn mô hình marketplace bán gói thành viên sang mô hình môi giới có người thật (Đức Quân) điều phối độc quyền, thu phí thành công 40% (một lần) từ chủ nhà khi giao dịch thành công, khách thuê miễn phí 100%.
+
+### 1. Trạng thái Hoàn thành 14 Hạng mục Kỹ thuật P0 (DEV-01 → DEV-14)
+- **DEV-01 (Đồng bộ đặc tả)**: Hoàn tất cập nhật CLAUDE.md, README.md, TRANG-THAI-TRIEN-KHAI.md, RUNBOOK.md, không còn mâu thuẫn giữa 2 mô hình.
+- **DEV-02 (Schema Prisma 20 models pivot)**: Bổ sung 20 models quản lý môi giới, phòng vật lý, hợp đồng, cọc, bàn giao, hoa hồng, thanh toán, đối soát, sổ cái, tranh chấp, consent.
+- **DEV-03 (Bảo vệ số chủ & Đầu mối công khai)**: Thay thế endpoint `revealPhone` chỉ trả hotline Đức Quân (`0981 753 082`), không rò rỉ số chủ; thêm `GET /listings/:id/contact`; cập nhật web components.
+- **DEV-04 (Tự gán Quan & Bảo vệ thông tin khách)**: LeadsService tự động gán Quan phụ trách; chủ trọ mở dashboard chỉ thấy SĐT/email che bảo mật; cấm chủ đổi status; tạo RentalRequest.
+- **DEV-05 (Củng cố OTP & Xác thực lịch)**: OtpService lưu Redis TTL 300s, CSPRNG `crypto.randomInt`, chống mượn OTP, chống replay, khóa sau 5 lần sai.
+- **DEV-06 (Cổng duyệt tin bắt buộc HĐ-01)**: Admin duyệt tin chỉ active khi có Thỏa thuận dịch vụ môi giới (HĐ-01) active và thẩm quyền cho thuê xác thực (BR-05).
+- **DEV-07 (Quản lý Lịch xem & Giữ phòng)**: ViewingsService chống trùng giờ dẫn Quan, giới hạn tối đa 3 lịch/ngày, chống giữ trùng phòng (UnitReservation), tự hủy lịch khi phòng hết chỗ.
+- **DEV-08 (Giao dịch, Cọc & Bàn giao)**: DealsService quản lý hợp đồng thuê, cọc (held_by_owner), bàn giao (HandoverRecord); điều kiện thuê thành công độc lập với thu phí (§6.2).
+- **DEV-09 (Hoa hồng 40% & Concurrency)**: CommissionsService tính phí 40% bằng BigInt basis points (4000/10000); hạn thanh toán 2 ngày làm việc; DB unique constraint `@unique([dealId])` chống trùng phí tuyệt đối (BR-12, AT-18).
+- **DEV-10 (Đối soát ngân hàng thật & Sổ cái)**: PaymentsService bắt buộc mã giao dịch ngân hàng thật `externalBankTxId` (BR-11, AT-20); xử lý trả thiếu, trả đủ, phân bổ nhiều deal; hoàn phí ghi sổ cái FinanceLedger.
+- **DEV-11 (Đóng bán Membership)**: Dừng bán mới toàn bộ gói thành viên (GAP-07); bỏ gate nâng cấp trả tiền tại ListingsService.create (GAP-08); bảo toàn 100% planSnapshot gói cũ; cập nhật trang giá sang mô hình môi giới 40%.
+- **DEV-12 (Transactional Outbox)**: Ghi lead và sự kiện thông báo nguyên tử trong một transaction (GAP-12); retry exponential backoff và chuyển Dead Letter Queue FAILED (AT-27).
+- **DEV-13 (Đồng bộ nội dung công khai)**: Cập nhật toàn bộ các trang công khai (/dieu-khoan, /gioi-thieu, /chinh-sach, /moi-gioi, /thue, /tin/[slug], /page.tsx); xóa bỏ hoàn toàn lời hứa liên hệ trực tiếp chủ trọ; áp dụng nghiêm ngặt GEMINI.md § 8 (không dấu chấm ở cuối câu).
+- **DEV-14 (Nghiệm thu toàn diện 30 ca AT-01 → AT-30)**: Chạy test scripts tự động trên CSDL thật, 30/30 ca kiểm thử đều đạt PASS 100%.
+
+### 2. Bảng Tổng Hợp 30 Ca Nghiệm Thu Bắt Buộc (AT-01 → AT-30)
+| Nhóm kiểm thử | Các ca kiểm thử | Kết quả | Bằng chứng thực tế |
+|---|---|---|---|
+| **Liên hệ & Nguồn cung (G1)** | AT-01, AT-02, AT-03, AT-04 | **PASS 100%** | `test-dev03-at01-03.js`, `test-dev06-at04.js` |
+| **Lead & Lịch dẫn (G2)** | AT-05, AT-06, AT-07, AT-08, AT-09, AT-10, AT-11, AT-12 | **PASS 100%** | `test-dev04-at06.js`, `test-dev05-at08.js`, `test-dev07-at10-12.js`, `test-dev14-batch1.js` |
+| **Hợp đồng & Tiền (G3)** | AT-13, AT-14, AT-15, AT-16, AT-17, AT-18, AT-19, AT-20, AT-21, AT-22, AT-23 | **PASS 100%** | `test-dev08-at13-14.js`, `test-dev09-at15-18.js`, `test-dev10-at20-23.js`, `test-dev14-batch1.js`, `test-dev14-batch2.js` |
+| **Diễn tập & Bảo mật (G4)** | AT-24, AT-25, AT-26, AT-27, AT-28, AT-29, AT-30 | **PASS 100%** | `test-dev11-at29.js`, `test-dev12-at27.js`, `test-dev14-batch2.js` |
+
+### 3. Cấu hình An toàn Tiền Bạc & Cổng Pháp Lý (Gate LEG)
+- Cấu hình an toàn: Tiếp tục duy trì cờ `payments_enabled=false` cho tới khi Quan xác nhận bằng văn bản việc hoàn tất các gate pháp lý LEG-01/02/03/04/06/07.
+- Không tự động đánh dấu phí PAID nếu không có giao dịch ngân hàng đối soát thật.
+- Quyết định mở Pilot G5 (14 ngày, 10-20 phòng thật) là quyết định kinh doanh của Quan sau khi đóng các cổng pháp lý.
 
 

@@ -243,6 +243,22 @@ export class OutboxService {
         this.logger.log(`[Outbox] Thông báo Lead #${payload.leadId} cho chủ tin ${payload.landlordPhone}: ${payload.tenantName} - ${payload.tenantPhone}`);
         return 'SENT';
 
+      case 'VIEWING_REQUESTED':
+        this.logger.log(`[Outbox] Yêu cầu lịch xem mới #${payload.viewingId} từ khách ${payload.clientName} (${payload.clientPhone}) cho phòng ${payload.unitCode}`);
+        return 'SENT';
+
+      case 'VIEWING_CONFIRMED':
+        this.logger.log(`[Outbox] Lịch xem #${payload.viewingId} đã xác nhận: Mã checkin ${payload.checkinCode}, người dẫn ${payload.agentName} (${payload.agentPhone})`);
+        return 'SENT';
+
+      case 'COMMISSION_DUE':
+        this.logger.log(`[Outbox] Công nợ hoa hồng đến hạn cho Deal #${payload.dealCode}: ${payload.amountVnd}đ, hạn thanh toán ${payload.dueAt}`);
+        return 'SENT';
+
+      case 'COMMISSION_PAID':
+        this.logger.log(`[Outbox] Thu phí hoa hồng thành công Deal #${payload.dealCode}: ${payload.amountVnd}đ qua giao dịch ${payload.externalBankTxId}`);
+        return 'SENT';
+
       case 'SHEETS_PENDING_LISTING':
         const ok = await this.googleSheetsService.appendPendingListing(payload.listing);
         if (!ok && !this.googleSheetsService.isMock) {

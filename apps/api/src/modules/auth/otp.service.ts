@@ -1,5 +1,14 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
+import Redis from 'ioredis';
 
 interface ActiveOtp {
   code: string;
@@ -14,81 +23,196 @@ interface RateLimitRecord {
 
 /**
  * OtpService — quản lý sinh/gửi/xác thực OTP bảo mật cao.
- * RB-02: Dùng CSPRNG crypto.randomInt, tách biệt hoàn toàn bộ đếm rate limit khỏi việc verify OTP.
+ * GAP-15: Hỗ trợ lưu trữ Redis chia sẻ có TTL, CSPRNG crypto.randomInt, không log OTP thật ở production.
+ * GAP-11 & AT-08: Ràng buộc OTP khớp chính xác số điện thoại yêu cầu, chống mượn OTP số khác hoặc replay.
  */
 @Injectable()
-export class OtpService {
+export class OtpService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(OtpService.name);
+  private redis: Redis | null = null;
   private readonly activeOtps = new Map<string, ActiveOtp>();
   private readonly rateLimits = new Map<string, RateLimitRecord>();
 
-  private readonly OTP_TTL_MS = 5 * 60 * 1000; // 5 phút
+  private readonly OTP_TTL_SECONDS = 300; // 5 phút
   private readonly MAX_ATTEMPTS = 5;
   private readonly MAX_SENDS_PER_HOUR = 5;
 
-  async sendOtp(phone: string): Promise<string> {
-    const now = Date.now();
-    const rateRecord = this.rateLimits.get(phone);
+  onModuleInit() {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 1,
+        enableReadyCheck: false,
+        retryStrategy: () => null, // Không retry vô tận nếu redis offline
+      });
 
-    // Kiểm tra rate limit 1 giờ
-    if (rateRecord) {
-      if (now - rateRecord.windowStart < 60 * 60 * 1000) {
-        if (rateRecord.sentCount >= this.MAX_SENDS_PER_HOUR) {
-          throw new HttpException(
-            'Bạn đã yêu cầu OTP quá nhiều lần trong 1 giờ. Vui lòng thử lại sau.',
-            HttpStatus.TOO_MANY_REQUESTS,
-          );
-        }
-        rateRecord.sentCount += 1;
-      } else {
-        // Hết cửa sổ 1 giờ, reset window mới
-        this.rateLimits.set(phone, { sentCount: 1, windowStart: now });
+      this.redis.on('error', (err) => {
+        this.logger.warn(`Redis không khả dụng, sử dụng In-Memory OTP Store dự phòng: ${err.message}`);
+        this.redis = null;
+      });
+
+      this.redis.on('connect', () => {
+        this.logger.log('Đã kết nối Redis chia sẻ thành công cho OTP Service');
+      });
+    } catch {
+      this.redis = null;
+    }
+  }
+
+  onModuleDestroy() {
+    if (this.redis) {
+      this.redis.disconnect();
+    }
+  }
+
+  /**
+   * Sinh mã OTP và gửi qua SMS adapter
+   */
+  async sendOtp(phone: string): Promise<string> {
+    const cleanPhone = phone.replace(/\s+/g, '');
+    const now = Date.now();
+
+    // 1. Kiểm tra Rate Limit 1 giờ (Redis hoặc Memory)
+    if (this.redis) {
+      const rateKey = `otp_rate:${cleanPhone}`;
+      const count = await this.redis.incr(rateKey);
+      if (count === 1) {
+        await this.redis.expire(rateKey, 3600); // 1 giờ
+      }
+      if (count > this.MAX_SENDS_PER_HOUR) {
+        throw new HttpException(
+          'Bạn đã yêu cầu OTP quá nhiều lần trong 1 giờ, vui lòng thử lại sau',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
       }
     } else {
-      this.rateLimits.set(phone, { sentCount: 1, windowStart: now });
+      const rateRecord = this.rateLimits.get(cleanPhone);
+      if (rateRecord) {
+        if (now - rateRecord.windowStart < 3600 * 1000) {
+          if (rateRecord.sentCount >= this.MAX_SENDS_PER_HOUR) {
+            throw new HttpException(
+              'Bạn đã yêu cầu OTP quá nhiều lần trong 1 giờ, vui lòng thử lại sau',
+              HttpStatus.TOO_MANY_REQUESTS,
+            );
+          }
+          rateRecord.sentCount += 1;
+        } else {
+          this.rateLimits.set(cleanPhone, { sentCount: 1, windowStart: now });
+        }
+      } else {
+        this.rateLimits.set(cleanPhone, { sentCount: 1, windowStart: now });
+      }
     }
 
-    // RB-02: Sinh mã OTP ngẫu nhiên 6 chữ số bằng CSPRNG (Cryptographically Secure Pseudo-Random Number Generator)
+    // 2. GAP-15: Sinh mã OTP ngẫu nhiên 6 chữ số bằng CSPRNG (crypto.randomInt)
     const code = crypto.randomInt(100000, 1000000).toString();
 
-    this.activeOtps.set(phone, {
-      code,
-      expiresAt: now + this.OTP_TTL_MS,
-      attempts: 0,
-    });
+    // 3. Lưu OTP với TTL 5 phút
+    if (this.redis) {
+      const otpKey = `otp:${cleanPhone}`;
+      const payload: ActiveOtp = {
+        code,
+        expiresAt: now + this.OTP_TTL_SECONDS * 1000,
+        attempts: 0,
+      };
+      await this.redis.setex(otpKey, this.OTP_TTL_SECONDS, JSON.stringify(payload));
+    } else {
+      this.activeOtps.set(cleanPhone, {
+        code,
+        expiresAt: now + this.OTP_TTL_SECONDS * 1000,
+        attempts: 0,
+      });
+    }
 
-    await this.sendViaProvider(phone, code);
+    // 4. Phát qua SMS Provider (ẩn OTP trong log production)
+    await this.sendViaProvider(cleanPhone, code);
     return code;
   }
 
-  verifyOtp(phone: string, code: string): boolean {
-    const record = this.activeOtps.get(phone);
-    if (!record) return false;
+  /**
+   * Xác thực mã OTP thông thường
+   */
+  async verifyOtp(phone: string, code: string): Promise<boolean> {
+    const cleanPhone = phone.replace(/\s+/g, '');
 
-    if (Date.now() > record.expiresAt) {
-      this.activeOtps.delete(phone);
+    if (this.redis) {
+      const otpKey = `otp:${cleanPhone}`;
+      const raw = await this.redis.get(otpKey);
+      if (!raw) return false;
+
+      let record: ActiveOtp;
+      try {
+        record = JSON.parse(raw);
+      } catch {
+        await this.redis.del(otpKey);
+        return false;
+      }
+
+      if (Date.now() > record.expiresAt) {
+        await this.redis.del(otpKey);
+        return false;
+      }
+
+      if (record.attempts >= this.MAX_ATTEMPTS) {
+        await this.redis.del(otpKey);
+        return false;
+      }
+
+      record.attempts += 1;
+
+      if (record.code !== code) {
+        const remainingTtl = Math.max(1, Math.floor((record.expiresAt - Date.now()) / 1000));
+        await this.redis.setex(otpKey, remainingTtl, JSON.stringify(record));
+        return false;
+      }
+
+      // Xóa OTP ngay sau khi xác thực thành công (chống replay - AT-08)
+      await this.redis.del(otpKey);
+      return true;
+    } else {
+      const record = this.activeOtps.get(cleanPhone);
+      if (!record) return false;
+
+      if (Date.now() > record.expiresAt) {
+        this.activeOtps.delete(cleanPhone);
+        return false;
+      }
+
+      if (record.attempts >= this.MAX_ATTEMPTS) {
+        this.activeOtps.delete(cleanPhone);
+        return false;
+      }
+
+      record.attempts += 1;
+
+      if (record.code !== code) return false;
+
+      this.activeOtps.delete(cleanPhone);
+      return true;
+    }
+  }
+
+  /**
+   * Xác thực mã OTP có ràng buộc chặt chẽ với số điện thoại của yêu cầu (AT-08).
+   * Tuyệt đối không cho phép dùng OTP của số A để xác thực lead số B.
+   */
+  async verifyOtpForPhone(targetPhone: string, inputPhone: string, code: string): Promise<boolean> {
+    const cleanTarget = targetPhone.replace(/\s+/g, '');
+    const cleanInput = inputPhone.replace(/\s+/g, '');
+
+    // AT-08: Kiểm tra số điện thoại gửi OTP phải khớp chính xác với số của Lead
+    if (cleanTarget !== cleanInput) {
+      this.logger.warn(`AT-08: Phát hiện mượn OTP từ số khác (target=${cleanTarget}, input=${cleanInput})`);
       return false;
     }
 
-    if (record.attempts >= this.MAX_ATTEMPTS) {
-      this.activeOtps.delete(phone);
-      return false;
-    }
-
-    record.attempts += 1;
-
-    if (record.code !== code) return false;
-
-    // RB-02: Xóa mã OTP sau khi dùng thành công, nhưng GIỮ NGUYÊN rateLimits để chống spam gửi tiếp
-    this.activeOtps.delete(phone);
-    return true;
+    return this.verifyOtp(cleanTarget, code);
   }
 
   private async sendViaProvider(phone: string, code: string): Promise<void> {
     const isStaging = process.env.APP_ENV === 'staging' || process.env.SAFETY_NET_DISABLE_OUTBOUND === 'true';
     if (isStaging) {
-      this.logger.warn(`🛡️ [SAFETY NET] Đang chạy trong môi trường STAGING (hoặc SAFETY_NET_DISABLE_OUTBOUND=true). Chặn gửi SMS thật tới ${phone}.`);
-      this.logger.log(`[STAGING MOCK SMS] Gửi OTP tới ${phone}: ${code} (chỉ ghi log nội bộ)`);
+      this.logger.warn(`🛡️ [SAFETY NET] Staging mode: Chặn gửi SMS thật tới ${phone}`);
       return;
     }
 
@@ -98,11 +222,10 @@ export class OtpService {
       if (process.env.NODE_ENV === 'production') {
         throw new HttpException('Chế độ SMS mock không được phép chạy ở môi trường production', HttpStatus.INTERNAL_SERVER_ERROR);
       }
-      this.logger.warn(`[MOCK SMS] Gửi OTP tới ${phone}: ${code} (chỉ hiện trong log dev/test)`);
+      this.logger.log(`[DEV/TEST MOCK SMS] Gửi OTP tới ${phone}: ${code}`);
       return;
     }
 
-    // P0-06 / BE-01: Tích hợp adapter nhà mạng SMS thật với AbortSignal timeout 5s
     const timeoutMs = 5000;
     try {
       if (provider === 'esms') {
@@ -123,19 +246,16 @@ export class OtpService {
             SecretKey: secretKey,
             Phone: phone,
             Content: `Ma xac thuc QNS Thue cua ban la: ${code}. Hieu luc 5 phut.`,
-            SmsType: '2', // CSKH / OTP
+            SmsType: '2',
           }),
           signal: controller.signal,
         }).finally(() => clearTimeout(timeoutId));
 
-        if (!res.ok) {
-          throw new Error(`eSMS trả mã HTTP lỗi: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`eSMS trả mã HTTP lỗi: ${res.status}`);
         const data: any = await res.json();
         if (data.CodeResult !== '100') {
-          throw new Error(`eSMS từ chối gửi tin (CodeResult=${data.CodeResult}, ErrorMessage=${data.ErrorMessage})`);
+          throw new Error(`eSMS từ chối gửi tin: ${data.ErrorMessage}`);
         }
-        this.logger.log(`[eSMS] Đã phát OTP thành công tới ${phone}`);
         return;
       }
 
@@ -166,10 +286,7 @@ export class OtpService {
           signal: controller.signal,
         }).finally(() => clearTimeout(timeoutId));
 
-        if (!res.ok) {
-          throw new Error(`Twilio trả mã HTTP lỗi: ${res.status}`);
-        }
-        this.logger.log(`[Twilio] Đã phát OTP thành công tới ${phone}`);
+        if (!res.ok) throw new Error(`Twilio trả mã HTTP lỗi: ${res.status}`);
         return;
       }
 
@@ -195,21 +312,20 @@ export class OtpService {
         }).finally(() => clearTimeout(timeoutId));
 
         if (!res.ok) throw new Error(`SpeedSMS trả mã HTTP lỗi: ${res.status}`);
-        this.logger.log(`[SpeedSMS] Đã phát OTP thành công tới ${phone}`);
         return;
       }
 
-      throw new Error(`SMS_PROVIDER="${provider}" không được hỗ trợ.`);
+      throw new Error(`SMS_PROVIDER="${provider}" không được hỗ trợ`);
     } catch (err: any) {
       this.logger.error(`Lỗi khi gửi SMS OTP qua provider "${provider}": ${err.message}`);
       throw new HttpException(
-        'Không thể gửi mã xác thực SMS qua nhà mạng viễn thông. Vui lòng kiểm tra lại số điện thoại hoặc thử lại sau ít phút.',
+        'Không thể gửi mã xác thực SMS qua nhà mạng viễn thông, vui lòng thử lại sau',
         HttpStatus.BAD_GATEWAY,
       );
     }
   }
 
-  /** Dọn dẹp các bản ghi OTP và rate limit đã hết hạn khỏi bộ nhớ */
+  /** Dọn dẹp bản ghi bộ nhớ dự phòng */
   cleanupExpired(): number {
     const now = Date.now();
     let count = 0;
@@ -220,11 +336,10 @@ export class OtpService {
       }
     }
     for (const [phone, rate] of this.rateLimits.entries()) {
-      if (now - rate.windowStart >= 60 * 60 * 1000) {
+      if (now - rate.windowStart >= 3600 * 1000) {
         this.rateLimits.delete(phone);
       }
     }
     return count;
   }
 }
-

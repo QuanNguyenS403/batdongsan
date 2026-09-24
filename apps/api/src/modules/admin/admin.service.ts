@@ -475,6 +475,42 @@ export class AdminService {
       }
     }
 
+    // BR-05 & AT-04: Cổng kiểm tra hợp đồng dịch vụ môi giới HĐ-01
+    // Tin đăng bắt buộc phải có HĐ-01 hiệu lực của chủ trước khi được duyệt nhận khách thật
+    const activeAgreement = await this.prisma.ownerServiceAgreement.findFirst({
+      where: {
+        ownerId: listing.ownerId,
+        status: 'active',
+      },
+      include: {
+        ownerProfile: true,
+        agreementUnits: true,
+      },
+    });
+
+    if (!activeAgreement) {
+      throw new BadRequestException(
+        'Tin đăng chưa có Hợp đồng dịch vụ môi giới (HĐ-01) có hiệu lực, không thể duyệt nhận khách thật',
+      );
+    }
+
+    if (activeAgreement.ownerProfile && !activeAgreement.ownerProfile.isVerified) {
+      throw new BadRequestException(
+        'Hồ sơ thẩm quyền cho thuê của người ký chưa được xác thực, không thể duyệt nhận khách thật',
+      );
+    }
+
+    if (listing.unitId && activeAgreement.agreementUnits.length > 0) {
+      const hasUnit = activeAgreement.agreementUnits.some(
+        (u) => u.unitId === listing.unitId && u.status === 'active',
+      );
+      if (!hasUnit) {
+        throw new BadRequestException(
+          'Phòng này chưa được bổ sung vào phụ lục danh mục phòng (PL-01) của Hợp đồng dịch vụ môi giới',
+        );
+      }
+    }
+
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 ngày
 
     // RB-05: Atomic CAS trong transaction: Quota count + updateMany status: 'pending'
@@ -916,5 +952,100 @@ export class AdminService {
   async retryOutboxDlq(id: bigint) {
     const ok = await this.outboxService.retryDlqEvent(id);
     return { success: ok, message: ok ? 'Đã kích hoạt thử lại sự kiện' : 'Không tìm thấy sự kiện FAILED' };
+  }
+
+  /**
+   * DEV-06: Tạo Hợp đồng dịch vụ môi giới (HĐ-01) cho chủ nhà
+   */
+  async createOwnerAgreement(data: {
+    ownerId: bigint;
+    agreementCode: string;
+    commissionRateBps?: number;
+    termsVersion?: string;
+    status?: string;
+    validFrom?: Date;
+    validUntil?: Date;
+    unitIds?: bigint[];
+  }) {
+    const owner = await this.prisma.user.findUnique({ where: { id: data.ownerId } });
+    if (!owner) throw new NotFoundException('Không tìm thấy chủ nhà');
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const agreement = await tx.ownerServiceAgreement.create({
+        data: {
+          agreementCode: data.agreementCode,
+          ownerId: data.ownerId,
+          status: data.status || 'active',
+          commissionRateBps: data.commissionRateBps || 4000,
+          termsVersion: data.termsVersion || '1.0',
+          validFrom: data.validFrom || new Date(),
+          validUntil: data.validUntil,
+        },
+      });
+
+      if (data.unitIds && data.unitIds.length > 0) {
+        for (const unitId of data.unitIds) {
+          const unit = await tx.rentalUnit.findUnique({ where: { id: unitId } });
+          await tx.agreementUnit.create({
+            data: {
+              agreementId: agreement.id,
+              unitId,
+              baseMonthlyRent: BigInt(unit?.areaM2 ? Number(unit.areaM2) * 100000 : 3000000),
+              status: 'active',
+            },
+          });
+        }
+      }
+
+      return agreement;
+    });
+
+    return serialize(created);
+  }
+
+  /**
+   * DEV-06: Lấy danh sách hợp đồng dịch vụ môi giới của một chủ nhà
+   */
+  async getOwnerAgreements(ownerId: bigint) {
+    const agreements = await this.prisma.ownerServiceAgreement.findMany({
+      where: { ownerId },
+      include: {
+        agreementUnits: {
+          include: { unit: true },
+        },
+        ownerProfile: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return agreements.map(serialize);
+  }
+
+  /**
+   * DEV-06: Cập nhật xác thực hồ sơ thẩm quyền cho thuê (OwnerProfile)
+   */
+  async verifyOwnerProfile(userId: bigint, isVerified: boolean) {
+    let profile = await this.prisma.ownerProfile.findUnique({ where: { userId } });
+    if (!profile) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+      profile = await this.prisma.ownerProfile.create({
+        data: {
+          userId,
+          legalFullName: user.fullName || 'Chủ nhà chưa đặt tên',
+          authorityType: 'owner',
+          isVerified,
+          verifiedAt: isVerified ? new Date() : null,
+        },
+      });
+    } else {
+      profile = await this.prisma.ownerProfile.update({
+        where: { userId },
+        data: {
+          isVerified,
+          verifiedAt: isVerified ? new Date() : null,
+        },
+      });
+    }
+    return serialize(profile);
   }
 }

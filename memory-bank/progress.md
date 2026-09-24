@@ -61,7 +61,9 @@
 | Rà soát Toàn Diện & Khắc Phục Lỗ Hổng Hệ Thống (21/09/2026) | ✅ Xong | Fix lỗ hổng leo quyền header & triệt tiêu fallback bypass MFA `123456` trong `CapabilitiesGuard`; Đồng bộ 100% DTO Phê duyệt (`confirmedAmount` F02) & Hoàn tiền (`externalTransactionId` F03) trên Admin Web UI; Tích hợp MFA popup prompt an toàn; Bổ sung Anti-scraping rate limit (30 số/giờ) cho `revealPhone`; Bổ sung `AuditEvent` cho `markAsRented` & `remove`; Bổ sung HTTP Security Headers trong `next.config.mjs` & CORS đa tên miền trong `main.ts`; Build pass 3/3 packages (1m12s), 31/31 routes Next.js pass, Typecheck API & Web 0 lỗi, Static lint 5/5 pass, Zero từ cấm. |
 | Rà soát Toàn Diện Độc Lập & Tối Ưu Hóa Trải Nghiệm (23/09/2026) | ✅ Xong | Đồng bộ Hotline 0981 753 082, Địa chỉ Ngõ 622, Minh Khai, Phường Vĩnh Tuy, Hà Nội và Thời gian làm việc 24/7 trên toàn bộ Header, Footer và /lien-he; Tách dòng và tối ưu line-height/letter-spacing tiêu đề Hero H1; Triệt tiêu 100% dấu chấm cuối câu trong toàn bộ Metadata trang, Modals, Thông báo lỗi; Nâng cấp Autocomplete tìm kiếm Hero hỗ trợ gõ tiếng Việt không dấu (diacritics-insensitive) kèm highlight từ khóa chuẩn xác; Sửa cấu hình packages/database/tsconfig.json loại trừ test-wave-0.ts giúp tsc PASS 3/3 packages; Mở rộng CORS localhost:3001 trong main.ts; Build sản xuất 31/31 routes Next.js và NestJS PASS 100%. |
 
-Cập nhật lần cuối: 23/09/2026 (Hoàn thành RÀ SOÁT VÀ KHẮC PHỤC TOÀN DIỆN ĐỘC LẬP).
+| PIVOT MÔ HÌNH: Môi Giới Cho Thuê Trực Tiếp (24/09/2026) | ✅ Xong | Chuyển dịch toàn diện từ marketplace sang môi giới trực tiếp có người thật (Đức Quân) điều phối độc quyền, thu phí 40% tháng đầu từ chủ khi thành công, khách thuê miễn phí 100%; Hoàn thành DEV-01 → DEV-14 (P0); Giải quyết triệt để GAP-01 → GAP-16; Nghiệm thu 30/30 ca AT-01 → AT-30 PASS 100% bằng dữ liệu và test script thực tế; Cấu hình payments_enabled=false bảo vệ tiền thật; Build sạch 100% monorepo (31/31 routes Next.js, API sạch lỗi). |
+
+Cập nhật lần cuối: 24/09/2026 (Hoàn tất 100% Phase Kỹ thuật P0 DEV-01 → DEV-14 & Nghiệm thu 30 ca AT-01 → AT-30 cho Pivot Môi giới Cho thuê).
 
 
 

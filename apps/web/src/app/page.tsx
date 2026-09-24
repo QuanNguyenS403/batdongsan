@@ -33,15 +33,15 @@ const VALUE_PROPOSITIONS = [
   },
   {
     icon: '📞',
-    title: 'Kết nối trực tiếp người cho thuê',
-    desc: 'Xem số điện thoại và liên hệ trực tiếp qua Zalo hoặc cuộc gọi để trao đổi thông tin, hẹn lịch xem phòng nhanh chóng',
+    title: 'Tư vấn và trực tiếp dẫn xem',
+    desc: 'Chuyên viên Đức Quân tiếp nhận nhu cầu, tư vấn chi tiết và trực tiếp dẫn xem phòng thực tế tận nơi',
     color: 'from-amber-500/10 to-amber-500/5',
     border: 'border-amber-200',
   },
   {
     icon: '🛡️',
     title: '100% Miễn phí cho người thuê',
-    desc: 'Tìm kiếm và kết nối hoàn toàn miễn phí. Nền tảng cam kết không thu phí người tìm thuê, không phát sinh phụ phí ẩn',
+    desc: 'Khách thuê không phải trả bất kỳ khoản phí môi giới nào, ký hợp đồng và thanh toán trực tiếp với bên có quyền cho thuê',
     color: 'from-emerald-500/10 to-emerald-500/5',
     border: 'border-emerald-200',
   },

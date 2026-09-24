@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ContactBrokerModal } from '@/components/ContactBrokerModal';
 import { RevealPhoneButton } from './RevealPhoneButton';
 import { AuthModal } from '@/components/AuthModal';
+import { SITE_CONFIG } from '@/lib/constants';
 
 interface MobileStickyContactBarProps {
   listingId: string;
@@ -22,9 +23,11 @@ export function MobileStickyContactBar({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [phone, setPhone] = useState<string | null>(null);
 
+  const activePhone = phone || SITE_CONFIG.hotline;
+
   return (
     <>
-      {/* Sticky Bottom Bar chỉ hiển thị trên màn hình nhỏ hơn 768px (Mobile CTA - FE-10) */}
+      {/* Sticky Bottom Bar chỉ hiển thị trên màn hình nhỏ hơn 768px (Mobile CTA) */}
       <div className="fixed bottom-0 inset-x-0 z-40 block md:hidden bg-white/95 backdrop-blur-md border-t border-surface-border px-4 py-2.5 shadow-elevated">
         <div className="flex items-center justify-between gap-3">
           {/* Cụm giá tiền bên trái */}
@@ -42,12 +45,12 @@ export function MobileStickyContactBar({
           <div className="flex items-center gap-2 shrink-0">
             {phone ? (
               <a
-                href={`tel:${phone}`}
-                aria-label={`Gọi điện cho chủ trọ theo số ${phone}`}
+                href={`tel:${activePhone.replace(/\s+/g, '')}`}
+                aria-label={`Gọi điện cho người dẫn xem theo số ${activePhone}`}
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-slate-800 active:scale-95 transition-all"
               >
                 <span>📞</span>
-                <span>{phone}</span>
+                <span>{activePhone}</span>
               </a>
             ) : (
               <div className="scale-90 origin-right">
@@ -62,11 +65,11 @@ export function MobileStickyContactBar({
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              aria-label="Mở hộp thoại gửi yêu cầu tư vấn xem phòng"
+              aria-label="Mở hộp thoại đề xuất lịch xem phòng"
               className="flex items-center justify-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-600 active:scale-95 transition-all"
             >
               <span>💬</span>
-              <span>Tư vấn</span>
+              <span>Đề xuất lịch</span>
             </button>
           </div>
         </div>
@@ -79,7 +82,7 @@ export function MobileStickyContactBar({
         onSuccess={() => setIsAuthModalOpen(false)}
       />
 
-      {/* Modal gửi liên hệ / đặt lịch xem phòng */}
+      {/* Modal gửi liên hệ / đề xuất lịch xem phòng */}
       <ContactBrokerModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -31,15 +32,56 @@ export class LeadsService {
   }
 
   /**
-   * Format lead entity sang JSON an toàn (chuyển đổi BigInt sang string).
+   * Che số điện thoại của khách trước khi hiển thị cho chủ nhà (mục 8.3 & AT-06).
    */
-  private formatLead(lead: any) {
+  public maskPhone(phone: string): string {
+    if (!phone) return '';
+    const clean = phone.replace(/\s+/g, '');
+    if (clean.length < 7) return '09•• ••• •••';
+    return `${clean.slice(0, 4)}***${clean.slice(-3)}`;
+  }
+
+  /**
+   * Che email của khách trước khi hiển thị cho chủ nhà (mục 8.3).
+   */
+  public maskEmail(email: string): string {
+    if (!email) return '';
+    const parts = email.split('@');
+    if (parts.length !== 2) return '***@***';
+    const name = parts[0];
+    const domain = parts[1];
+    const maskedName = name.length > 2 ? `${name.slice(0, 2)}***` : `${name.slice(0, 1)}***`;
+    return `${maskedName}@${domain}`;
+  }
+
+  /**
+   * Format lead entity sang JSON an toàn (chuyển đổi BigInt sang string).
+   * Hỗ trợ che thông tin nhạy cảm của khách cho vai trò chủ nhà (GAP-03, AT-06).
+   */
+  private formatLead(lead: any, maskPrivateInfo = false) {
     return {
       ...lead,
       id: lead.id.toString(),
       listingId: lead.listingId.toString(),
+      unitId: lead.unitId ? lead.unitId.toString() : null,
+      requestId: lead.requestId ? lead.requestId.toString() : null,
       requesterId: lead.requesterId ? lead.requesterId.toString() : null,
       assignedToUserId: lead.assignedToUserId ? lead.assignedToUserId.toString() : null,
+      phone: maskPrivateInfo ? this.maskPhone(lead.phone) : lead.phone,
+      email: maskPrivateInfo && lead.email ? this.maskEmail(lead.email) : lead.email,
+      isPhoneMasked: maskPrivateInfo,
+      assignedAgent: lead.assignedTo
+        ? {
+            id: lead.assignedTo.id.toString(),
+            fullName: lead.assignedTo.fullName || 'Đức Quân',
+            phone: '0981 753 082',
+            role: 'Người tư vấn và trực tiếp dẫn xem',
+          }
+        : {
+            fullName: 'Đức Quân',
+            phone: '0981 753 082',
+            role: 'Người tư vấn và trực tiếp dẫn xem',
+          },
       listing: lead.listing
         ? {
             ...lead.listing,
@@ -52,7 +94,7 @@ export class LeadsService {
         ? {
             id: lead.requester.id.toString(),
             fullName: lead.requester.fullName,
-            phone: lead.requester.phone,
+            phone: maskPrivateInfo ? this.maskPhone(lead.requester.phone) : lead.requester.phone,
           }
         : undefined,
     };
@@ -60,7 +102,7 @@ export class LeadsService {
 
   /**
    * Tạo lead mới từ khách thuê (Public endpoint).
-   * P0-02: Phải persist DB thật, có dedupe, trả success chỉ sau khi ghi DB thành công.
+   * DEV-04: Tự động gán người phụ trách (Đức Quân) ở server, lưu RentalRequest, bảo vệ số khách.
    */
   async createLead(dto: CreateLeadDto, requesterId?: bigint) {
     let listingIdBigInt: bigint;
@@ -79,6 +121,9 @@ export class LeadsService {
         status: true,
         expiresAt: true,
         ownerId: true,
+        unitId: true,
+        contactAgentId: true,
+        price: true,
         owner: {
           select: {
             id: true,
@@ -98,12 +143,12 @@ export class LeadsService {
       throw new BadRequestException('Tin đăng này hiện không còn nhận yêu cầu liên hệ');
     }
 
-    // RB-11: Kiểm tra tin đăng chưa hết hạn
+    // GAP-16: Kiểm tra tin đăng chưa hết hạn
     if (listing.expiresAt && listing.expiresAt < new Date()) {
       throw new BadRequestException('Tin đăng này đã hết hạn hiển thị, không thể gửi yêu cầu liên hệ');
     }
 
-    // RB-11: Kiểm tra chủ tin không bị tạm khóa do vi phạm
+    // GAP-16: Kiểm tra chủ tin không bị tạm khóa
     if (listing.owner?.isBlocked) {
       throw new BadRequestException('Tài khoản người cho thuê của tin này hiện đang bị tạm khóa');
     }
@@ -127,25 +172,71 @@ export class LeadsService {
       };
     }
 
-    // 4. Lưu DB thật và ghi sự kiện Transactional Outbox (RB-06 & RB-13)
+    // 4. Tìm người phụ trách dịch vụ (Đức Quân) để tự gán ở server (GAP-04)
+    const defaultAgent = await this.prisma.agentProfile.findFirst({
+      where: { isActive: true },
+      select: { userId: true, displayName: true, workPhone: true },
+    });
+    const defaultAdmin = defaultAgent
+      ? null
+      : await this.prisma.user.findFirst({
+          where: { role: 'admin' },
+          select: { id: true, fullName: true, phone: true },
+        });
+
+    let assignedToUserId: bigint | null = null;
+    if (listing.contactAgentId) {
+      const contactAgent = await this.prisma.agentProfile.findUnique({
+        where: { id: listing.contactAgentId },
+        select: { userId: true },
+      });
+      assignedToUserId = contactAgent?.userId || null;
+    }
+    if (!assignedToUserId) {
+      assignedToUserId = defaultAgent?.userId || defaultAdmin?.id || null;
+    }
+
+    // 5. Lưu DB thật và ghi sự kiện Transactional Outbox (RB-06 & GAP-12)
     try {
       const created = await this.prisma.$transaction(async (tx) => {
+        // Nhóm nhu cầu người thuê vào RentalRequest (Mục 10 kế hoạch)
+        let rentalRequest = await tx.rentalRequest.findFirst({
+          where: { phone: cleanPhone },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (!rentalRequest) {
+          rentalRequest = await tx.rentalRequest.create({
+            data: {
+              requestCode: `REQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              userId: requesterId ?? null,
+              fullName: dto.fullName.trim(),
+              phone: cleanPhone,
+              notes: dto.message?.trim() || null,
+              budgetMax: listing.price,
+            },
+          });
+        }
+
         const lead = await tx.lead.create({
           data: {
             listingId: listingIdBigInt,
+            unitId: listing.unitId || null,
+            requestId: rentalRequest.id,
+            assignedToUserId, // GAP-04: Tự động gán cho Quân ở server
             requesterId: requesterId ?? null,
             fullName: dto.fullName.trim(),
             phone: cleanPhone,
             email: dto.email?.trim() || null,
             message: dto.message?.trim() || null,
             channel: dto.channel || 'web_form',
-            consent: true,
+            consent: Boolean(dto.consent),
             status: 'new',
             dedupeKey,
           },
         });
 
-        // Ghi sự kiện LEAD_CREATED để thông báo cho chủ tin (RB-13)
+        // Ghi sự kiện LEAD_CREATED (BR-04: không gửi SĐT chưa che cho chủ nhà)
         await this.outboxService.recordEvent(
           {
             aggregateType: 'LEAD',
@@ -155,10 +246,9 @@ export class LeadsService {
               leadId: lead.id.toString(),
               listingId: listing.id.toString(),
               listingTitle: listing.title,
-              landlordPhone: listing.owner.phone,
+              assignedAgentPhone: defaultAgent?.workPhone || '0981 753 082',
               tenantName: lead.fullName,
-              tenantPhone: lead.phone,
-              tenantEmail: lead.email,
+              tenantPhoneMasked: this.maskPhone(lead.phone),
               message: lead.message,
             },
           },
@@ -168,16 +258,15 @@ export class LeadsService {
         return lead;
       });
 
-      this.logger.log(`Created new lead id=${created.id} for listing=${listingIdBigInt}`);
+      this.logger.log(`Created new lead id=${created.id} assignedTo=${assignedToUserId}`);
 
       return {
         success: true,
-        message: 'Gửi yêu cầu liên hệ thành công! Người đăng tin sẽ sớm liên lạc lại với bạn',
+        message: 'Gửi yêu cầu liên hệ thành công! Người tư vấn và trực tiếp dẫn xem sẽ sớm liên hệ lại với bạn',
         isDuplicate: false,
         leadId: created.id.toString(),
       };
     } catch (err: any) {
-      // Prisma P2002: Unique constraint failed
       if (err.code === 'P2002' || err.message?.includes('dedupe_key')) {
         const raceLead = await this.prisma.lead.findUnique({ where: { dedupeKey } });
         return {
@@ -193,7 +282,9 @@ export class LeadsService {
   }
 
   /**
-   * Dành cho Seller (Chủ trọ / Môi giới): Lấy danh sách khách thuê quan tâm tới các tin của mình.
+   * Dành cho Chủ trọ / Người cho thuê: Xem danh sách lead quan tâm tin của mình.
+   * BR-04, GAP-03, AT-06: Chủ nhà chỉ xem lead đã được che số điện thoại và email.
+   * Quá trình liên hệ, sàng lọc và dẫn khách do Quan trực tiếp điều phối.
    */
   async findMyLeads(ownerId: bigint, query: QueryLeadsDto) {
     const page = Number(query.page ?? 1);
@@ -238,6 +329,14 @@ export class LeadsService {
               title: true,
               slug: true,
               price: true,
+              ownerId: true,
+            },
+          },
+          assignedTo: {
+            select: {
+              id: true,
+              fullName: true,
+              phone: true,
             },
           },
         },
@@ -245,8 +344,9 @@ export class LeadsService {
       this.prisma.lead.count({ where }),
     ]);
 
+    // GAP-03 & AT-06: Chủ nhà nhận dữ liệu lead với số điện thoại đã che bảo mật
     return {
-      items: items.map((item: any) => this.formatLead(item)),
+      items: items.map((item: any) => this.formatLead(item, true)),
       pagination: {
         page,
         pageSize,
@@ -257,7 +357,8 @@ export class LeadsService {
   }
 
   /**
-   * Dành cho Admin: Quản lý toàn bộ Lead queue của sàn.
+   * Dành cho Admin / Người phụ trách (Quan): Quản lý toàn bộ Lead queue của sàn.
+   * Xem đầy đủ thông tin khách để thực hiện tư vấn và sắp xếp lịch xem phòng.
    */
   async findAdminLeads(query: QueryLeadsDto) {
     const page = Number(query.page ?? 1);
@@ -314,13 +415,20 @@ export class LeadsService {
               phone: true,
             },
           },
+          assignedTo: {
+            select: {
+              id: true,
+              fullName: true,
+              phone: true,
+            },
+          },
         },
       }),
       this.prisma.lead.count({ where }),
     ]);
 
     return {
-      items: items.map((item: any) => this.formatLead(item)),
+      items: items.map((item: any) => this.formatLead(item, false)),
       pagination: {
         page,
         pageSize,
@@ -331,7 +439,8 @@ export class LeadsService {
   }
 
   /**
-   * Cập nhật trạng thái lead (Seller hoặc Admin).
+   * Cập nhật trạng thái lead (Chỉ Admin hoặc Chuyên viên tư vấn được phân công).
+   * GAP-03: Chủ nhà không được tự tiện đổi trạng thái lead để đảm bảo quy trình môi giới.
    */
   async updateStatus(id: bigint, dto: UpdateLeadStatusDto, currentUserId: bigint, isAdmin: boolean) {
     const lead = await this.prisma.lead.findUnique({
@@ -347,9 +456,11 @@ export class LeadsService {
       throw new NotFoundException('Lead không tồn tại');
     }
 
-    // Nếu không phải admin, chỉ chủ tin mới được update lead của tin mình
-    if (!isAdmin && lead.listing.ownerId !== currentUserId) {
-      throw new BadRequestException('Bạn không có quyền cập nhật lead này');
+    const isAssigned = lead.assignedToUserId === currentUserId;
+    if (!isAdmin && !isAssigned) {
+      throw new ForbiddenException(
+        'Tiến độ và trạng thái khách thuê do chuyên viên tư vấn trực tiếp điều phối và cập nhật',
+      );
     }
 
     const updateData: any = {
@@ -368,8 +479,26 @@ export class LeadsService {
     const updated = await this.prisma.lead.update({
       where: { id },
       data: updateData,
+      include: {
+        listing: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            price: true,
+            ownerId: true,
+          },
+        },
+        assignedTo: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+          },
+        },
+      },
     });
 
-    return this.formatLead(updated);
+    return this.formatLead(updated, false);
   }
 }

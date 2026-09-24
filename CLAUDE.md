@@ -4,7 +4,10 @@
 > Phần 1 là **phân tích thực tế** website tham chiếu (mogi.vn, truy cập trực tiếp ngày 30/08/2026).
 > Phần 2 trở đi là **đặc tả kiến trúc đề xuất** cho dự án mới, được suy ra từ phần 1 nhưng điều chỉnh theo hướng gọn nhẹ, dễ triển khai, dễ maintain một mình.
 >
-> **Định hướng chiến lược (Pivot 05/09/2026):** Dự án chính thức chuyển dịch 100% thành **nền tảng trung gian (broker) chuyên sâu "Cho thuê"** (phòng trọ sinh viên, nhà nguyên căn, căn hộ chung cư, studio, mặt bằng kinh doanh). **Loại bỏ hoàn toàn mảng mua bán nhà đất**. Nền tảng kết nối trực tiếp Người thuê / Sinh viên với Chủ trọ / Môi giới qua SĐT/Zalo; nền tảng **KHÔNG xử lý giao dịch cọc hay tiền thuê**. Nguồn thu từ bên cung (phí đẩy tin, dịch vụ gia tăng). Toàn bộ kiến trúc và tính năng tập trung vào tìm kiếm có cấu trúc, minh bạch chi phí dịch vụ/điện nước và tìm phòng gần trường đại học.
+> **Định hướng chiến lược (Pivot 24/09/2026):** Dự án chính thức chuyển dịch sang **mô hình môi giới cho thuê có người thật (Quan) làm đầu mối duy nhất**, thu phí thành công 40% từ chủ nhà (thu 1 lần khi giao dịch đủ điều kiện thành công: đã ký HĐ thuê + đã thanh toán kỳ đầu + đã bàn giao phòng), **khách thuê miễn phí 100%**.
+> Quyết định này THAY THẾ mọi tài liệu trước đó nói về mô hình marketplace 2 chiều tự liên hệ hoặc gói membership/đăng tin làm nguồn thu chính.
+> Nền tảng kết nối người thuê qua đầu mối tư vấn và trực tiếp dẫn xem của Quan; tên và số điện thoại công khai trên mọi tin là của Quan, không để lộ số riêng của chủ ra ngoài. Chủ ký hợp đồng thuê trực tiếp với khách; nền tảng **KHÔNG giữ cọc, KHÔNG thu hộ tiền thuê**.
+> Vô hiệu hóa endpoint `reveal-phone` cũ; dừng bán mới các gói membership; chuyển sang quản lý hợp đồng dịch vụ HĐ-01 với chủ và công nợ phí môi giới.
 >
 > Tham khảo Mogi.vn ở Phần 1 để kế thừa kinh nghiệm kiến trúc và SEO, nhưng đặc tả kỹ thuật từ Phần 2 đã được chuẩn hóa 100% cho mô hình cho thuê.
 
@@ -228,14 +231,14 @@ Transaction (id, user_id, membership_id? , listing_id?(nếu mua đẩy tin),
 
 ### 2.5 Luồng người dùng chính (Customer Journeys)
 
-**A. Người tìm mua/thuê (chiếm 90% traffic, không cần tài khoản để browse):**
-Landing (Google/Ads) → Trang danh sách (áp filter) → Trang chi tiết → (bị chặn) đăng nhập OTP → xem SĐT/nhắn tin → liên hệ ngoài platform (điện thoại/Zalo) → **hết vai trò của hệ thống** (giống Mogi — không có escrow/thanh toán giao dịch BĐS trong app, chỉ là kênh kết nối).
+**A. Người tìm thuê (Miễn phí 100%):**
+Landing (Google/Ads) → Trang danh sách (áp filter: giá, tiện ích, trường ĐH) → Trang chi tiết → Xem thông tin người tư vấn & trực tiếp dẫn xem (Quan) → Bấm gọi / Zalo / Gửi yêu cầu đặt lịch xem phòng → Quan liên hệ xác nhận lịch, trực tiếp dẫn xem tận nơi → Khách gặp chủ, ký HĐ thuê trực tiếp với chủ và nhận bàn giao phòng (Khách không trả bất kỳ khoản phí môi giới nào).
 
-**B. Người đăng tin (môi giới/chủ nhà — nguồn thu chính):**
-Đăng ký OTP → chọn gói (Trial miễn phí trước) → đăng tin (wizard) → chờ duyệt (kiểm duyệt thủ công hoặc bán tự động qua rule + AI check ảnh trùng/spam) → tin lên live → theo dõi lượt xem/liên hệ trong dashboard → hết hạn → gia hạn hoặc nâng cấp gói/mua TOP-UP.
+**B. Người cho thuê / Chủ phòng:**
+Gửi thông tin phòng → Ký thỏa thuận dịch vụ môi giới (HĐ-01) với điều khoản phí thành công 40% tháng đầu → Tin được biên tập, kiểm duyệt và xuất bản với thông tin đầu mối là Quan → Quan sàng lọc nhu cầu, dẫn khách tới xem phòng → Chủ và khách ký HĐ thuê trực tiếp (HĐ-02), bàn giao phòng và nhận tiền thuê kỳ đầu → Chủ thanh toán phí dịch vụ 40% cho doanh nghiệp trong 2 ngày làm việc.
 
-**C. Admin/Kiểm duyệt viên (nội bộ):**
-Hàng đợi tin chờ duyệt → duyệt/từ chối (kèm lý do) → xử lý report vi phạm → quản lý gói thành viên/thanh toán → quản lý nội dung SEO (bảng giá, review khu vực) → dashboard doanh thu.
+**C. Quan (Người điều phối & trực tiếp dẫn xem) / Admin:**
+Tiếp nhận lead vào hàng đợi tập trung → Sàng lọc nhu cầu khách qua điện thoại/Zalo → Xác nhận lịch xem (tối đa 3 lịch/ngày) → Trực tiếp dẫn khách xem phòng → Hỗ trợ đối chiếu hồ sơ, chứng kiến ký HĐ-02 và bàn giao → Xác nhận giao dịch thành công (RentalDeal đủ điều kiện tại §6.2) → Tạo công nợ phí (Commission DUE) → Đối soát giao dịch chuyển khoản ngân hàng thật và xác nhận thanh toán (PAID).
 
 ### 2.6 Chiến lược SEO/Content (bắt buộc nếu muốn cạnh tranh mảng này)
 - Mỗi trang danh mục (tỉnh × quận × loại hình) cần **unique content block** ở cuối trang — có thể generate bán tự động (template + biến số liệu thật, KHÔNG spin nội dung rác) để tránh duplicate content bị Google phạt.
@@ -244,41 +247,30 @@ Hàng đợi tin chờ duyệt → duyệt/từ chối (kèm lý do) → xử l�
 - Sitemap.xml chia nhỏ theo loại (sitemap-listings-1.xml, sitemap-projects.xml...) vì số lượng URL sẽ vượt giới hạn 50k/file rất nhanh nếu scale.
 - Structured data (Schema.org `RealEstateListing`, `Product`, `Offer`) cho mọi trang chi tiết tin — tăng khả năng hiện rich snippet giá/ảnh trên Google.
 
-### 2.7 Chống lạm dụng & Trust-safety (rút ra từ pattern của Mogi)
-- Ẩn số điện thoại sau click + log lượt "hiện số" → vừa chống scrape vừa là **metric giá trị tin đăng** (bán cho môi giới: "tin của bạn có N lượt hiện số").
-- Nút "Báo vi phạm" ở mọi tin — hàng đợi kiểm duyệt review report thủ công.
-- Email ẩn qua obfuscation (hoặc đơn giản hơn: không hiển thị email công khai, chỉ dùng nội bộ).
-- Rate-limit gửi OTP theo SĐT + theo IP.
-- Xác thực CMND/CCCD cho môi giới (badge "Đã xác thực") — tăng trust, có thể để giai đoạn 2.
+### 2.7 Chống lạm dụng & Trust-safety (Chuẩn mô hình môi giới Quan điều phối)
+- **Đầu mối liên hệ duy nhất**: Tất cả tin đăng công khai đều hiển thị thông tin liên hệ của Quan ("Người tư vấn và trực tiếp dẫn xem"), tuyệt đối không để lộ số điện thoại riêng của chủ phòng ra ngoài qua API, SSR, JSON-LD, hay cache (vô hiệu hóa endpoint `revealPhone` cũ).
+- **Hàng đợi lead tập trung**: Lead từ form hoặc yêu cầu lịch xem tự động gán cho Quan phụ trách; chủ phòng không xem được số điện thoại khách trước giai đoạn giới thiệu chốt giao dịch.
+- **Báo vi phạm tin đăng**: Khách thuê có thể báo cáo tin đã hết phòng, sai giá thực tế hoặc không đúng thông tin kiểm tra.
+- **Cơ chế OTP bảo mật**: OTP xác thực số điện thoại dùng CSPRNG, lưu trữ chia sẻ TTL và rate limit chống brute-force.
+- **Nguyên tắc an toàn tài chính**: Chỉ ghi nhận phí môi giới `PAID` khi có giao dịch ngân hàng thật khớp mã tham chiếu đối soát; một giao dịch chỉ phát sinh đúng 1 khoản phí gốc.
 
-### 2.8 Lộ trình triển khai đề xuất
+### 2.8 Lộ trình triển khai đề xuất (Xem chi tiết tại ke-hoach-thuc-thi-moi-gioi-cho-thue.md)
+- **Gate G0**: Chốt mô hình, pháp lý và hạ tầng kỹ thuật ban đầu.
+- **Gate G1**: Liên hệ và nguồn cung (DEV-01, DEV-02, DEV-03, DEV-06, DEV-11, DEV-13).
+- **Gate G2**: Lead và lịch bạn dẫn (DEV-04, DEV-05, DEV-07, DEV-12).
+- **Gate G3**: Hợp đồng và tiền (DEV-08, DEV-09, DEV-10, DEV-12).
+- **Gate G4**: Diễn tập và nghiệm thu 30 ca AT-01 → AT-30 (DEV-14).
+- **Gate G5**: Pilot 14 ngày vận hành thực tế (10–20 phòng).
 
-**Giai đoạn 1 — MVP (4-8 tuần, 1 người có thể làm được):**
-- Auth OTP + đăng tin cơ bản (không cần gói trả phí, mọi tin miễn phí, giới hạn số lượng/user).
-- Trang danh sách + chi tiết tin + tìm kiếm filter cơ bản (Postgres, chưa cần Meilisearch nếu <5000 tin).
-- Trang môi giới đơn giản (auto-generate từ user có ≥1 tin).
-- Upload ảnh (Cloudflare R2/S3) + resize cơ bản.
-- SEO cơ bản: meta tag động, sitemap, breadcrumb.
-
-**Giai đoạn 2 — Monetization (sau khi có traffic/tin thật):**
-- Gói thành viên + thanh toán VNPay/MoMo.
-- Đẩy tin/VIP/TOP-UP.
-- Dashboard quản lý tin cho người đăng.
-- Search engine chuyên dụng khi data đủ lớn.
-
-**Giai đoạn 3 — Tính năng giữ chân (differentiation):**
-- Trang "Giá nhà đất" (thống kê từ chính dữ liệu tin đăng của bạn — không cần AI phức tạp ban đầu, trung bình cộng có trọng số là đủ).
-- Review khu vực.
-- Lead-gen đối tác (ngân hàng vay mua nhà) — nguồn thu phụ dễ triển khai (chỉ cần form + gửi email/CRM đối tác).
-- App di động / PWA.
-
-### 2.9 Quy ước code cho Claude Code khi làm việc trên dự án này
+### 2.9 Quy ước code bắt buộc
 - Ưu tiên Server Components cho mọi trang liệt kê/SEO; chỉ dùng Client Components cho phần tương tác (filter form, modal auth, gallery).
 - Mọi trang public **phải** có: `<title>`, meta description, canonical, Open Graph — không merge PR thiếu SEO tag.
+- **Tuyệt đối không thêm dấu chấm vào cuối câu** trên bất kỳ nội dung UI, meta description, thông báo lỗi, toast, popup nào người dùng nhìn thấy (GEMINI.md § 8).
 - Slug tạo tự động từ tiêu đề (bỏ dấu, lowercase, nối `-`), luôn hậu tố `id{number}` để tránh trùng và cho phép đổi tiêu đề mà không vỡ URL cũ (301 redirect slug cũ → slug mới, giữ nguyên ID).
-- Giá tiền luôn lưu ở đơn vị nhỏ nhất (VNĐ, số nguyên) trong DB, chỉ format "X tỷ Y triệu" ở tầng hiển thị.
-- Không bao giờ trả số điện thoại đầy đủ trong response API list — chỉ trả khi có endpoint riêng `reveal-phone` có auth + ghi log.
-- Mọi thay đổi schema Listing phải cân nhắc ảnh hưởng tới index search engine (đồng bộ lại Meilisearch/Elasticsearch).
+- Giá tiền luôn lưu ở đơn vị nhỏ nhất (VNĐ, số nguyên `BigInt`) trong DB, chỉ format ở tầng hiển thị.
+- Phí dịch vụ môi giới tính theo basis points (4000/10000 = 40%) trên cơ sở tiền thuê thuần tháng đầu tiên sau ưu đãi; không dùng số thực JS cho các phép tính tiền.
+- Không bao giờ trả số điện thoại riêng của chủ trong API public hoặc danh sách tin; liên hệ hiển thị là của Quan từ `SITE_CONFIG`.
+- Mọi thay đổi schema Listing phải cân nhắc tính toàn vẹn và migration tương thích ngược.
 
 ---
 

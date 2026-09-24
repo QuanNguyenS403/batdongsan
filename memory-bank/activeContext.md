@@ -1,28 +1,35 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (23/09/2026 — THI HÀNH TOÀN DIỆN AUDIT HARNESS, SỬA TOÀN BỘ LỖ HỔNG VÀ NGHIỆM THU 100%):**
-1. **Kích hoạt quy trình 6 Cổng Rà Soát Tự Động (Skill 06: Full-System Autonomous Audit & Repair Harness)**:
-   - **Gate 1 (Compilation)**: `tsc --noEmit` đạt 0 lỗi trên cả 3 packages (`apps/web`, `apps/api`, `packages/database`).
-   - **Gate 2 (Security & Auth)**: Quét sạch backdoor credentials, triệt tiêu mã MFA bypass, bảo vệ anti-scraping SĐT, xác thực JWT & Revoke tokenVersion.
-   - **Gate 3 (API Contract & USP Integration)**: Tích hợp `MoveInCostEstimator` vào trang chi tiết `/tin/[slug]`, đồng bộ endpoint upload ảnh `/listings/:id/images`, đồng bộ Admin Finance Ledger.
-   - **Gate 4 (Database, Outbox & Migrations)**: Đồng bộ mock `$transaction`, OutboxService, CAS state machine cho kịch bản test; nghiệm thu toàn bộ 6/6 test wave scripts.
-   - **Gate 5 (UI & Invariants - GEMINI.md § 8)**:
-     - 100% không còn dấu chấm cuối câu trên UI, metadata, error toast, alerts và 38 exception messages của API Backend.
-     - Tiêu đề Hero H1 phân tách 2 dòng chuẩn typographic `leading-[1.15] md:leading-[1.18]`, khoảng đệm `mt-0.5 sm:mt-0.5`.
-     - Đồng bộ thông tin liên hệ duy nhất từ `SITE_CONFIG` (`hotline: 0981 753 082`, `workingHours: 24/7`, `email: ducquan16102006@gmail.com`, `address: Ngõ 622, Minh Khai, Phường Vĩnh Tuy, Hà Nội`).
-     - Tìm kiếm thông minh HeroSearchForm hỗ trợ tiếng Việt có dấu/không dấu (diacritics-insensitive) kèm highlight từ khóa.
-   - **Gate 6 (Production Build & Visual Inspection)**:
-     - `nest build` hoàn tất 100%.
-     - `next build` hoàn tất 31/31 static & dynamic routes.
-     - Browser Subagent kiểm thử trực quan trên Next.js production server: ghi hình video WebP, chụp ảnh màn hình xác nhận Hero H1, Search autocomplete, Footer và Pricing page.
-2. **Nghiệm thu toàn bộ Test Suites**:
-   - `static-lint-check.js`: 5/5 PASS.
-   - `test-wave-0.js`: 11/11 PASS (100%).
-   - `test-wave-1.js`: 9/9 PASS (100%).
-   - `test-wave-2.js`: 6/6 PASS (100%).
-   - `test-wave-3.js`: 5/5 PASS (100%).
-   - `test-wave-4.js`: 7/7 PASS (100%).
-   - `test-wave-5.js`: 9/9 PASS (100%).
+**Việc vừa hoàn thành (24/09/2026 — HOÀN THÀNH 100% PHASE KỸ THUẬT P0 VÀ NGHIỆM THU 30 CA AT CHO PIVOT MÔI GIỚI CHO THUÊ):**
+1. **Chuyển đổi triệt để Mô hình Kinh doanh (Pivot 24/09/2026)**:
+   - Thay thế toàn bộ mô hình marketplace bán gói membership sang môi giới trực tiếp có người thật (Đức Quân) điều phối độc quyền.
+   - Thu phí thành công 40% (một lần) từ chủ nhà khi giao dịch thành công (đủ 4 điều kiện §6.2), khách thuê 100% miễn phí (0 đồng phí môi giới). Nền tảng không thu hộ tiền thuê, không giữ cọc.
+   - Toàn bộ tin đăng hiển thị hotline chuyên viên Đức Quân (`0981 753 082`), vai trò "Người tư vấn và trực tiếp dẫn xem", bảo mật tuyệt đối SĐT riêng của chủ nhà khỏi mã nguồn HTML và API public.
+2. **Hoàn tất 14/14 Hạng mục Kỹ thuật P0 (DEV-01 → DEV-14)**:
+   - DEV-01: Đồng bộ đặc tả CLAUDE.md, README.md, TRANG-THAI-TRIEN-KHAI.md, RUNBOOK.md.
+   - DEV-02: 20 Prisma models pivot (AgencyProfile, AgentProfile, OwnerProfile, RentalUnit, AgreementUnit, RentalRequest, Introduction, Viewing, UnitReservation, RentalDeal, DepositRecord, HandoverRecord, Commission, Payment, PaymentAllocation, Document, DocumentAcceptance, ConsentRecord, Dispute).
+   - DEV-03: Endpoint `revealPhone` chỉ trả hotline Quân, thêm `GET /listings/:id/contact`, sửa web components.
+   - DEV-04: LeadsService tự động gán Quan, tạo RentalRequest, che SĐT/email với chủ nhà, cấm chủ đổi status.
+   - DEV-05: OtpService lưu Redis TTL 300s, CSPRNG `crypto.randomInt`, chống mượn OTP, chống replay.
+   - DEV-06: Cổng duyệt tin bắt buộc HĐ-01 active và thẩm quyền xác thực (BR-05).
+   - DEV-07: ViewingsService chống trùng giờ dẫn Quan (AT-10), maxDailyViewings (3/ngày), chống giữ trùng phòng (AT-11), hủy/đổi giờ lưu vết (AT-12).
+   - DEV-08: DealsService quản lý hợp đồng thuê, cọc (held_by_owner), bàn giao (HandoverRecord), tách bạch thuê thành công khỏi thu phí.
+   - DEV-09: CommissionsService tính phí 40% bằng BigInt basis points (4000/10000), hạn 2 ngày làm việc, DB unique constraint `@unique([dealId])` chống trùng phí tuyệt đối (BR-12, AT-18).
+   - DEV-10: PaymentsService đối soát mã giao dịch ngân hàng thật `externalBankTxId` (BR-11, AT-20), xử lý trả thiếu, trả đủ, phân bổ nhiều deal, hoàn phí ghi sổ cái FinanceLedger.
+   - DEV-11: Chặn mua mới membership (GAP-07), bỏ gate nâng cấp trả tiền tại ListingsService.create (GAP-08), bảo toàn planSnapshot gói cũ, cập nhật trang giá sang mô hình 40%.
+   - DEV-12: Transactional Outbox ghi lead và thông báo nguyên tử (GAP-12), retry exponential backoff và chuyển Dead Letter Queue FAILED (AT-27).
+   - DEV-13: Đồng bộ nội dung công khai (/dieu-khoan, /gioi-thieu, /chinh-sach, /moi-gioi, /thue, /tin/[slug], /page.tsx), xóa sạch lời hứa liên hệ trực tiếp chủ trọ (GAP-13), tuân thủ GEMINI.md § 8 (không dấu chấm cuối câu).
+   - DEV-14: Thực thi kiểm thử toàn diện, đạt 100% PASS cho 30 ca AT-01 → AT-30 với dữ liệu thực tế.
+3. **Giải quyết 16/16 Khoảng cách (GAP-01 → GAP-16)**: Toàn bộ chuyển sang trạng thái `resolved`.
+4. **Nghiệm thu 30/30 Ca Kiểm Thử Bắt Buộc (AT-01 → AT-30)**:
+   - Đã viết và chạy các script kiểm thử chuyên biệt: `test-dev03-at01-03.js`, `test-dev04-at06.js`, `test-dev05-at08.js`, `test-dev06-at04.js`, `test-dev07-at10-12.js`, `test-dev08-at13-14.js`, `test-dev09-at15-18.js`, `test-dev10-at20-23.js`, `test-dev11-at29.js`, `test-dev12-at27.js`, `test-dev14-batch1.js`, `test-dev14-batch2.js`.
+   - Kết quả: 30/30 ca PASS 100% với dữ liệu chứng minh thực tế trên CSDL PostgreSQL.
+5. **Đóng các Gate G1 → G4 (Kỹ thuật và Diễn tập sẵn sàng)**:
+   - Gate G1 (Liên hệ và nguồn cung): ĐÓNG (AT-01..04 PASS).
+   - Gate G2 (Lead và lịch bạn dẫn): ĐÓNG (AT-05..12 PASS).
+   - Gate G3 (Hợp đồng và tiền): ĐÓNG (AT-13..23 PASS).
+   - Gate G4 (Diễn tập và nghiệm thu): ĐÓNG (AT-24..30 PASS, monorepo build PASS 100%).
+   - Gate G5 (Pilot 14 ngày, 10-20 phòng): Giữ nguyên cờ `payments_enabled=false` ở cấu hình. Chờ Quan hoàn tất các điều kiện pháp lý LEG-01..08 và ra quyết định kinh doanh.
 
 **Việc hoàn thành trước đó (21/09/2026 — RÀ SOÁT TOÀN DIỆN HỆ THỐNG & KHẮC PHỤC TRIỆT ĐỂ TOÀN BỘ LỖ HỔNG):**
 1. **Khắc phục lỗ hổng leo quyền & bypass MFA trong `CapabilitiesGuard` (`apps/api/src/common/guards/capabilities.guard.ts`)**:

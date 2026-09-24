@@ -52,16 +52,26 @@ model User {
   tokenVersion    Int       @default(0) @map("token_version")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  listings        Listing[]
-  savedListings   SavedListing[]
-  savedSearches   SavedSearch[]
-  reports         ListingReport[]
-  phoneReveals    PhoneRevealLog[]
-  memberships     UserMembership[]
-  verifiedListings Listing[] @relation("VerifiedListings")
-  requestedLeads  Lead[]          @relation("RequestedLeads")
-  assignedLeads   Lead[]          @relation("AssignedLeads")
-  financeLedgers  FinanceLedger[]
+  listings          Listing[]
+  savedListings     SavedListing[]
+  savedSearches     SavedSearch[]
+  reports           ListingReport[]
+  phoneReveals      PhoneRevealLog[]
+  memberships       UserMembership[]
+  verifiedListings  Listing[]          @relation("VerifiedListings")
+  requestedLeads    Lead[]             @relation("RequestedLeads")
+  assignedLeads     Lead[]             @relation("AssignedLeads")
+  financeLedgers    FinanceLedger[]
+  agentProfile      AgentProfile?
+  ownerProfile      OwnerProfile?
+  rentalUnits       RentalUnit[]
+  ownerAgreements   OwnerServiceAgreement[]
+  dealsAsOwner      RentalDeal[]       @relation("OwnerDeals")
+  dealsAsTenant     RentalDeal[]       @relation("TenantDeals")
+  rentalRequests    RentalRequest[]
+  documentAcceptances DocumentAcceptance[]
+  consentRecords    ConsentRecord[]
+  disputesRaised    Dispute[]
 
   @@map("users")
 }
@@ -82,6 +92,7 @@ model Location {
   projects     Project[]
   priceIndex   PriceIndex[]
   universities University[]
+  rentalUnits  RentalUnit[]
 
   @@map("locations")
 }
@@ -104,6 +115,7 @@ model Project {
   createdAt     DateTime @default(now()) @map("created_at")
 
   listings      Listing[]
+  rentalUnits   RentalUnit[]
 
   @@map("projects")
 }
@@ -148,6 +160,10 @@ model Listing {
   verifiedAt             DateTime?           @map("verified_at")
   verifiedByUserId       BigInt?             @map("verified_by_user_id")
   verifiedBy             User?               @relation("VerifiedListings", fields: [verifiedByUserId], references: [id])
+  unitId                 BigInt?             @map("unit_id")
+  unit                   RentalUnit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  contactAgentId         BigInt?             @map("contact_agent_id")
+  contactAgent           AgentProfile?       @relation(fields: [contactAgentId], references: [id], onDelete: SetNull)
   createdAt              DateTime            @default(now()) @map("created_at")
   updatedAt              DateTime            @updatedAt @map("updated_at")
 
@@ -163,6 +179,8 @@ model Listing {
   @@index([status, expiresAt, createdAt])
   @@index([status, price])
   @@index([status, locationId])
+  @@index([unitId])
+  @@index([contactAgentId])
   @@map("listings")
 }
 
@@ -339,26 +357,31 @@ model UserMembership {
 
 /// Khách hàng tiềm năng (Lead) gửi yêu cầu liên hệ cho tin đăng cho thuê.
 model Lead {
-  id               BigInt      @id @default(autoincrement())
-  listingId        BigInt      @map("listing_id")
-  listing          Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  requesterId      BigInt?     @map("requester_id")
-  requester        User?       @relation("RequestedLeads", fields: [requesterId], references: [id], onDelete: SetNull)
-  fullName         String      @map("full_name") @db.VarChar(150)
-  phone            String      @db.VarChar(20)
-  email            String?     @db.VarChar(150)
-  message          String?     @db.Text
-  channel          String      @default("web_form") @db.VarChar(50) // web_form | direct_call | zalo | popup
-  consent          Boolean     @default(true)
-  status           String      @default("new") @db.VarChar(30) // new | contacted | qualified | completed | spam | cancelled
-  dedupeKey        String      @unique @map("dedupe_key") @db.VarChar(128)
-  assignedToUserId BigInt?     @map("assigned_to_user_id")
-  assignedTo       User?       @relation("AssignedLeads", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  notes            String?     @db.Text
-  createdAt        DateTime    @default(now()) @map("created_at")
-  updatedAt        DateTime    @updatedAt @map("updated_at")
+  id               BigInt         @id @default(autoincrement())
+  listingId        BigInt         @map("listing_id")
+  listing          Listing        @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  unitId           BigInt?        @map("unit_id")
+  unit             RentalUnit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  requestId        BigInt?        @map("request_id")
+  request          RentalRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  requesterId      BigInt?        @map("requester_id")
+  requester        User?          @relation("RequestedLeads", fields: [requesterId], references: [id], onDelete: SetNull)
+  fullName         String         @map("full_name") @db.VarChar(150)
+  phone            String         @db.VarChar(20)
+  email            String?        @db.VarChar(150)
+  message          String?        @db.Text
+  channel          String         @default("web_form") @db.VarChar(50) // web_form | direct_call | zalo | popup
+  consent          Boolean        @default(true)
+  status           String         @default("new") @db.VarChar(30) // new | contacted | qualified | completed | spam | cancelled
+  dedupeKey        String         @unique @map("dedupe_key") @db.VarChar(128)
+  assignedToUserId BigInt?        @map("assigned_to_user_id")
+  assignedTo       User?          @relation("AssignedLeads", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  notes            String?        @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
   @@index([listingId, status])
+  @@index([unitId, status])
   @@index([phone])
   @@index([createdAt])
   @@map("leads")
@@ -368,9 +391,12 @@ model Lead {
 model FinanceLedger {
   id                    BigInt          @id @default(autoincrement())
   transactionType       String          @map("transaction_type") @db.VarChar(50) // cash_in | refund | adjustment
+  sourceType            String          @default("membership") @map("source_type") @db.VarChar(50)
   amount                BigInt          // Số tiền VNĐ nguyên
   userMembershipId      BigInt?         @map("user_membership_id")
   userMembership        UserMembership? @relation(fields: [userMembershipId], references: [id], onDelete: SetNull)
+  commissionId          BigInt?         @map("commission_id")
+  commission            Commission?     @relation(fields: [commissionId], references: [id], onDelete: SetNull)
   userId                BigInt          @map("user_id")
   user                  User            @relation(fields: [userId], references: [id], onDelete: Restrict)
   externalTransactionId String?         @unique @map("external_transaction_id") @db.VarChar(150) // Mã giao dịch ngân hàng chống nạp trùng
@@ -380,6 +406,8 @@ model FinanceLedger {
 
   @@index([userId])
   @@index([transactionType])
+  @@index([sourceType])
+  @@index([commissionId])
   @@index([createdAt])
   @@map("finance_ledgers")
 }
@@ -432,5 +460,483 @@ model OutboxEvent {
   @@index([status, lockedUntil])
   @@index([aggregateType, aggregateId])
   @@map("outbox_events")
+}
+
+/// ============================================================================
+/// CÁC THỰC THỂ MÔI GIỚI CHO THUÊ (PIVOT 24/09/2026 - MỤC 10 KẾ HOẠCH THỰC THI)
+/// ============================================================================
+
+model AgencyProfile {
+  id                Int                     @id @default(autoincrement())
+  legalName         String                  @map("legal_name") @db.VarChar(200)
+  taxCode           String?                 @map("tax_code") @db.VarChar(50)
+  licenseNumber     String?                 @map("license_number") @db.VarChar(100)
+  address           String                  @db.VarChar(255)
+  bankName          String                  @map("bank_name") @db.VarChar(100)
+  bankAccountNumber String                  @map("bank_account_number") @db.VarChar(50)
+  bankAccountHolder String                  @map("bank_account_holder") @db.VarChar(150)
+  hotline           String                  @db.VarChar(30)
+  email             String                  @db.VarChar(100)
+  isActive          Boolean                 @default(true) @map("is_active")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+
+  agentProfiles     AgentProfile[]
+  ownerAgreements   OwnerServiceAgreement[]
+  commissions       Commission[]
+
+  @@map("agency_profiles")
+}
+
+model AgentProfile {
+  id                  BigInt                  @id @default(autoincrement())
+  userId              BigInt                  @unique @map("user_id")
+  user                User                    @relation(fields: [userId], references: [id])
+  agencyId            Int?                    @map("agency_id")
+  agency              AgencyProfile?          @relation(fields: [agencyId], references: [id])
+  displayName         String                  @map("display_name") @db.VarChar(150)
+  workPhone           String                  @map("work_phone") @db.VarChar(20)
+  zaloPhone           String?                 @map("zalo_phone") @db.VarChar(20)
+  bio                 String?                 @db.Text
+  avatarUrl           String?                 @map("avatar_url")
+  brokerLicenseNumber String?                 @map("broker_license_number") @db.VarChar(100)
+  maxDailyViewings    Int                     @default(3) @map("max_daily_viewings")
+  isActive            Boolean                 @default(true) @map("is_active")
+  createdAt           DateTime                @default(now()) @map("created_at")
+  updatedAt           DateTime                @updatedAt @map("updated_at")
+
+  listings            Listing[]
+  ownerAgreements     OwnerServiceAgreement[]
+  viewings            Viewing[]
+
+  @@map("agent_profiles")
+}
+
+model OwnerProfile {
+  id                BigInt                  @id @default(autoincrement())
+  userId            BigInt                  @unique @map("user_id")
+  user              User                    @relation(fields: [userId], references: [id])
+  legalFullName     String                  @map("legal_full_name") @db.VarChar(150)
+  identityNumber    String?                 @map("identity_number") @db.VarChar(50)
+  authorityType     String                  @default("owner") @map("authority_type") @db.VarChar(50)
+  authorityDocUrl   String?                 @map("authority_doc_url")
+  bankAccountName   String?                 @map("bank_account_name") @db.VarChar(150)
+  bankAccountNumber String?                 @map("bank_account_number") @db.VarChar(50)
+  bankName          String?                 @map("bank_name") @db.VarChar(100)
+  isVerified        Boolean                 @default(false) @map("is_verified")
+  verifiedAt        DateTime?               @map("verified_at")
+  notes             String?                 @db.Text
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+
+  rentalUnits       RentalUnit[]
+  ownerAgreements   OwnerServiceAgreement[]
+  rentalDeals       RentalDeal[]
+
+  @@map("owner_profiles")
+}
+
+model RentalUnit {
+  id               BigInt               @id @default(autoincrement())
+  unitCode         String               @unique @map("unit_code") @db.VarChar(50)
+  ownerId          BigInt               @map("owner_id")
+  owner            User                 @relation(fields: [ownerId], references: [id])
+  ownerProfileId   BigInt?              @map("owner_profile_id")
+  ownerProfile     OwnerProfile?        @relation(fields: [ownerProfileId], references: [id])
+  projectId        BigInt?              @map("project_id")
+  project          Project?             @relation(fields: [projectId], references: [id])
+  locationId       Int                  @map("location_id")
+  location         Location             @relation(fields: [locationId], references: [id])
+  addressDetail    String               @map("address_detail") @db.VarChar(255)
+  roomNumber       String?              @map("room_number") @db.VarChar(50)
+  propertyType     String               @map("property_type") @db.VarChar(30)
+  areaM2           Decimal              @map("area_m2") @db.Decimal(10, 2)
+  bedrooms         Int?                 @db.SmallInt
+  bathrooms        Int?                 @db.SmallInt
+  status           String               @default("available") @db.VarChar(30)
+  availableFrom    DateTime?            @map("available_from")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  listings         Listing[]
+  agreementUnits   AgreementUnit[]
+  viewings         Viewing[]
+  unitReservations UnitReservation[]
+  rentalDeals      RentalDeal[]
+  leads            Lead[]
+
+  @@index([ownerId, status])
+  @@index([locationId, status])
+  @@map("rental_units")
+}
+
+model OwnerServiceAgreement {
+  id                 BigInt          @id @default(autoincrement())
+  agreementCode      String          @unique @map("agreement_code") @db.VarChar(64)
+  ownerId            BigInt          @map("owner_id")
+  owner              User            @relation(fields: [ownerId], references: [id])
+  ownerProfileId     BigInt?         @map("owner_profile_id")
+  ownerProfile       OwnerProfile?   @relation(fields: [ownerProfileId], references: [id])
+  agencyId           Int?            @map("agency_id")
+  agency             AgencyProfile?  @relation(fields: [agencyId], references: [id])
+  agentId            BigInt?         @map("agent_id")
+  agent              AgentProfile?   @relation(fields: [agentId], references: [id])
+  commissionRateBps  Int             @default(4000) @map("commission_rate_bps")
+  termsVersion       String          @default("1.0") @map("terms_version") @db.VarChar(20)
+  status             String          @default("draft") @db.VarChar(30)
+  signedAt           DateTime?       @map("signed_at")
+  validFrom          DateTime?       @map("valid_from")
+  validUntil         DateTime?       @map("valid_until")
+  documentUrl        String?         @map("document_url")
+  documentHash       String?         @map("document_hash") @db.VarChar(128)
+  protectionDays     Int             @default(90) @map("protection_days")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  agreementUnits     AgreementUnit[]
+  introductions      Introduction[]
+  rentalDeals        RentalDeal[]
+
+  @@index([ownerId, status])
+  @@map("owner_service_agreements")
+}
+
+model AgreementUnit {
+  id              BigInt                @id @default(autoincrement())
+  agreementId     BigInt                @map("agreement_id")
+  agreement       OwnerServiceAgreement @relation(fields: [agreementId], references: [id])
+  unitId          BigInt                @map("unit_id")
+  unit            RentalUnit            @relation(fields: [unitId], references: [id])
+  baseMonthlyRent BigInt                @map("base_monthly_rent")
+  effectiveFrom   DateTime              @default(now()) @map("effective_from")
+  status          String                @default("active") @db.VarChar(30)
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  @@unique([agreementId, unitId])
+  @@map("agreement_units")
+}
+
+model RentalRequest {
+  id                BigInt          @id @default(autoincrement())
+  requestCode       String          @unique @map("request_code") @db.VarChar(64)
+  userId            BigInt?         @map("user_id")
+  user              User?           @relation(fields: [userId], references: [id])
+  fullName          String          @map("full_name") @db.VarChar(150)
+  phone             String          @db.VarChar(20)
+  budgetMin         BigInt?         @map("budget_min")
+  budgetMax         BigInt?         @map("budget_max")
+  targetMoveInDate  DateTime?       @map("target_move_in_date")
+  leaseTermMonths   Int?            @map("lease_term_months")
+  occupantsCount    Int?            @map("occupants_count")
+  preferredLocation String?         @map("preferred_location") @db.VarChar(200)
+  notes             String?         @db.Text
+  isPhoneVerified   Boolean         @default(false) @map("is_phone_verified")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  leads             Lead[]
+  introductions     Introduction[]
+  viewings          Viewing[]
+  consentRecords    ConsentRecord[]
+
+  @@index([phone])
+  @@index([createdAt])
+  @@map("rental_requests")
+}
+
+model Introduction {
+  id                  BigInt                @id @default(autoincrement())
+  introCode           String                @unique @map("intro_code") @db.VarChar(64)
+  agreementId         BigInt                @map("agreement_id")
+  agreement           OwnerServiceAgreement @relation(fields: [agreementId], references: [id])
+  unitId              BigInt?               @map("unit_id")
+  requestId           BigInt?               @map("request_id")
+  request             RentalRequest?        @relation(fields: [requestId], references: [id])
+  clientPhone         String                @map("client_phone") @db.VarChar(20)
+  clientName          String                @map("client_name") @db.VarChar(150)
+  introducedAt        DateTime              @default(now()) @map("introduced_at")
+  protectionExpiresAt DateTime              @map("protection_expires_at")
+  ownerAcknowledgedAt DateTime?             @map("owner_acknowledged_at")
+  isDisputed          Boolean               @default(false) @map("is_disputed")
+  status              String                @default("active") @db.VarChar(30)
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  viewings            Viewing[]
+  rentalDeals         RentalDeal[]
+
+  @@index([agreementId, clientPhone])
+  @@index([protectionExpiresAt])
+  @@map("introductions")
+}
+
+model Viewing {
+  id                 BigInt         @id @default(autoincrement())
+  viewingCode        String         @unique @map("viewing_code") @db.VarChar(64)
+  unitId             BigInt         @map("unit_id")
+  unit               RentalUnit     @relation(fields: [unitId], references: [id])
+  agentId            BigInt         @map("agent_id")
+  agent              AgentProfile   @relation(fields: [agentId], references: [id])
+  requestId          BigInt?        @map("request_id")
+  request            RentalRequest? @relation(fields: [requestId], references: [id])
+  introId            BigInt?        @map("intro_id")
+  intro              Introduction?  @relation(fields: [introId], references: [id])
+  clientName         String         @map("client_name") @db.VarChar(150)
+  clientPhone        String         @map("client_phone") @db.VarChar(20)
+  scheduledStartTime DateTime       @map("scheduled_start_time")
+  scheduledEndTime   DateTime       @map("scheduled_end_time")
+  status             String         @default("requested") @db.VarChar(30)
+  checkinCode        String?        @map("checkin_code") @db.VarChar(20)
+  completedAt        DateTime?      @map("completed_at")
+  clientFeedback     String?        @map("client_feedback") @db.Text
+  notes              String?        @db.Text
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  @@index([agentId, scheduledStartTime])
+  @@index([unitId, scheduledStartTime])
+  @@map("viewings")
+}
+
+model UnitReservation {
+  id            BigInt      @id @default(autoincrement())
+  unitId        BigInt      @map("unit_id")
+  unit          RentalUnit  @relation(fields: [unitId], references: [id])
+  dealId        BigInt?     @map("deal_id")
+  deal          RentalDeal? @relation(fields: [dealId], references: [id])
+  reservedFrom  DateTime    @map("reserved_from")
+  reservedUntil DateTime    @map("reserved_until")
+  holdReason    String      @default("viewing_interest") @map("hold_reason") @db.VarChar(50)
+  status        String      @default("active") @db.VarChar(30)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([unitId, status])
+  @@map("unit_reservations")
+}
+
+model RentalDeal {
+  id                  BigInt                @id @default(autoincrement())
+  dealCode            String                @unique @map("deal_code") @db.VarChar(64)
+  unitId              BigInt                @map("unit_id")
+  unit                RentalUnit            @relation(fields: [unitId], references: [id])
+  agreementId         BigInt                @map("agreement_id")
+  agreement           OwnerServiceAgreement @relation(fields: [agreementId], references: [id])
+  introId             BigInt?               @map("intro_id")
+  intro               Introduction?         @relation(fields: [introId], references: [id])
+  ownerId             BigInt                @map("owner_id")
+  owner               User                  @relation("OwnerDeals", fields: [ownerId], references: [id])
+  ownerProfileId      BigInt?               @map("owner_profile_id")
+  ownerProfile        OwnerProfile?         @relation(fields: [ownerProfileId], references: [id])
+  tenantUserId        BigInt?               @map("tenant_user_id")
+  tenantUser          User?                 @relation("TenantDeals", fields: [tenantUserId], references: [id])
+  tenantName          String                @map("tenant_name") @db.VarChar(150)
+  tenantPhone         String                @map("tenant_phone") @db.VarChar(20)
+  tenantIdentity      String?               @map("tenant_identity") @db.VarChar(50)
+  actualMonthlyRent   BigInt                @map("actual_monthly_rent")
+  depositAmount       BigInt                @default(0) @map("deposit_amount")
+  leaseStartDate      DateTime              @map("lease_start_date")
+  leaseEndDate        DateTime              @map("lease_end_date")
+  status              String                @default("negotiating") @db.VarChar(30)
+  contractSignedAt    DateTime?             @map("contract_signed_at")
+  firstMonthPaidAt    DateTime?             @map("first_month_paid_at")
+  handoverCompletedAt DateTime?             @map("handover_completed_at")
+  successAt           DateTime?             @map("success_at")
+  contractUrl         String?               @map("contract_url")
+  contractHash        String?               @map("contract_hash") @db.VarChar(128)
+  version             Int                   @default(1)
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  unitReservations    UnitReservation[]
+  depositRecords      DepositRecord[]
+  handoverRecords     HandoverRecord[]
+  commission          Commission?
+  disputes            Dispute[]
+
+  @@index([ownerId, status])
+  @@index([unitId, status])
+  @@map("rental_deals")
+}
+
+model DepositRecord {
+  id               BigInt      @id @default(autoincrement())
+  dealId           BigInt      @map("deal_id")
+  deal             RentalDeal  @relation(fields: [dealId], references: [id])
+  amount           BigInt
+  recipientName    String      @map("recipient_name") @db.VarChar(150)
+  recipientAccount String?     @map("recipient_account") @db.VarChar(50)
+  recipientBank    String?     @map("recipient_bank") @db.VarChar(100)
+  depositedAt      DateTime    @map("deposited_at")
+  holdUntil        DateTime?   @map("hold_until")
+  receiptUrl       String?     @map("receipt_url")
+  status           String      @default("held_by_owner") @db.VarChar(30)
+  notes            String?     @db.Text
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  @@index([dealId])
+  @@map("deposit_records")
+}
+
+model HandoverRecord {
+  id                  BigInt      @id @default(autoincrement())
+  dealId              BigInt      @map("deal_id")
+  deal                RentalDeal  @relation(fields: [dealId], references: [id])
+  handoverDate        DateTime    @map("handover_date")
+  electricMeterNumber Decimal?    @map("electric_meter_number") @db.Decimal(10, 2)
+  waterMeterNumber    Decimal?    @map("water_meter_number") @db.Decimal(10, 2)
+  keysCount           Int         @default(1) @map("keys_count")
+  conditionNotes      String?     @map("condition_notes") @db.Text
+  handoverDocUrl      String?     @map("handover_doc_url")
+  handoverDocHash     String?     @map("handover_doc_hash") @db.VarChar(128)
+  ownerConfirmed      Boolean     @default(false) @map("owner_confirmed")
+  tenantConfirmed     Boolean     @default(false) @map("tenant_confirmed")
+  agentWitnessed      Boolean     @default(false) @map("agent_witnessed")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+
+  @@index([dealId])
+  @@map("handover_records")
+}
+
+model Commission {
+  id                   BigInt             @id @default(autoincrement())
+  dealId               BigInt             @unique @map("deal_id")
+  deal                 RentalDeal         @relation(fields: [dealId], references: [id])
+  agencyId             Int?               @map("agency_id")
+  agency               AgencyProfile?     @relation(fields: [agencyId], references: [id])
+  commissionBaseVnd    BigInt             @map("commission_base_vnd")
+  rateBps              Int                @default(4000) @map("rate_bps")
+  commissionAmountVnd  BigInt             @map("commission_amount_vnd")
+  taxAmountVnd         BigInt             @default(0) @map("tax_amount_vnd")
+  totalDueVnd          BigInt             @map("total_due_vnd")
+  paidAmountVnd        BigInt             @default(0) @map("paid_amount_vnd")
+  refundedAmountVnd    BigInt             @default(0) @map("refunded_amount_vnd")
+  dueAt                DateTime?          @map("due_at")
+  status               String             @default("estimated") @db.VarChar(30)
+  policyVersion        String             @default("1.0") @map("policy_version") @db.VarChar(20)
+  paymentReferenceCode String             @unique @map("payment_reference_code") @db.VarChar(64)
+  version              Int                @default(1)
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  paymentAllocations   PaymentAllocation[]
+  financeLedgers       FinanceLedger[]
+  disputes             Dispute[]
+
+  @@index([status, dueAt])
+  @@map("commissions")
+}
+
+model Payment {
+  id                  BigInt              @id @default(autoincrement())
+  paymentCode         String              @unique @map("payment_code") @db.VarChar(64)
+  externalBankTxId    String              @unique @map("external_bank_tx_id") @db.VarChar(150)
+  bankName            String              @map("bank_name") @db.VarChar(100)
+  accountNumber       String              @map("account_number") @db.VarChar(50)
+  amount              BigInt
+  allocatedAmount     BigInt              @default(0) @map("allocated_amount")
+  remitterName        String?             @map("remitter_name") @db.VarChar(150)
+  remitterAccount     String?             @map("remitter_account") @db.VarChar(50)
+  paymentTime         DateTime            @map("payment_time")
+  rawDescription      String?             @map("raw_description") @db.Text
+  reconciledByUserId  BigInt?             @map("reconciled_by_user_id")
+  reconciledAt        DateTime?           @map("reconciled_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+
+  paymentAllocations  PaymentAllocation[]
+
+  @@index([externalBankTxId])
+  @@index([paymentTime])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id           BigInt      @id @default(autoincrement())
+  paymentId    BigInt      @map("payment_id")
+  payment      Payment     @relation(fields: [paymentId], references: [id])
+  commissionId BigInt      @map("commission_id")
+  commission   Commission  @relation(fields: [commissionId], references: [id])
+  amount       BigInt
+  allocatedAt  DateTime    @default(now()) @map("allocated_at")
+  note         String?     @db.Text
+
+  @@unique([paymentId, commissionId])
+  @@map("payment_allocations")
+}
+
+model Document {
+  id            BigInt               @id @default(autoincrement())
+  docCode       String               @unique @map("doc_code") @db.VarChar(64)
+  docType       String               @map("doc_type") @db.VarChar(50)
+  title         String               @db.VarChar(200)
+  version       String               @db.VarChar(20)
+  fileUrl       String               @map("file_url")
+  fileHash      String               @map("file_hash") @db.VarChar(128)
+  mimeType      String?              @map("mime_type") @db.VarChar(100)
+  fileSizeBytes Int?                 @map("file_size_bytes")
+  isCurrent     Boolean              @default(true) @map("is_current")
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  documentAcceptances DocumentAcceptance[]
+
+  @@map("documents")
+}
+
+model DocumentAcceptance {
+  id               BigInt    @id @default(autoincrement())
+  documentId       BigInt    @map("document_id")
+  document         Document  @relation(fields: [documentId], references: [id])
+  userId           BigInt    @map("user_id")
+  user             User      @relation(fields: [userId], references: [id])
+  acceptedAt       DateTime  @default(now()) @map("accepted_at")
+  ipAddress        String?   @map("ip_address") @db.VarChar(50)
+  userAgent        String?   @map("user_agent") @db.VarChar(255)
+  acceptanceMethod String    @default("click_agree") @map("acceptance_method") @db.VarChar(50)
+
+  @@unique([documentId, userId])
+  @@map("document_acceptances")
+}
+
+model ConsentRecord {
+  id            BigInt         @id @default(autoincrement())
+  userId        BigInt?        @map("user_id")
+  user          User?          @relation(fields: [userId], references: [id])
+  requestId     BigInt?        @map("request_id")
+  request       RentalRequest? @relation(fields: [requestId], references: [id])
+  purpose       String         @db.VarChar(100)
+  isAgreed      Boolean        @default(false) @map("is_agreed")
+  noticeVersion String         @default("1.0") @map("notice_version") @db.VarChar(20)
+  agreedAt      DateTime       @default(now()) @map("agreed_at")
+  revokedAt     DateTime?      @map("revoked_at")
+  ipAddress     String?        @map("ip_address") @db.VarChar(50)
+
+  @@index([userId, purpose])
+  @@map("consent_records")
+}
+
+model Dispute {
+  id               BigInt      @id @default(autoincrement())
+  disputeCode      String      @unique @map("dispute_code") @db.VarChar(64)
+  dealId           BigInt?     @map("deal_id")
+  deal             RentalDeal? @relation(fields: [dealId], references: [id])
+  commissionId     BigInt?     @map("commission_id")
+  commission       Commission? @relation(fields: [commissionId], references: [id])
+  raisedByUserId   BigInt      @map("raised_by_user_id")
+  raisedByUser     User        @relation(fields: [raisedByUserId], references: [id])
+  reason           String      @db.VarChar(200)
+  details          String?     @db.Text
+  status           String      @default("open") @db.VarChar(30)
+  resolvedAt       DateTime?   @map("resolved_at")
+  resolvedByUserId BigInt?     @map("resolved_by_user_id")
+  resolutionNote   String?     @map("resolution_note") @db.Text
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  @@index([dealId])
+  @@index([commissionId])
+  @@map("disputes")
 }
 

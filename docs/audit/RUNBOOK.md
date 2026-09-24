@@ -80,3 +80,24 @@ curl -f http://localhost:4000/health || exit 1
   1. Chạy script đối soát số dư: `pnpm ts-node packages/database/scripts/backfill-finance-ledgers.ts`.
   2. So sánh tổng tiền thực thu trên bảng điều khiển `GET /admin/finance/summary` với báo nợ/báo có của tài khoản ngân hàng Vietcombank.
   3. Nếu có giao dịch lệch mã tham chiếu: Đối soát thủ công qua bảng `AuditEvent` để xác định admin thực hiện thao tác duyệt.
+
+---
+
+## 4. Quy Trình Vận Hành Môi Giới Cho Thuê (Pivot 24/09/2026 - Quan Phụ Trách)
+
+### A. Chu trình đầu ngày
+1. Kiểm tra hàng đợi Lead mới (`/admin/leads`), tự gán Quan phụ trách; cảnh báo lead quá SLA 2h.
+2. Kiểm tra lịch xem phòng trong ngày (tối đa 3 lịch/ngày), xác nhận người mở cửa phía chủ và khách thuê.
+3. Rà soát danh sách công nợ phí môi giới (`Commission` ở trạng thái `DUE` hoặc `OVERDUE`).
+4. Đối soát số dư biến động ngân hàng với các khoản thanh toán phí `SUBMITTED`.
+
+### B. Quy trình trước và sau buổi dẫn xem
+1. **Trước buổi xem**: Gửi xác nhận cho khách (tên người dẫn là Quan, SĐT liên hệ, vị trí điểm hẹn, mã phòng, giá niêm yết, cam kết miễn phí dẫn xem 100%).
+2. **Tại phòng**: Trực tiếp hướng dẫn khách khảo sát hiện trạng, đối chiếu biểu phí điện nước, tiện ích thực tế; tuyệt đối không cam kết thay chủ ngoài thẩm quyền.
+3. **Sau buổi xem**: Ghi nhận kết quả xem (`Viewing.status = COMPLETED / NO_SHOW / RESCHEDULED`), ghi nhận phản hồi của khách vào hệ thống.
+
+### C. Quy trình ký kết, bàn giao và ghi nhận phí 40%
+1. **Ký thuê**: Chủ và khách ký hợp đồng thuê trực tiếp (HĐ-02). Quan chứng kiến và lưu bản sao có mã giao dịch `RentalDeal`.
+2. **Bàn giao phòng**: Lập biên bản bàn giao (BB-03) ghi nhận ngày bàn giao, chìa khóa, chỉ số điện nước.
+3. **Điều kiện ghi nhận thành công (§6.2)**: Khi hội tụ đủ 5 điều kiện (HĐ dịch vụ hiệu lực + HĐ thuê đã ký + tiền thuê kỳ đầu đã thanh toán + phòng đã bàn giao + không còn tranh chấp), hệ thống mới chuyển `RentalDeal.status = ACTIVE`, ghi nhận `Commission.status = DUE` với cơ sở 40% tiền thuê thuần tháng đầu sau ưu đãi.
+4. **Đối soát thu phí**: Chủ thanh toán qua ngân hàng trong vòng 2 ngày làm việc. Chỉ khi đối soát khớp biến động tài khoản thật kèm mã tham chiếu giao dịch thì mới chuyển `Commission.status = PAID` và ghi sổ cái `FinanceLedger` (BR-11, AT-20, AT-21).

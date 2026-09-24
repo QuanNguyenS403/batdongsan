@@ -32,24 +32,24 @@ export default function ChinhSachPage() {
             <section>
               <h2 className="text-base font-bold text-text-primary mb-2">1. Mục đích thu thập thông tin</h2>
               <p>
-                BĐS Cho Thuê chỉ thu thập các thông tin tối thiểu cần thiết để phục vụ mục đích vận hành:
+                QNS Thuê chỉ thu thập các thông tin tối thiểu cần thiết để phục vụ mục đích vận hành và điều phối dịch vụ môi giới:
               </p>
               <ul className="list-disc pl-5 space-y-1.5 mt-2">
-                <li><strong>Số điện thoại:</strong> Dùng để gửi mã xác thực OTP, đăng nhập tài khoản và kết nối giữa người thuê với chủ phòng</li>
-                <li><strong>Họ tên / Tên hiển thị:</strong> Nhận diện người dùng trên hệ thống và hiển thị ở bài đăng tin</li>
-                <li><strong>Lịch sử tìm kiếm & tin đã lưu:</strong> Lưu trữ trên tài khoản cá nhân để phục vụ trải nghiệm người dùng</li>
+                <li><strong>Số điện thoại:</strong> Dùng để gửi mã xác thực OTP, đăng nhập tài khoản và tiếp nhận tư vấn, sắp xếp lịch dẫn xem phòng thực tế</li>
+                <li><strong>Họ tên / Tên hiển thị:</strong> Nhận diện người dùng trên hệ thống và ghi nhận trong hồ sơ yêu cầu thuê phòng</li>
+                <li><strong>Nhu cầu thuê & Lịch sử tìm kiếm:</strong> Lưu trữ trên tài khoản cá nhân để hỗ trợ chuyên viên tìm kiếm căn phòng phù hợp nhất</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-base font-bold text-text-primary mb-2">2. Cơ chế ẩn và bảo vệ số điện thoại (Anti-Scraping)</h2>
+              <h2 className="text-base font-bold text-text-primary mb-2">2. Cơ chế Bảo vệ Thông tin Liên hệ và Quyền riêng tư</h2>
               <p>
-                Để bảo vệ quyền riêng tư và chống thu thập số điện thoại tự động (spam cuộc gọi rác):
+                Để bảo vệ quyền riêng tư và tối ưu chất lượng dịch vụ:
               </p>
               <ul className="list-disc pl-5 space-y-1.5 mt-2">
-                <li>Số điện thoại của chủ phòng <strong>KHÔNG</strong> bao giờ xuất hiện công khai trong mã nguồn HTML ban đầu của trang danh sách</li>
-                <li>Người dùng bắt buộc phải đăng nhập và nhấn nút <strong>"Hiện số điện thoại"</strong> để xem thông tin liên hệ</li>
-                <li>Mỗi lượt xem số đều được hệ thống ghi nhận và kiểm soát tần suất truy cập để ngăn chặn hành vi quấy rối hoặc cào dữ liệu trái phép</li>
+                <li>Số điện thoại hiển thị trên tất cả các tin đăng là số hotline liên hệ chính thức của chuyên viên tư vấn và điều phối QNS Thuê</li>
+                <li>Hồ sơ cá nhân và số điện thoại của bên cho thuê được bảo mật nội bộ, chỉ cung cấp cho khách thuê khi tiến hành đối chiếu thẩm quyền pháp lý và ký hợp đồng</li>
+                <li>Thông tin khách thuê được bảo vệ nghiêm ngặt, chỉ phục vụ việc tư vấn, xác nhận lịch dẫn xem và kết nối khi giao kết hợp đồng thuê</li>
               </ul>
             </section>
 
