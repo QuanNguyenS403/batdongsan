@@ -15,7 +15,6 @@ const FOOTER_LINKS = {
     { href: '/cho-thue-mat-bang', label: 'Mặt bằng kinh doanh' },
   ],
   'Thông tin & Hỗ trợ': [
-    { href: '/gia-thanh-vien', label: 'Bảng giá gói hội viên' },
     { href: '/dang-tin', label: 'Đăng tin cho thuê miễn phí' },
     { href: '/gioi-thieu', label: 'Giới thiệu nền tảng' },
     { href: '/lien-he', label: 'Liên hệ & Hỗ trợ' },

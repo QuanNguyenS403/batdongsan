@@ -324,9 +324,96 @@ export class AuthService {
   }
 
   async me(userId: bigint) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        documentAcceptances: {
+          where: {
+            document: { docCode: 'BROKER_TERMS_V2' },
+          },
+          select: { acceptedAt: true },
+        },
+      },
+    });
     if (!user) throw new UnauthorizedException();
-    return serializeUser(user);
+    const serialized = serializeUser(user);
+    const hasAccepted = (user.documentAcceptances?.length ?? 0) > 0;
+    return {
+      ...serialized,
+      hasAcceptedBrokerTerms: hasAccepted,
+      brokerTermsAcceptedAt: user.documentAcceptances?.[0]?.acceptedAt ?? null,
+    };
+  }
+
+  async getBrokerTermsStatus(userId: bigint) {
+    const doc = await this.prisma.document.findUnique({
+      where: { docCode: 'BROKER_TERMS_V2' },
+    });
+    if (!doc) {
+      return { hasAcceptedBrokerTerms: false, acceptedAt: null, version: '2.0' };
+    }
+    const acceptance = await this.prisma.documentAcceptance.findUnique({
+      where: {
+        documentId_userId: {
+          documentId: doc.id,
+          userId,
+        },
+      },
+    });
+    return {
+      hasAcceptedBrokerTerms: !!acceptance,
+      acceptedAt: acceptance?.acceptedAt ?? null,
+      version: doc.version,
+    };
+  }
+
+  async acceptBrokerTerms(userId: bigint, ipAddress?: string, userAgent?: string) {
+    let doc = await this.prisma.document.findUnique({
+      where: { docCode: 'BROKER_TERMS_V2' },
+    });
+    if (!doc) {
+      doc = await this.prisma.document.create({
+        data: {
+          docCode: 'BROKER_TERMS_V2',
+          docType: 'terms_of_service',
+          title: 'Điều khoản và Chính sách Dịch vụ Môi giới Cho thuê QNS BROKER',
+          version: '2.0',
+          fileUrl: '/dieu-khoan',
+          fileHash: 'sha256:qns-broker-terms-v2',
+          isCurrent: true,
+        },
+      });
+    }
+
+    const acceptance = await this.prisma.documentAcceptance.upsert({
+      where: {
+        documentId_userId: {
+          documentId: doc.id,
+          userId,
+        },
+      },
+      create: {
+        documentId: doc.id,
+        userId,
+        acceptedAt: new Date(),
+        acceptanceMethod: 'click_agree',
+        ipAddress: ipAddress ? String(ipAddress).substring(0, 50) : null,
+        userAgent: userAgent ? String(userAgent).substring(0, 255) : null,
+      },
+      update: {
+        acceptedAt: new Date(),
+        acceptanceMethod: 'click_agree',
+        ipAddress: ipAddress ? String(ipAddress).substring(0, 50) : null,
+        userAgent: userAgent ? String(userAgent).substring(0, 255) : null,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Đã xác nhận chấp thuận Điều khoản dịch vụ môi giới thành công',
+      hasAcceptedBrokerTerms: true,
+      acceptedAt: acceptance.acceptedAt,
+    };
   }
 
   private issueTokens(user: { id: bigint; phone: string; fullName: string | null; avatarUrl: string | null; role: string; createdAt: Date; tokenVersion?: number }) {

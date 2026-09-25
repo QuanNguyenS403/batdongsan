@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -79,6 +80,20 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: { id: bigint }) {
     return this.authService.me(user.id);
+  }
+
+  @ApiBearerAuth()
+  @Get('broker-terms-status')
+  getBrokerTermsStatus(@CurrentUser() user: { id: bigint }) {
+    return this.authService.getBrokerTermsStatus(user.id);
+  }
+
+  @ApiBearerAuth()
+  @Post('accept-broker-terms')
+  acceptBrokerTerms(@CurrentUser() user: { id: bigint }, @Req() req: Request) {
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.authService.acceptBrokerTerms(user.id, ipAddress, userAgent);
   }
 }
 

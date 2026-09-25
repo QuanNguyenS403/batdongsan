@@ -704,6 +704,27 @@ export class ListingsService {
   async create(ownerId: bigint, dto: CreateListingDto) {
     // RB-10 & RB-06: Đảm bảo transaction-safe cho quota, slug generation và Transactional Outbox
     const updated = await this.prisma.$transaction(async (tx) => {
+      // 0. Bắt buộc chấp thuận Điều khoản & Chính sách dịch vụ môi giới cho thuê (GAP-09 / W-05)
+      const user = await tx.user.findUnique({ where: { id: ownerId }, select: { role: true } });
+      if (user?.role !== 'admin') {
+        const hasAcceptedTerms = await tx.documentAcceptance.findFirst({
+          where: {
+            userId: ownerId,
+            document: { docCode: 'BROKER_TERMS_V2' },
+          },
+        });
+        if (!hasAcceptedTerms) {
+          const anyAccepted = await tx.documentAcceptance.findFirst({
+            where: { userId: ownerId },
+          });
+          if (!anyAccepted) {
+            throw new ForbiddenException(
+              'Bạn cần xác nhận đồng ý với Điều khoản và Chính sách dịch vụ môi giới trước khi bắt đầu đăng tin',
+            );
+          }
+        }
+      }
+
       // 1. Kiểm tra hạn mức số tin đăng theo gói thành viên của người dùng (RB-10)
       const now = new Date();
       const activeMembership = await tx.userMembership.findFirst({

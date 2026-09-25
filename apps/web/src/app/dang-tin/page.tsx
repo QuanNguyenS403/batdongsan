@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch, isLoggedIn } from '@/lib/auth-client';
 import { AuthModal } from '@/components/AuthModal';
+import { OwnerBrokerTermsGate } from '@/components/OwnerBrokerTermsGate';
 
 interface LocationItem {
   id: number;
@@ -56,6 +57,8 @@ export default function DangTinPage() {
   const [propertyType, setPropertyType] = useState('can-ho-chung-cu');
   const [loggedInUser, setLoggedInUser] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  const [checkingTerms, setCheckingTerms] = useState(true);
 
   // Quản lý hình ảnh và xem trước
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -66,8 +69,60 @@ export default function DangTinPage() {
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
+  async function checkTermsStatus() {
+    if (!isLoggedIn()) {
+      setLoggedInUser(false);
+      setTermsAccepted(false);
+      setCheckingTerms(false);
+      return;
+    }
+    setLoggedInUser(true);
+
+    // Kiểm tra cache local
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('qns_broker_terms_accepted');
+      if (cached === 'true') {
+        setTermsAccepted(true);
+        setCheckingTerms(false);
+        return;
+      }
+    }
+
+    try {
+      const res = await authFetch('/auth/broker-terms-status');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hasAcceptedBrokerTerms) {
+          setTermsAccepted(true);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('qns_broker_terms_accepted', 'true');
+          }
+        } else {
+          setTermsAccepted(false);
+        }
+      } else {
+        const meRes = await authFetch('/auth/me');
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          const accepted = !!meData.hasAcceptedBrokerTerms;
+          setTermsAccepted(accepted);
+          if (accepted && typeof window !== 'undefined') {
+            localStorage.setItem('qns_broker_terms_accepted', 'true');
+          }
+        } else {
+          setTermsAccepted(false);
+        }
+      }
+    } catch {
+      const cached = typeof window !== 'undefined' ? localStorage.getItem('qns_broker_terms_accepted') : null;
+      setTermsAccepted(cached === 'true');
+    } finally {
+      setCheckingTerms(false);
+    }
+  }
+
   useEffect(() => {
-    setLoggedInUser(isLoggedIn());
+    checkTermsStatus();
 
     // Tải danh sách địa danh
     fetch(`${API_URL}/locations`)
@@ -209,6 +264,83 @@ export default function DangTinPage() {
     }
   }
 
+  if (checkingTerms) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12 space-y-6 animate-pulse">
+        <div className="h-8 w-48 bg-slate-200 rounded-xl" />
+        <div className="h-5 w-80 bg-slate-100 rounded-xl" />
+        <div className="h-80 rounded-2xl bg-slate-100 border border-slate-200" />
+      </div>
+    );
+  }
+
+  if (!loggedInUser) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <div className="mb-8 text-center space-y-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3.5 py-1 text-xs font-bold text-brand">
+            🔑 Cổng dịch vụ người cho thuê
+          </span>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+            Đăng tin cho thuê Căn hộ, Studio & Phòng trọ
+          </h1>
+          <p className="text-xs md:text-sm text-slate-600 max-w-md mx-auto">
+            Tiếp cận khách thuê có nhu cầu thực tế, tin đăng được chuyên viên Đức Quân hỗ trợ thẩm định và điều phối dẫn khách
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-teal-200/80 bg-gradient-to-br from-teal-50/70 via-white to-teal-50/30 p-8 md:p-10 text-center space-y-5 shadow-elevated">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10 text-3xl text-brand ring-1 ring-brand/20">
+            🔒
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-lg md:text-xl font-bold text-slate-900">
+              Bạn cần đăng nhập tài khoản để đăng tin cho thuê
+            </h2>
+            <p className="text-xs md:text-sm text-slate-600 max-w-lg mx-auto">
+              Chức năng đăng tin dành riêng cho Chủ nhà và Người có quyền cho thuê phòng. Khách thuê phòng vãng lai không cần đăng ký tài khoản
+            </p>
+          </div>
+          <div className="pt-2">
+            <button
+              type="button"
+              id="open-login-dangtin-btn"
+              onClick={() => setAuthModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-600 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <span>Đăng nhập hoặc Đăng ký ngay</span>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={() => {
+            setLoggedInUser(true);
+            checkTermsStatus();
+          }}
+          subtitle="Đăng nhập để bắt đầu đăng tin cho thuê phòng"
+        />
+      </div>
+    );
+  }
+
+  if (!termsAccepted) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <OwnerBrokerTermsGate
+          onAccepted={() => {
+            setTermsAccepted(true);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6">
@@ -217,28 +349,9 @@ export default function DangTinPage() {
         </span>
         <h1 className="text-2xl font-bold text-text-primary">Đăng tin cho thuê Căn hộ, Studio & Phòng trọ</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Tiếp cận hàng ngàn khách thuê có nhu cầu thực tế. Tin đăng được kiểm duyệt nhanh chóng.
+          Tiếp cận hàng ngàn khách thuê có nhu cầu thực tế, tin đăng được kiểm duyệt nhanh chóng
         </p>
       </div>
-
-      {/* Cảnh báo bắt buộc đăng nhập nếu chưa đăng nhập */}
-      {!loggedInUser && (
-        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xl">🔒</span>
-            <p className="text-xs sm:text-sm font-medium text-amber-900">
-              Bạn cần <strong>đăng nhập</strong> bằng số điện thoại để đăng tin cho thuê.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setAuthModalOpen(true)}
-            className="rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-2 text-xs font-bold text-white transition-colors shrink-0 shadow-sm"
-          >
-            Đăng nhập ngay
-          </button>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-surface-border bg-white p-7 shadow-elevated">
         {/* Loại hình cho thuê — Phân chia rõ ràng Căn hộ và Studio riêng biệt */}
@@ -532,9 +645,9 @@ export default function DangTinPage() {
             <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-bold">
               ✓
             </div>
-            <p className="font-bold text-emerald-800">Đăng tin thành công!</p>
+            <p className="font-bold text-emerald-800">Đăng tin thành công</p>
             <p className="mt-1 text-xs text-emerald-600">
-              Tin của bạn đang được kiểm duyệt tự động và sẽ hiển thị công khai sớm.
+              Tin của bạn đang được kiểm duyệt tự động và sẽ hiển thị công khai sớm
             </p>
             <div className="mt-3 flex justify-center gap-3">
               <Link href="/thue" className="btn-secondary text-xs">
@@ -559,7 +672,10 @@ export default function DangTinPage() {
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        onSuccess={() => setLoggedInUser(true)}
+        onSuccess={() => {
+          setLoggedInUser(true);
+          checkTermsStatus();
+        }}
         subtitle="Đăng nhập để đăng tin cho thuê phòng / căn hộ"
       />
     </div>
