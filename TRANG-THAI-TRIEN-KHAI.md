@@ -2,7 +2,28 @@
 
 > File này ghi lại **chính xác code đã có trong repo tại thời điểm này** — phân biệt với `CLAUDE.md`/`README.md` vốn là tài liệu đặc tả/tầm nhìn đầy đủ. Đọc file này trước để biết cái gì chạy được ngay, cái gì còn là TODO.
 
-## 🚀 ĐỢT 7: CHUYỂN ĐỔI MÔ HÌNH MÔI GIỚI CHO THUÊ 40% CÓ ĐẦU MỐI DUY NHẤT (PIVOT 24/09/2026)
+## 🚀 ĐỢT 8: THỰC THI KẾ HOẠCH ĐIỀU CHỈNH V2, CHẶN LỖI P0, ENGINE HOA HỒNG V2 & HOÀN TẤT GATE G-01 (25/09/2026)
+
+Thực thi theo kế hoạch tại `docs/audit/ke-hoach-dieu-chinh-batdongsan-2026-09-25.md` (V2 thay thế hoàn toàn V1):
+1. **Khắc phục lỗi bảo mật P0 tối khẩn (GAP-01 / OTP-01 / OTP-02)**:
+   - Sửa lỗi thiếu `await` trước lời gọi `verifyOtp` trong `AuthService.register()` và `resetPassword()`. Kiểm tra kết quả boolean nghiêm ngặt.
+   - Thêm test `test-w00-p0.js` chứng minh OTP sai/rỗng/hết hạn bị từ chối 400 Bad Request, không tạo user và không đổi mật khẩu.
+2. **Loại bỏ lỗ hổng Google OAuth (GAP-02 / GAP-03 / AUTH-07..10)**:
+   - Xóa bỏ hoàn toàn trường `phone` tự khai khỏi `GoogleLoginDto` và giao diện.
+   - Thay thế bằng xác thực Google server-side qua thư viện chính thức (`google.auth.OAuth2`), kiểm tra `aud`, `iss`, `exp`, `email_verified=true`, khóa tài khoản bằng `sub`.
+   - Tiện ích `identity-canonical.ts`: Chuẩn hóa email theo KT-02 (giữ dot cho Workspace, bỏ dot cho Gmail cá nhân) và chuẩn hóa SĐT về E.164 (+84).
+3. **Gỡ bỏ hoàn toàn thanh toán trực tuyến (GAP-06 / PAY-01)**:
+   - Vô hiệu hóa route `GET /payments/commissions/:id/vietqr` và `POST /payments/webhook/bank`, trả 404 NotFoundException nhất quán.
+   - Đổi tên miền nghiệp vụ sang `Receivables & Offline Collections`.
+   - Đánh dấu `vietcombank-email-webhook.gs` và `HUONG-DAN-THANH-TOAN-VIETCOMBANK-0D.md` thành tài liệu lịch sử đã ngừng áp dụng.
+4. **Chốt đặc tả và xóa sạch công thức cũ "40% tháng đầu" (W-01 / GAP-08)**:
+   - Đồng bộ trang `dieu-khoan/page.tsx`, `MembershipPricingClient.tsx`, `EXECUTION-STATUS.md` sang công thức V2: 40% tiền thuê trung bình một tháng theo toàn bộ thời hạn hợp đồng.
+5. **Triển khai Engine tính hoa hồng V2 và kiểm thử 14 ca (W-06 / GAP-11 / FEE-01..14)**:
+   - Tạo `commission-calculator.ts` thực hiện chuẩn xác công thức $\frac{\Sigma(p_i \times m_i)}{\Sigma(m_i)} \times 40\%$, làm tròn half-up ở bước cuối cùng với số nguyên BigInt.
+   - Xóa bỏ nhánh suy diễn giá từ `areaM2 * 100.000` hoặc mặc định 3.000.000đ trong `admin.service.ts` (GAP-11).
+   - Xóa bỏ thông báo yêu cầu nâng cấp gói trong luồng duyệt tin `approveListing` (GAP-13).
+   - Chạy bộ test `test-fee-v2.js` đạt 14/14 PASS (100%), chứng minh ví dụ 24 tháng ra đúng 2.700.000đ, FEE-07 half-up ra đúng 400.001đ, concurrency request đồng thời giải quyết triệt để.
+6. **Nghiệm thu hoàn tất Gate G-01**: Toàn bộ GAP-01..13 và GAP-15 đã có bằng chứng kiểm thử tự động thật. Commit trên nhánh `feat/no-online-payment-verified-owner-v2`.
 
 Thực thi theo kế hoạch tại `docs/audit/ke-hoach-thuc-thi-moi-gioi-cho-thue.md`:
 1. **Chuyển đổi Mô hình Cốt lõi**:
