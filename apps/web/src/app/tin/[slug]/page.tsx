@@ -9,6 +9,12 @@ import { ReportListingModal } from '@/components/ReportListingModal';
 import { OwnerContactBox } from './OwnerContactBox';
 import { MobileStickyContactBar } from './MobileStickyContactBar';
 import { MoveInCostEstimator } from '@/components/MoveInCostEstimator';
+import {
+  getNearbyUniversities,
+  getGoogleMapsEmbedUrl,
+  getGoogleMapsViewUrl,
+  getGoogleMapsDirectionsUrl,
+} from '@/lib/vietnam-universities';
 
 interface Props {
   params: { slug: string };
@@ -126,6 +132,39 @@ export default async function ListingDetailPage({ params }: Props) {
       ? []
       : ALL_DEMO_LISTINGS.filter((item) => item.id !== listing.id).slice(0, 4);
   }
+
+  // Xử lý danh sách trường Đại học lân cận (từ DB hoặc tự động tính toán từ tọa độ Google Maps)
+  const displayUnis = (() => {
+    if (listing.nearbyUniversities && listing.nearbyUniversities.length > 0) {
+      return listing.nearbyUniversities.map((item) => {
+        const distKm = item.distanceMeters != null ? Number((item.distanceMeters / 1000).toFixed(1)) : 1;
+        const distMeters = item.distanceMeters ?? Math.round(distKm * 1000);
+        const timeMins = item.travelTimeMinutes ?? Math.max(1, Math.round((distKm / 22) * 60));
+        return {
+          name: item.university.name,
+          abbreviation: item.university.abbreviation,
+          address: item.university.address,
+          distanceKm: distKm,
+          distanceMeters: distMeters,
+          travelTimeMinutes: timeMins,
+        };
+      });
+    }
+
+    if (listing.lat != null && listing.lng != null) {
+      const computed = getNearbyUniversities(listing.lat, listing.lng, 10, 4);
+      return computed.map((u) => ({
+        name: u.name,
+        abbreviation: u.abbreviation,
+        address: u.address,
+        distanceKm: u.distanceKm,
+        distanceMeters: u.distanceMeters,
+        travelTimeMinutes: u.travelTimeMinutes,
+      }));
+    }
+
+    return [];
+  })();
 
   return (
     <div className="min-h-screen bg-surface-muted">
@@ -329,28 +368,95 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             </div>
 
-            {/* Khối Tiện ích xung quanh & Bản đồ (Chuẩn mẫu Mogi) */}
-            <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-bold text-text-primary text-base">Tiện ích xung quanh</h2>
-                <span className="text-xs text-text-muted">{listing.location.name}</span>
+            {/* Khối Bản đồ Google Maps & Tiện ích vị trí */}
+            <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h2 className="font-bold text-text-primary text-base flex items-center gap-1.5">
+                    <span className="text-red-500">📍</span>
+                    <span>Vị trí trên Google Maps & Tiện ích xung quanh</span>
+                  </h2>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {listing.addressDetail ? `${listing.addressDetail}, ${listing.location.name}` : listing.location.name}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={getGoogleMapsDirectionsUrl(
+                      listing.lat != null && listing.lng != null
+                        ? { lat: listing.lat, lng: listing.lng }
+                        : { address: listing.addressDetail ?? listing.location.name },
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-hover transition-colors shadow-xs"
+                  >
+                    <span>🧭</span>
+                    <span>Chỉ đường trên Google Maps</span>
+                  </a>
+                  <a
+                    href={getGoogleMapsViewUrl(
+                      listing.lat != null && listing.lng != null
+                        ? { lat: listing.lat, lng: listing.lng }
+                        : { address: listing.addressDetail ?? listing.location.name },
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-xl border border-surface-border bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-brand/40 hover:text-brand transition-colors"
+                  >
+                    <span>Mở bản đồ lớn</span>
+                    <span>↗</span>
+                  </a>
+                </div>
               </div>
-              <div className="relative aspect-[16/9] md:aspect-[21/9] w-full overflow-hidden rounded-xl border border-surface-border bg-slate-100">
+
+              <div className="relative aspect-[16/9] md:aspect-[21/9] w-full overflow-hidden rounded-xl border border-surface-border bg-slate-100 shadow-inner">
                 <iframe
                   title={`Bản đồ vị trí ${listing.addressDetail ?? listing.location.name}`}
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.addressDetail ?? listing.location.name)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                  src={getGoogleMapsEmbedUrl(
+                    listing.lat != null && listing.lng != null
+                      ? { lat: listing.lat, lng: listing.lng }
+                      : { address: listing.addressDetail ?? listing.location.name },
+                  )}
                   className="h-full w-full border-0"
                   loading="lazy"
                   allowFullScreen
                 />
               </div>
-              <p className="flex items-center gap-1.5 text-xs text-text-muted">
-                <svg className="h-4 w-4 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                </svg>
-                {listing.addressDetail ?? listing.location.name}
-              </p>
+
+              {/* Danh sách trường Đại học lân cận */}
+              {displayUnis.length > 0 && (
+                <div className="pt-3 border-t border-surface-border space-y-2.5">
+                  <h3 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                    <span>🎓</span>
+                    <span>Khoảng cách tới các trường Đại học lân cận</span>
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {displayUnis.map((uni, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between gap-2 rounded-xl border border-surface-border bg-slate-50/70 p-2.5 hover:border-brand/30 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-text-primary truncate">
+                            {uni.abbreviation ? `[${uni.abbreviation}] ` : ''}
+                            {uni.name}
+                          </p>
+                          {uni.address && (
+                            <p className="text-[11px] text-text-muted truncate mt-0.5">{uni.address}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="inline-block rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                            {uni.distanceKm < 1 ? `~${uni.distanceMeters}m` : `~${uni.distanceKm} km`}
+                          </span>
+                          <p className="text-[10px] text-text-muted mt-0.5">~{uni.travelTimeMinutes} phút xe máy</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Khối Bất động sản tương tự (Chuẩn mẫu Mogi) */}

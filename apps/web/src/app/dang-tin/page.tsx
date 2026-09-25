@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { authFetch, isLoggedIn } from '@/lib/auth-client';
 import { AuthModal } from '@/components/AuthModal';
 import { OwnerBrokerTermsGate } from '@/components/OwnerBrokerTermsGate';
+import { GoogleMapAddressPicker, type SelectedUniversityDistance } from '@/components/GoogleMapAddressPicker';
 
 interface LocationItem {
   id: number;
@@ -68,6 +69,11 @@ export default function DangTinPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
+  // Quản lý định vị Google Maps & trường Đại học lân cận
+  const [addressDetail, setAddressDetail] = useState('');
+  const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedUnis, setSelectedUnis] = useState<SelectedUniversityDistance[]>([]);
 
   async function checkTermsStatus() {
     if (!isLoggedIn()) {
@@ -198,7 +204,18 @@ export default function DangTinPage() {
       transactionType: 'rent',
       propertyType,
       locationId: Number(locationIdValue),
-      addressDetail: (form.get('addressDetail') as string) || undefined,
+      addressDetail: addressDetail.trim() || (form.get('addressDetail') as string) || undefined,
+      lat: mapCoords?.lat ?? undefined,
+      lng: mapCoords?.lng ?? undefined,
+      ...(selectedUnis.length > 0
+        ? {
+            universityDistances: selectedUnis.map((u) => ({
+              universityId: u.universityId,
+              distanceMeters: u.distanceMeters,
+              travelTimeMinutes: u.travelTimeMinutes,
+            })),
+          }
+        : {}),
       title: form.get('title') as string,
       description: (form.get('description') as string) || undefined,
       price: Number(form.get('price')),
@@ -384,28 +401,28 @@ export default function DangTinPage() {
           </div>
         </div>
 
-        {/* Địa danh & Khu vực */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Khu vực (Tỉnh/Quận/Huyện) *</label>
-            <select name="locationId" required className="input-field">
-              <option value="">-- Chọn khu vực --</option>
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.level === 'province' ? `📍 ${loc.name}` : loc.level === 'district' ? `  └─ ${loc.name}` : `     └─ ${loc.name}`}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Địa chỉ cụ thể (Số nhà, ngõ, tên đường)</label>
-            <input
-              name="addressDetail"
-              placeholder="VD: Số 45/12 đường D1, Phường Tân Phong"
-              className="input-field"
-            />
-          </div>
+        {/* Khu vực hành chính */}
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-text-secondary">Khu vực (Tỉnh/Quận/Huyện) *</label>
+          <select name="locationId" required className="input-field">
+            <option value="">-- Chọn khu vực --</option>
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.level === 'province' ? `📍 ${loc.name}` : loc.level === 'district' ? `  └─ ${loc.name}` : `     └─ ${loc.name}`}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {/* Khối định vị địa chỉ bất kỳ liên kết Google Maps & Trường Đại học lân cận */}
+        <GoogleMapAddressPicker
+          initialAddress={addressDetail}
+          initialLat={mapCoords?.lat}
+          initialLng={mapCoords?.lng}
+          onAddressChange={(val) => setAddressDetail(val)}
+          onCoordinatesChange={(coords) => setMapCoords(coords)}
+          onUniversitiesChange={(unis) => setSelectedUnis(unis)}
+        />
 
         {/* Tiêu đề & Mô tả */}
         <div>

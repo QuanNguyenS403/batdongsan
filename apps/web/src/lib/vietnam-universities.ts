@@ -271,6 +271,69 @@ export const VIETNAM_UNIVERSITIES: UniversityData[] = [
     lat: 10.8557,
     lng: 106.8087,
   },
+  {
+    slug: 'dh-rmit-nam-sai-gon',
+    name: 'Trường Đại học RMIT Việt Nam (Cơ sở Nam Sài Gòn)',
+    abbreviation: 'RMIT HCM',
+    region: 'TP. Hồ Chí Minh',
+    address: '702 Nguyễn Văn Linh, Phường Tân Hưng, Quận 7, TP.HCM',
+    lat: 10.7297,
+    lng: 106.6948,
+  },
+  {
+    slug: 'dh-van-hien',
+    name: 'Trường Đại học Văn Hiến',
+    abbreviation: 'VHU',
+    region: 'TP. Hồ Chí Minh',
+    address: '665-667-669 Điện Biên Phủ, Phường 1, Quận 3, TP.HCM',
+    lat: 10.7695,
+    lng: 106.6775,
+  },
+  {
+    slug: 'dh-ngoai-ngu-tin-hoc-tphcm',
+    name: 'Trường Đại học Ngoại ngữ - Tin học TP.HCM',
+    abbreviation: 'HUFLIT',
+    region: 'TP. Hồ Chí Minh',
+    address: '828 Sư Vạn Hạnh, Phường 13, Quận 10, TP.HCM',
+    lat: 10.7785,
+    lng: 106.6672,
+  },
+  {
+    slug: 'dh-nguyen-tat-thanh',
+    name: 'Trường Đại học Nguyễn Tất Thành',
+    abbreviation: 'NTTU',
+    region: 'TP. Hồ Chí Minh',
+    address: '300A Nguyễn Tất Thành, Phường 13, Quận 4, TP.HCM',
+    lat: 10.7615,
+    lng: 106.7112,
+  },
+  {
+    slug: 'hoc-vien-can-bo-tphcm',
+    name: 'Học viện Cán bộ TP. Hồ Chí Minh',
+    abbreviation: 'HVCB',
+    region: 'TP. Hồ Chí Minh',
+    address: '324 Chu Văn An, Phường 12, Bình Thạnh, TP.HCM',
+    lat: 10.8175,
+    lng: 106.7022,
+  },
+  {
+    slug: 'dh-quoc-te-sai-gon',
+    name: 'Trường Đại học Quốc tế Sài Gòn',
+    abbreviation: 'SIU',
+    region: 'TP. Hồ Chí Minh',
+    address: '8C Tống Hữu Định, Thảo Điền, TP. Thủ Đức, TP.HCM',
+    lat: 10.8062,
+    lng: 106.7355,
+  },
+  {
+    slug: 'dh-gia-dinh',
+    name: 'Trường Đại học Gia Định',
+    abbreviation: 'GDU',
+    region: 'TP. Hồ Chí Minh',
+    address: '185-187 Hoàng Văn Thụ, Phường 8, Phú Nhuận, TP.HCM',
+    lat: 10.7985,
+    lng: 106.6782,
+  },
 
   // ── HÀ NỘI ──
   {
@@ -498,6 +561,276 @@ export const VIETNAM_UNIVERSITIES: UniversityData[] = [
     lat: 21.0051,
     lng: 105.9328,
   },
+  {
+    slug: 'dh-kinh-doanh-cong-nghe-ha-noi',
+    name: 'Trường Đại học Kinh doanh và Công nghệ Hà Nội',
+    abbreviation: 'HUBT',
+    region: 'Hà Nội',
+    address: '29A Ngõ 124 Vĩnh Tuy, Phường Vĩnh Tuy, Hai Bà Trưng, Hà Nội',
+    lat: 20.9982,
+    lng: 105.8778,
+  },
+  {
+    slug: 'dh-kinh-te-ky-thuat-cong-nghiep',
+    name: 'Trường Đại học Kinh tế - Kỹ thuật Công nghiệp',
+    abbreviation: 'UNETI',
+    region: 'Hà Nội',
+    address: '456 Minh Khai, Phường Vĩnh Tuy, Hai Bà Trưng, Hà Nội',
+    lat: 20.9975,
+    lng: 105.8672,
+  },
+  {
+    slug: 'dh-mo-ha-noi',
+    name: 'Trường Đại học Mở Hà Nội',
+    abbreviation: 'HOU',
+    region: 'Hà Nội',
+    address: 'Phố Nguyễn Hiền, Phường Bách Khoa, Hai Bà Trưng, Hà Nội',
+    lat: 21.0041,
+    lng: 105.8475,
+  },
+  {
+    slug: 'dh-khoa-hoc-xa-hoi-nhan-van-hn',
+    name: 'Trường ĐH Khoa học Xã hội và Nhân văn - ĐHQG Hà Nội',
+    abbreviation: 'USSH HN',
+    region: 'Hà Nội',
+    address: '336 Nguyễn Trãi, Thanh Xuân Trung, Thanh Xuân, Hà Nội',
+    lat: 20.9947,
+    lng: 105.8078,
+  },
+  {
+    slug: 'dh-khoa-hoc-tu-nhien-hn',
+    name: 'Trường Đại học Khoa học Tự nhiên - ĐHQG Hà Nội',
+    abbreviation: 'HUS HN',
+    region: 'Hà Nội',
+    address: '334 Nguyễn Trãi, Thanh Xuân Trung, Thanh Xuân, Hà Nội',
+    lat: 20.9953,
+    lng: 105.8085,
+  },
+  {
+    slug: 'dh-cong-nghe-dhqghn',
+    name: 'Trường Đại học Công nghệ - ĐHQG Hà Nội',
+    abbreviation: 'UET',
+    region: 'Hà Nội',
+    address: 'Nhà E3, 144 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
+    lat: 21.0378,
+    lng: 105.7818,
+  },
+  {
+    slug: 'dh-ngoai-ngu-dhqghn',
+    name: 'Trường Đại học Ngoại ngữ - ĐHQG Hà Nội',
+    abbreviation: 'ULIS',
+    region: 'Hà Nội',
+    address: 'Số 2 Phạm Văn Đồng, Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
+    lat: 21.0398,
+    lng: 105.7825,
+  },
+  {
+    slug: 'dh-kinh-te-dhqghn',
+    name: 'Trường Đại học Kinh tế - ĐHQG Hà Nội',
+    abbreviation: 'UEB',
+    region: 'Hà Nội',
+    address: '144 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
+    lat: 21.0373,
+    lng: 105.7828,
+  },
+  {
+    slug: 'dh-cong-nghe-giao-thong-van-tai',
+    name: 'Trường Đại học Công nghệ Giao thông Vận tải',
+    abbreviation: 'UTT',
+    region: 'Hà Nội',
+    address: '54 Triều Khúc, Thanh Xuân Nam, Thanh Xuân, Hà Nội',
+    lat: 20.9856,
+    lng: 105.7978,
+  },
+  {
+    slug: 'dh-lao-dong-xa-hoi',
+    name: 'Trường Đại học Lao động - Xã hội',
+    abbreviation: 'ULSA',
+    region: 'Hà Nội',
+    address: '43 Trần Duy Hưng, Trung Hòa, Cầu Giấy, Hà Nội',
+    lat: 21.0089,
+    lng: 105.7995,
+  },
+  {
+    slug: 'dh-dien-luc',
+    name: 'Trường Đại học Điện lực',
+    abbreviation: 'EPU',
+    region: 'Hà Nội',
+    address: '235 Hoàng Quốc Việt, Cổ Nhuế 1, Bắc Từ Liêm, Hà Nội',
+    lat: 21.0478,
+    lng: 105.7885,
+  },
+  {
+    slug: 'hoc-vien-ky-thuat-quan-su',
+    name: 'Học viện Kỹ thuật Quân sự',
+    abbreviation: 'MTA',
+    region: 'Hà Nội',
+    address: '236 Hoàng Quốc Việt, Cổ Nhuế 1, Bắc Từ Liêm, Hà Nội',
+    lat: 21.0475,
+    lng: 105.7877,
+  },
+  {
+    slug: 'hoc-vien-ky-thuat-mat-ma',
+    name: 'Học viện Kỹ thuật Mật mã',
+    abbreviation: 'ACT',
+    region: 'Hà Nội',
+    address: '141 Chiến Thắng, Tân Triều, Thanh Trì, Hà Nội',
+    lat: 20.9768,
+    lng: 105.7925,
+  },
+  {
+    slug: 'hoc-vien-y-duoc-hoc-co-truyen',
+    name: 'Học viện Y Dược học Cổ truyền Việt Nam',
+    abbreviation: 'VATM',
+    region: 'Hà Nội',
+    address: 'Số 2 Trần Phú, Mộ Lao, Hà Đông, Hà Nội',
+    lat: 20.9842,
+    lng: 105.7872,
+  },
+  {
+    slug: 'dh-cong-doan',
+    name: 'Trường Đại học Công đoàn',
+    abbreviation: 'VUU',
+    region: 'Hà Nội',
+    address: '169 Tây Sơn, Quang Trung, Đống Đa, Hà Nội',
+    lat: 21.0081,
+    lng: 105.8248,
+  },
+  {
+    slug: 'dh-my-thuat-cong-nghiep',
+    name: 'Trường Đại học Mỹ thuật Công nghiệp',
+    abbreviation: 'MTCN',
+    region: 'Hà Nội',
+    address: '360 Đê La Thành, Chợ Dừa, Đống Đa, Hà Nội',
+    lat: 21.0182,
+    lng: 105.8236,
+  },
+  {
+    slug: 'dh-van-hoa-ha-noi',
+    name: 'Trường Đại học Văn hóa Hà Nội',
+    abbreviation: 'HUC',
+    region: 'Hà Nội',
+    address: '418 Đê La Thành, Chợ Dừa, Đống Đa, Hà Nội',
+    lat: 21.0213,
+    lng: 105.8228,
+  },
+  {
+    slug: 'hoc-vien-phu-nu-viet-nam',
+    name: 'Học viện Phụ nữ Việt Nam',
+    abbreviation: 'VWA',
+    region: 'Hà Nội',
+    address: '68 Nguyễn Chí Thanh, Láng Thượng, Đống Đa, Hà Nội',
+    lat: 21.0215,
+    lng: 105.8115,
+  },
+  {
+    slug: 'hoc-vien-chinh-sach-phat-trien',
+    name: 'Học viện Chính sách và Phát triển',
+    abbreviation: 'APD',
+    region: 'Hà Nội',
+    address: 'Khu đô thị Nam An Khánh, An Khánh, Hoài Đức, Hà Nội',
+    lat: 20.9987,
+    lng: 105.7289,
+  },
+  {
+    slug: 'dh-tai-nguyen-moi-truong-hn',
+    name: 'Trường Đại học Tài nguyên và Môi trường Hà Nội',
+    abbreviation: 'HUNRE',
+    region: 'Hà Nội',
+    address: '41A Phú Diễn, Phú Diễn, Bắc Từ Liêm, Hà Nội',
+    lat: 21.0482,
+    lng: 105.7602,
+  },
+  {
+    slug: 'dh-san-khau-dien-anh-hn',
+    name: 'Trường Đại học Sân khấu - Điện ảnh Hà Nội',
+    abbreviation: 'SKDA HN',
+    region: 'Hà Nội',
+    address: 'Khu Văn hóa nghệ thuật, Mai Dịch, Cầu Giấy, Hà Nội',
+    lat: 21.0375,
+    lng: 105.7725,
+  },
+  {
+    slug: 'dh-su-pham-nghe-thuat-tw',
+    name: 'Trường Đại học Sư phạm Nghệ thuật Trung ương',
+    abbreviation: 'NUAE',
+    region: 'Hà Nội',
+    address: '18 Ngõ 55 Trần Phú, Văn Quán, Hà Đông, Hà Nội',
+    lat: 20.9818,
+    lng: 105.7905,
+  },
+  {
+    slug: 'hoc-vien-an-ninh-nhan-dan',
+    name: 'Học viện An ninh Nhân dân',
+    abbreviation: 'T01',
+    region: 'Hà Nội',
+    address: 'Km 9 Đường Nguyễn Trãi, Văn Quán, Hà Đông, Hà Nội',
+    lat: 20.9862,
+    lng: 105.7932,
+  },
+  {
+    slug: 'hoc-vien-canh-sat-nhan-dan',
+    name: 'Học viện Cảnh sát Nhân dân',
+    abbreviation: 'T02',
+    region: 'Hà Nội',
+    address: 'Phường Cổ Nhuế 2, Bắc Từ Liêm, Hà Nội',
+    lat: 21.0668,
+    lng: 105.7685,
+  },
+  {
+    slug: 'dh-phong-chay-chua-chay',
+    name: 'Trường Đại học Phòng cháy Chữa cháy',
+    abbreviation: 'T06',
+    region: 'Hà Nội',
+    address: '243 Khuất Duy Tiến, Thanh Xuân Bắc, Thanh Xuân, Hà Nội',
+    lat: 20.9972,
+    lng: 105.7928,
+  },
+  {
+    slug: 'dh-dai-nam',
+    name: 'Trường Đại học Đại Nam',
+    abbreviation: 'DNU',
+    region: 'Hà Nội',
+    address: 'Số 1 Phố Xốm, Phú Lãm, Hà Đông, Hà Nội',
+    lat: 20.9525,
+    lng: 105.7592,
+  },
+  {
+    slug: 'dh-phuong-dong',
+    name: 'Trường Đại học Phương Đông',
+    abbreviation: 'PDU',
+    region: 'Hà Nội',
+    address: '171 Trung Kính, Yên Hòa, Cầu Giấy, Hà Nội',
+    lat: 21.0185,
+    lng: 105.7962,
+  },
+  {
+    slug: 'dh-rmit-ha-noi',
+    name: 'Trường Đại học RMIT Việt Nam (Cơ sở Hà Nội)',
+    abbreviation: 'RMIT HN',
+    region: 'Hà Nội',
+    address: 'Tòa Handi Resco, 521 Kim Mã, Ba Đình, Hà Nội',
+    lat: 21.0315,
+    lng: 105.8152,
+  },
+  {
+    slug: 'dh-vinuni',
+    name: 'Trường Đại học VinUni',
+    abbreviation: 'VinUni',
+    region: 'Hà Nội',
+    address: 'Vinhomes Ocean Park, Gia Lâm, Hà Nội',
+    lat: 20.9898,
+    lng: 105.9422,
+  },
+  {
+    slug: 'dh-anh-quoc-viet-nam-buv',
+    name: 'Trường Đại học Anh Quốc Việt Nam (BUV)',
+    abbreviation: 'BUV',
+    region: 'Hà Nội',
+    address: 'Khu đô thị Ecopark, Xuân Quan, Văn Giang, Hưng Yên (giáp Hà Nội)',
+    lat: 20.9712,
+    lng: 105.9325,
+  },
 
   // ── ĐÀ NẴNG & MIỀN TRUNG ──
   {
@@ -562,6 +895,24 @@ export const VIETNAM_UNIVERSITIES: UniversityData[] = [
     address: 'Khu Đô thị FPT City, Hòa Hải, Ngũ Hành Sơn, Đà Nẵng',
     lat: 15.9863,
     lng: 108.2612,
+  },
+  {
+    slug: 'dh-dong-a',
+    name: 'Trường Đại học Đông Á',
+    abbreviation: 'UDA',
+    region: 'Đà Nẵng & Miền Trung',
+    address: '33 Xô Viết Nghệ Tĩnh, Hòa Cường Nam, Hải Châu, Đà Nẵng',
+    lat: 16.0335,
+    lng: 108.2185,
+  },
+  {
+    slug: 'dh-ky-thuat-y-duoc-da-nang',
+    name: 'Trường Đại học Kỹ thuật Y - Dược Đà Nẵng',
+    abbreviation: 'YDN',
+    region: 'Đà Nẵng & Miền Trung',
+    address: '99 Hùng Vương, Hải Châu 1, Hải Châu, Đà Nẵng',
+    lat: 16.0698,
+    lng: 108.2188,
   },
   {
     slug: 'dh-y-duoc-hue',
@@ -748,3 +1099,98 @@ export const VIETNAM_UNIVERSITIES: UniversityData[] = [
     lng: 106.7912,
   },
 ];
+
+/**
+ * Tính khoảng cách đường chim bay (km) giữa 2 tọa độ theo công thức Haversine
+ */
+export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Bán kính trái đất (km)
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(2));
+}
+
+export interface NearbyUniversityResult extends UniversityData {
+  distanceKm: number;
+  distanceMeters: number;
+  travelTimeMinutes: number;
+}
+
+/**
+ * Tìm kiếm các trường đại học lân cận theo tọa độ thực tế (sắp xếp từ gần nhất đến xa nhất)
+ */
+export function getNearbyUniversities(
+  lat: number,
+  lng: number,
+  maxDistanceKm: number = 8,
+  limit: number = 6,
+): NearbyUniversityResult[] {
+  const results: NearbyUniversityResult[] = [];
+
+  for (const uni of VIETNAM_UNIVERSITIES) {
+    if (!uni.lat || !uni.lng) continue;
+    const distanceKm = calculateDistanceKm(lat, lng, uni.lat, uni.lng);
+    if (distanceKm <= maxDistanceKm) {
+      // Vận tốc xe máy nội đô trung bình 20 - 25 km/h
+      const travelTimeMinutes = Math.max(1, Math.round((distanceKm / 22) * 60));
+      results.push({
+        ...uni,
+        distanceKm,
+        distanceMeters: Math.round(distanceKm * 1000),
+        travelTimeMinutes,
+      });
+    }
+  }
+
+  results.sort((a, b) => a.distanceKm - b.distanceKm);
+  return results.slice(0, limit);
+}
+
+/**
+ * Tạo URL Google Maps Embed chính xác cho iframe
+ */
+export function getGoogleMapsEmbedUrl(location: { lat?: number; lng?: number; address?: string }): string {
+  if (location.lat != null && location.lng != null && !isNaN(location.lat) && !isNaN(location.lng)) {
+    return `https://maps.google.com/maps?q=${location.lat},${location.lng}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+  }
+  const query = location.address?.trim() || 'Hà Nội';
+  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+}
+
+/**
+ * Tạo link mở xem vị trí trên Google Maps (App hoặc Web)
+ */
+export function getGoogleMapsViewUrl(location: { lat?: number; lng?: number; address?: string }): string {
+  if (location.lat != null && location.lng != null && !isNaN(location.lat) && !isNaN(location.lng)) {
+    return `https://www.google.com/maps?q=${location.lat},${location.lng}`;
+  }
+  const query = location.address?.trim() || 'Hà Nội';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+/**
+ * Tạo link chỉ đường trên Google Maps
+ */
+export function getGoogleMapsDirectionsUrl(
+  destination: { lat?: number; lng?: number; address?: string },
+  origin?: { lat?: number; lng?: number; address?: string },
+): string {
+  const destParam =
+    destination.lat != null && destination.lng != null
+      ? `${destination.lat},${destination.lng}`
+      : encodeURIComponent(destination.address?.trim() || '');
+
+  if (origin && origin.lat != null && origin.lng != null) {
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destParam}&travelmode=driving`;
+  }
+
+  return `https://www.google.com/maps/dir/?api=1&destination=${destParam}&travelmode=driving`;
+}
+

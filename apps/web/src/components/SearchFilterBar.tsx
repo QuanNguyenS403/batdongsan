@@ -276,7 +276,16 @@ export function SearchFilterBar({
           </button>
 
           <span className="text-xs text-text-muted hidden sm:inline">Gợi ý tìm nhanh:</span>
-          {['dhqg-tphcm', 'dh-bach-khoa-tphcm', 'dhqg-ha-noi'].map((uSlug) => {
+          {[
+            'dh-bach-khoa-ha-noi',
+            'dh-kinh-te-quoc-dan',
+            'dh-kinh-doanh-cong-nghe-ha-noi',
+            'dh-ngoai-thuong-hn',
+            'dhqg-ha-noi',
+            'dhqg-tphcm',
+            'dh-bach-khoa-tphcm',
+            'dh-ton-duc-thang',
+          ].map((uSlug) => {
             const u = universities.find((x) => x.slug === uSlug);
             if (!u) return null;
             const active = universitySlug === uSlug;
