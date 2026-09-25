@@ -103,7 +103,7 @@ SMS_SECRET_KEY=
 # Storage
 S3_ENDPOINT=
 S3_REGION=auto
-S3_BUCKET=batdongsan-images
+S3_BUCKET=qns-broker-images
 S3_ACCESS_KEY=
 S3_SECRET_KEY=
 S3_PUBLIC_URL=

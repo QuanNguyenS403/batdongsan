@@ -1,7 +1,8 @@
 export const SITE_CONFIG = {
-  name: 'QNS Thuê',
-  brandName: 'QNS Thuê',
-  domain: 'qns.vn',
+  name: 'QNS BROKER',
+  brandName: 'QNS BROKER',
+  domain: 'qnsbroker.com',
+  url: 'https://qnsbroker.com',
   slogan: 'Rõ chi phí, đúng người cho thuê',
   description:
     'Nền tảng tìm chỗ thuê minh bạch chi phí, giúp người thuê kết nối trực tiếp với bên có quyền cho thuê, từ phòng trọ đến căn hộ',

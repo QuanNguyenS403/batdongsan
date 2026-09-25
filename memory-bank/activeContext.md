@@ -1,6 +1,24 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (24/09/2026 — HOÀN THÀNH 100% PHASE KỸ THUẬT P0 VÀ NGHIỆM THU 30 CA AT CHO PIVOT MÔI GIỚI CHO THUÊ):**
+**Việc vừa hoàn thành (25/09/2026 — TRIỂN KHAI PHƯƠNG ÁN A THANH TOÁN TỰ ĐỘNG VIETCOMBANK 0Đ TRỌN ĐỜI & ĐỒNG BỘ THƯƠNG HIỆU QNS BROKER):**
+1. **Triển khai toàn diện Phương án A (Vietcombank Email Webhook 0đ vĩnh viễn)**:
+   - Endpoint Backend: `@Post('webhook/bank')` trong `PaymentsController` kết nối tới `handleBankEmailWebhook` trong `PaymentsService`.
+   - Cơ chế bảo mật: Xác thực chặt chẽ qua `BANK_WEBHOOK_SECRET=qns_bank_sec_9f8b42ec31057e7c81d3` (hỗ trợ qua header `x-webhook-secret` hoặc body).
+   - Bộ giải mã thông minh (Smart Parser): Hỗ trợ cả JSON cấu trúc lẫn trích xuất tự động bằng Regex từ nội dung rawEmail của Vietcombank.
+   - Đối soát tự động & Gạch nợ: Khớp mã hoa hồng `paymentReferenceCode`, tự động ghi nhận thanh toán `Payment`, phân bổ `allocatePayment` và ghi log `AuditEvent`.
+   - Thông báo tức thì qua Telegram: Tự động gửi tin nhắn báo tiền về tài khoản kèm mã giao dịch qua bot `@QNSbroker_bot`.
+   - Google Apps Script: Tạo file kịch bản `packages/database/scripts/vietcombank-email-webhook.gs` kèm hàm `testConnect` và tài liệu hướng dẫn chi tiết `HUONG-DAN-THANH-TOAN-VIETCOMBANK-0D.md`.
+2. **Loại bỏ triệt để PayOS & SMS keys dư thừa**:
+   - Xóa bỏ toàn bộ route `@Post('webhook/payos')` và hàm `handlePayosWebhook` trong `PaymentsController` & `PaymentsService`.
+   - Loại bỏ các biến `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`, `PAYOS_WEBHOOK_URL` khỏi toàn bộ các file `.env`, `apps/api/.env`, `packages/database/.env`, `.env.example`.
+   - Loại bỏ `SMS_API_KEY`, `SMS_SECRET_KEY` khỏi cấu hình, chuyển trọn vẹn xác thực OTP sang Telegram Bot (`SMS_PROVIDER=telegram`) 100% miễn phí.
+3. **Triển khai Đăng nhập 1-Click bằng Google (Phương án 2 - 0đ trọn đời)**:
+   - Endpoint Backend: `@Post('google')` trong `AuthController` kết nối `googleLogin` trong `AuthService`, xác thực Google Token qua Google TokenInfo API.
+   - Luồng thông minh: Khách hàng xác thực qua Google không cần mã OTP SMS, tài khoản tự động tạo và đánh dấu đã xác thực. Nếu chưa có SĐT, hệ thống mở form nhập SĐT nhanh 1 lần duy nhất.
+   - Giao diện: Tích hợp nút "Đăng nhập nhanh bằng Google (0đ)" chuẩn Google Identity Services trên cả `AuthModal.tsx` và `dang-nhap/page.tsx`.
+   - Cấu hình: Thêm biến `NEXT_PUBLIC_GOOGLE_CLIENT_ID` vào toàn bộ hệ thống file `.env`.
+
+**Việc hoàn thành trước đó (24/09/2026 — HOÀN THÀNH 100% PHASE KỸ THUẬT P0 VÀ NGHIỆM THU 30 CA AT CHO PIVOT MÔI GIỚI CHO THUÊ):**
 1. **Chuyển đổi triệt để Mô hình Kinh doanh (Pivot 24/09/2026)**:
    - Thay thế toàn bộ mô hình marketplace bán gói membership sang môi giới trực tiếp có người thật (Đức Quân) điều phối độc quyền.
    - Thu phí thành công 40% (một lần) từ chủ nhà khi giao dịch thành công (đủ 4 điều kiện §6.2), khách thuê 100% miễn phí (0 đồng phí môi giới). Nền tảng không thu hộ tiền thuê, không giữ cọc.

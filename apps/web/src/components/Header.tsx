@@ -110,7 +110,7 @@ export function Header() {
               Q
             </span>
             <span className="text-base font-bold tracking-tight text-white">
-              QNS <span className="font-normal opacity-90">Thuê</span>
+              QNS <span className="font-normal opacity-90">BROKER</span>
             </span>
           </Link>
 

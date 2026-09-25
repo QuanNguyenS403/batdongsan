@@ -555,7 +555,7 @@ export class ListingsService {
             cleanKw,
           )}`,
           {
-            headers: { 'User-Agent': 'QNS.vn-RealEstate-Platform/1.0' },
+            headers: { 'User-Agent': 'QNS-Broker-Platform/1.0' },
             signal: controller.signal,
           },
         );
@@ -1057,7 +1057,7 @@ export class ListingsService {
       phone,
       brokerName,
       role,
-      agency: 'QNS Thuê',
+      agency: 'QNS BROKER',
       note: 'Tư vấn và xem phòng miễn phí. Hợp đồng thuê ký trực tiếp với bên có quyền cho thuê',
     };
   }
@@ -1108,7 +1108,7 @@ export class ListingsService {
         role: 'Người tư vấn và trực tiếp dẫn xem',
         phone: listing.contactAgent?.workPhone || '0981 753 082',
         zalo: '0981 753 082',
-        agencyName: 'QNS Thuê',
+        agencyName: 'QNS BROKER',
         workingHours: '24/7',
       },
       lessorDisclosure: {

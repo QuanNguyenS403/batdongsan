@@ -11,7 +11,7 @@ import {
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'QNS Thuê — Rõ chi phí, đúng người cho thuê',
+  title: 'QNS BROKER — Rõ chi phí, đúng người cho thuê',
   description:
     'Nền tảng tìm chỗ thuê minh bạch chi phí: phòng trọ sinh viên, studio, căn hộ, mặt bằng kinh doanh. Xem bảng chi phí trọn gói trước khi liên hệ, kết nối đúng bên có quyền cho thuê',
 };
@@ -94,7 +94,7 @@ export default async function HomePage() {
         <div className="container-max py-14 lg:py-20">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/20">
-              QNS Thuê — Rõ chi phí, đúng người cho thuê
+              QNS BROKER — Rõ chi phí, đúng người cho thuê
             </div>
             <h1 className="text-3xl font-bold tracking-normal text-text-primary sm:text-4xl md:text-5xl lg:text-[3.25rem] leading-[1.15] md:leading-[1.18]">
               <span className="block">Tìm chỗ thuê phù hợp,</span>

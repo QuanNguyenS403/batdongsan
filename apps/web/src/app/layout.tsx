@@ -13,14 +13,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://qnsbroker.com'),
   title: {
-    default: 'QNS Thuê — Rõ chi phí, đúng người cho thuê',
-    template: '%s | QNS Thuê',
+    default: 'QNS BROKER — Rõ chi phí, đúng người cho thuê',
+    template: '%s | QNS BROKER',
   },
   description:
-    'Nền tảng kết nối tìm phòng trọ sinh viên, căn hộ dịch vụ, studio và mặt bằng cho thuê QNS Thuê — biểu phí điện nước minh bạch, kết nối đúng bên có quyền cho thuê',
+    'Nền tảng kết nối tìm phòng trọ sinh viên, căn hộ dịch vụ, studio và mặt bằng cho thuê QNS BROKER — biểu phí điện nước minh bạch, kết nối đúng bên có quyền cho thuê',
   keywords: [
-    'QNS Thuê',
+    'QNS BROKER',
+    'qnsbroker.com',
     'thuê phòng trọ',
     'phòng trọ sinh viên',
     'căn hộ dịch vụ',
@@ -32,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'vi_VN',
-    siteName: 'QNS Thuê',
+    siteName: 'QNS BROKER',
   },
   robots: { index: true, follow: true },
 };

@@ -350,7 +350,7 @@ export default function DangTinPage() {
           </div>
         </div>
 
-        {/* Biểu phí điện nước & Chi phí sinh hoạt minh bạch (USP QNS Thuê) */}
+        {/* Biểu phí điện nước & Chi phí sinh hoạt minh bạch (USP QNS BROKER) */}
         <div className="rounded-xl border border-surface-border bg-slate-50/60 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-text-primary">

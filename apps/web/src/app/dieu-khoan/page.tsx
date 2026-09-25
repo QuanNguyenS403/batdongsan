@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { SITE_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'Điều khoản dịch vụ môi giới cho thuê — QNS Thuê',
+  title: 'Điều khoản dịch vụ môi giới cho thuê — QNS BROKER',
   description:
-    'Quy định, quyền lợi và nghĩa vụ của người thuê phòng, chủ trọ và bên cho thuê khi tham gia dịch vụ môi giới QNS Thuê',
+    'Quy định, quyền lợi và nghĩa vụ của người thuê phòng, chủ trọ và bên cho thuê khi tham gia dịch vụ môi giới QNS BROKER',
 };
 
 export default function DieuKhoanPage() {
@@ -33,7 +33,7 @@ export default function DieuKhoanPage() {
             <section>
               <h2 className="text-base font-bold text-text-primary mb-2">1. Định vị và Vai trò của Nền tảng</h2>
               <p>
-                QNS Thuê là dịch vụ môi giới cho thuê bất động sản chuyên biệt (phòng trọ, studio, căn hộ, mặt bằng kinh doanh). Ông Nguyễn Đức Quân là chuyên viên trực tiếp phụ trách tiếp nhận nhu cầu, tư vấn và dẫn khách xem phòng tận nơi
+                QNS BROKER là dịch vụ môi giới cho thuê bất động sản chuyên biệt (phòng trọ, studio, căn hộ, mặt bằng kinh doanh). Ông Nguyễn Đức Quân là chuyên viên trực tiếp phụ trách tiếp nhận nhu cầu, tư vấn và dẫn khách xem phòng tận nơi
               </p>
               <p className="mt-2 text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs">
                 ⚠️ <strong>Phân định trách nhiệm tài chính:</strong> Nền tảng <strong>KHÔNG</strong> thu hộ tiền thuê, không giữ tiền đặt cọc và không bảo lãnh hợp đồng dân sự. Tiền đặt cọc và tiền thuê được bên thuê thanh toán trực tiếp cho bên cho thuê hợp pháp theo hợp đồng thuê
