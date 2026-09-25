@@ -233,8 +233,9 @@ export class DealsService {
         missingConditions.push('Hợp đồng thuê giữa chủ và khách chưa được ký');
       }
 
-      if (!deal.firstMonthPaidAt) {
-        missingConditions.push('Chủ nhà chưa nhận tiền thuê kỳ tháng đầu tiên');
+      // Điều kiện 3 theo Mục 5 Kế hoạch V2: Khoản tiền thuê đầu tiên đến hạn (nếu có) đã được chủ xác nhận
+      if (!deal.firstMonthPaidAt && deal.actualMonthlyRent > 0n) {
+        missingConditions.push('Khoản tiền thuê đầu tiên đến hạn chưa được chủ nhà xác nhận nhận từ khách thuê');
       }
 
       if (!deal.handoverCompletedAt) {

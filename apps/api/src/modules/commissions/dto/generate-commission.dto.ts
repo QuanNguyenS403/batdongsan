@@ -3,7 +3,7 @@ import { IsNumber, IsOptional } from 'class-validator';
 
 export class GenerateCommissionDto {
   @ApiPropertyOptional({
-    description: 'Cơ sở tính phí tùy chỉnh (VNĐ) nếu có ưu đãi/thỏa thuận kỳ 1 tháng đầu khác giá hợp đồng',
+    description: 'Cơ sở tính phí theo thỏa thuận phụ lục hợp đồng đã có căn cứ xác nhận (VNĐ)',
   })
   @IsOptional()
   @IsNumber()

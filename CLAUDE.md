@@ -4,10 +4,11 @@
 > Phần 1 là **phân tích thực tế** website tham chiếu (mogi.vn, truy cập trực tiếp ngày 30/08/2026).
 > Phần 2 trở đi là **đặc tả kiến trúc đề xuất** cho dự án mới, được suy ra từ phần 1 nhưng điều chỉnh theo hướng gọn nhẹ, dễ triển khai, dễ maintain một mình.
 >
-> **Định hướng chiến lược (Pivot 24/09/2026):** Dự án chính thức chuyển dịch sang **mô hình môi giới cho thuê có người thật (Quan) làm đầu mối duy nhất**, thu phí thành công 40% từ chủ nhà (thu 1 lần khi giao dịch đủ điều kiện thành công: đã ký HĐ thuê + đã thanh toán kỳ đầu + đã bàn giao phòng), **khách thuê miễn phí 100%**.
+> **Định hướng chiến lược (Kế hoạch điều chỉnh V2 — 25/09/2026):** Dự án chính thức vận hành theo đặc tả [`docs/audit/ke-hoach-dieu-chinh-batdongsan-2026-09-25.md`](./docs/audit/ke-hoach-dieu-chinh-batdongsan-2026-09-25.md) (V2 thay thế hoàn toàn V1).
+> Mô hình: Môi giới cho thuê chuyên biệt có người thật (Đức Quân) làm đầu mối duy nhất, thu phí thành công từ chủ nhà bằng **40% tiền thuê trung bình một tháng theo toàn bộ thời hạn hợp đồng đã xác định** (bình quân có trọng số toàn kỳ hợp đồng $\Sigma(p_i \times m_i) / \Sigma(m_i) \times 40\%$, thu một lần khi giao dịch đủ điều kiện thành công: đã ký HĐ thuê + đã thanh toán kỳ đầu đến hạn nếu có + đã bàn giao phòng), **khách thuê miễn phí 100%** (không cần tài khoản, gửi form xem phòng trực tiếp).
 > Quyết định này THAY THẾ mọi tài liệu trước đó nói về mô hình marketplace 2 chiều tự liên hệ hoặc gói membership/đăng tin làm nguồn thu chính.
-> Nền tảng kết nối người thuê qua đầu mối tư vấn và trực tiếp dẫn xem của Quan; tên và số điện thoại công khai trên mọi tin là của Quan, không để lộ số riêng của chủ ra ngoài. Chủ ký hợp đồng thuê trực tiếp với khách; nền tảng **KHÔNG giữ cọc, KHÔNG thu hộ tiền thuê**.
-> Vô hiệu hóa endpoint `reveal-phone` cũ; dừng bán mới các gói membership; chuyển sang quản lý hợp đồng dịch vụ HĐ-01 với chủ và công nợ phí môi giới.
+> Nền tảng kết nối người thuê qua đầu mối tư vấn và trực tiếp dẫn xem của Quân; tên và số điện thoại công khai trên mọi tin là của Quân, không để lộ số riêng của chủ ra ngoài. Chủ ký hợp đồng thuê trực tiếp với khách; nền tảng **KHÔNG giữ cọc, KHÔNG thu hộ tiền thuê**.
+> **Tuyệt đối không có chức năng thanh toán trực tuyến trên website** (không checkout, không VietQR, không webhook ngân hàng tự động). Vô hiệu hóa route VietQR và webhook bank trả 404 nhất quán (BR-01, GAP-06). Quản lý hợp đồng dịch vụ HĐ-01 với chủ và sổ công nợ phí môi giới nội bộ.
 >
 > Tham khảo Mogi.vn ở Phần 1 để kế thừa kinh nghiệm kiến trúc và SEO, nhưng đặc tả kỹ thuật từ Phần 2 đã được chuẩn hóa 100% cho mô hình cho thuê.
 
