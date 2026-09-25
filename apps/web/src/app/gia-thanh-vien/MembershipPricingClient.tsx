@@ -105,7 +105,7 @@ export function MembershipPricingClient() {
             </div>
             <h3 className="text-xl font-bold text-slate-900 mb-2">Phí Dịch Vụ 40%</h3>
             <p className="text-xs text-slate-600 leading-relaxed mb-6">
-              Không thu phí đăng tin ban đầu, chỉ thanh toán một lần bằng 40% cơ sở tiền thuê tháng đầu tiên sau khi phòng đã bàn giao thành công
+              Không thu phí đăng tin ban đầu, chỉ thanh toán một lần bằng 40% tiền thuê trung bình một tháng theo toàn bộ thời hạn hợp đồng sau khi giao dịch thành công và bàn giao phòng
             </p>
             <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-5">
               <li className="flex items-center gap-2">
@@ -201,9 +201,9 @@ export function MembershipPricingClient() {
           </div>
           <div>
             <span className="text-2xl mb-2 block">🏦</span>
-            <h5 className="font-bold text-sm text-slate-900 mb-1">Chỉ thu phí khi khách dọn vào ở</h5>
+            <h5 className="font-bold text-sm text-slate-900 mb-1">Chỉ thu phí khi giao dịch thành công</h5>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Khoản phí 40% chỉ phát sinh sau khi hợp đồng thuê đã ký, tiền tháng đầu đã thanh toán và biên bản bàn giao phòng hoàn tất
+              Khoản phí 40% chỉ phát sinh khi hợp đồng thuê có hiệu lực, biên bản bàn giao hoàn tất và khoản tiền thuê đầu tiên đến hạn (nếu có) đã được xác nhận thanh toán
             </p>
           </div>
         </div>

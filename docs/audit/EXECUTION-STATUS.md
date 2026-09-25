@@ -1,5 +1,13 @@
 # SỔ THEO DÕI THỰC THI AUDIT (EXECUTION STATUS)
 
+> [!IMPORTANT]
+> **ĐIỀU CHỈNH TOÀN DIỆN THEO KẾ HOẠCH V2 (25/09/2026)**:
+> File [ke-hoach-dieu-chinh-batdongsan-2026-09-25.md](file:///d:/BĐS/docs/audit/ke-hoach-dieu-chinh-batdongsan-2026-09-25.md) (V2) **THAY THẾ HOÀN TOÀN** [ke-hoach-thuc-thi-moi-gioi-cho-thue.md](file:///d:/BĐS/docs/audit/ke-hoach-thuc-thi-moi-gioi-cho-thue.md) (V1) ở các điểm mâu thuẫn:
+> 1. **Công thức phí**: V2 áp dụng **bình quân có trọng số toàn kỳ hợp đồng** $\Sigma(p_i \times m_i) / \Sigma(m_i) \times 40\%$, làm tròn half-up ở bước cuối cùng. Toàn bộ các finding/tiêu chí của V1 dựa trên "40% tháng đầu" (kể cả AT-15, AT-16 cũ) nay bị thay thế bởi bộ kiểm thử FEE-01 đến FEE-14 của V2; không đóng bằng cách tự coi V1 đã đúng.
+> 2. **Gỡ bỏ thanh toán trực tuyến**: V2 bãi bỏ hoàn toàn thanh toán online, không checkout, không VietQR, không webhook ngân hàng tự động. Mục DEV-16 (tự động đối soát/cổng thanh toán) chính thức bị loại khỏi phạm vi phát hành. Route cũ trả 404/410 nhất quán.
+> 3. **Xác thực chủ nhà**: Sửa lỗi P0 xác thực (GAP-01 thiếu await, GAP-02/03 Google tự gán số điện thoại). Chỉ hỗ trợ Google verify server-side và SMS OTP số điện thoại.
+> 4. **Chấp thuận điều khoản máy chủ**: Chấp thuận gắn liền với từng revision tin đăng trên máy chủ, lưu DocumentAcceptance có hash, snapshot điều khoản và bằng chứng.
+
 > **Quy ước trạng thái**: Chỉ sử dụng đúng 3 trạng thái chuẩn:
 > - `open`: Chưa thực hiện hoặc đang chờ xử lý.
 > - `in progress`: Đang thực hiện, chưa đạt toàn bộ tiêu chí nghiệm thu.
@@ -302,7 +310,7 @@ Các tài liệu dưới đây được duy trì tại thư mục `docs/audit/` 
 | **DEV-13** | P0 | Đồng bộ trang điều khoản, riêng tư, liên hệ, giới thiệu; chính sách truy cập | DEV-03/06/10/11 + LEG | **verified** | Đã đồng bộ toàn bộ nội dung công khai: /dieu-khoan, /gioi-thieu, /chinh-sach, /moi-gioi, /thue, /tin/[slug], /page.tsx; xóa sạch lời hứa liên hệ trực tiếp chủ trọ; áp dụng nghiêm ngặt GEMINI.md § 8 (không dấu chấm cuối câu); pnpm build Next.js 31/31 trang PASS 100% |
 | **DEV-14** | P0 | Migration thử, kiểm thử các ca tại mục 13, phục hồi, hướng dẫn vận hành | DEV-02…13 | **verified** | Đã hoàn thành toàn bộ 30 ca AT-01..30 với test scripts chạy thực tế trên DB/API, pass 100%; dữ liệu chứng minh đầy đủ |
 | **DEV-15** | P1 | Dashboard tỷ lệ chuyển đổi, thời gian phản hồi, chi phí và tuổi nợ | Luồng P0 chạy ổn | not started | Định nghĩa chỉ số rõ, số tổng khớp hồ sơ và ledger |
-| **DEV-16** | P1 | Tự động đối soát/cổng thanh toán hợp pháp nếu phù hợp | DEV-10, đánh giá tích hợp | not started | Webhook xác thực, chống replay, đối soát thử đúng rồi mới bật; AT-22 |
+| **DEV-16** | P1 | Tự động đối soát/cổng thanh toán hợp pháp nếu phù hợp | DEV-10, đánh giá tích hợp | **removed (V2)** | Đã loại bỏ hoàn toàn khỏi phạm vi phát hành theo Kế hoạch V2 (GAP-06); vô hiệu hóa route VietQR & webhook; trả về 404 nhất quán |
 | **DEV-17** | P1 | Tích hợp ký điện tử phù hợp thay thao tác tải bản giấy | DEV-08 + rà soát pháp lý | not started | Nội dung, người ký, phiên bản, bằng chứng và tải bản được kiểm chứng |
 
 ---

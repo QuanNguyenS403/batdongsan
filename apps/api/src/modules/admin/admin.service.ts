@@ -436,7 +436,7 @@ export class AdminService {
     const listing = await this.prisma.listing.findUnique({
       where: { id },
       include: {
-        owner: { select: { id: true, phone: true, fullName: true } },
+        owner: { select: { id: true, phone: true, fullName: true, isBlocked: true, isPhoneVerified: true } },
       },
     });
     if (!listing) {
@@ -462,21 +462,13 @@ export class AdminService {
       orderBy: { endDate: 'desc' },
     });
 
-    let maxAllowedListings = 3;
-    let planName = 'Gói Dùng Thử';
-    if (activeMembership) {
-      planName = activeMembership.plan.name;
-      maxAllowedListings = activeMembership.plan.maxActiveListings;
-      if (activeMembership.planSnapshot && typeof activeMembership.planSnapshot === 'object') {
-        const snap = activeMembership.planSnapshot as any;
-        if (typeof snap.maxActiveListings === 'number') {
-          maxAllowedListings = snap.maxActiveListings;
-        }
-      }
+    // CỔNG KIỂM DUYỆT 6 ĐIỀU KIỆN (MỤC 6.3 KẾ HOẠCH V2 & POST-05, POST-06, GAP-13)
+    // 1. Kiểm tra chủ tài khoản không bị khóa và đã xác thực kênh
+    if (listing.owner.isBlocked) {
+      throw new BadRequestException('Tài khoản chủ nhà đang bị khóa, không thể duyệt tin đăng');
     }
 
-    // BR-05 & AT-04: Cổng kiểm tra hợp đồng dịch vụ môi giới HĐ-01
-    // Tin đăng bắt buộc phải có HĐ-01 hiệu lực của chủ trước khi được duyệt nhận khách thật
+    // 2 & 3. Kiểm tra HĐ-01 hợp lệ, đúng chủ, đúng thời hạn
     const activeAgreement = await this.prisma.ownerServiceAgreement.findFirst({
       where: {
         ownerId: listing.ownerId,
@@ -484,7 +476,9 @@ export class AdminService {
       },
       include: {
         ownerProfile: true,
-        agreementUnits: true,
+        agreementUnits: {
+          include: { unit: true },
+        },
       },
     });
 
@@ -494,20 +488,46 @@ export class AdminService {
       );
     }
 
-    if (activeAgreement.ownerProfile && !activeAgreement.ownerProfile.isVerified) {
+    if (activeAgreement.validUntil && activeAgreement.validUntil < now) {
+      throw new BadRequestException('Hợp đồng dịch vụ môi giới đã hết hạn hiệu lực, không thể duyệt tin');
+    }
+
+    // POST-05: Bắt buộc phải có OwnerProfile và đã được thẩm tra quyền cho thuê
+    if (!activeAgreement.ownerProfile || !activeAgreement.ownerProfile.isVerified) {
       throw new BadRequestException(
         'Hồ sơ thẩm quyền cho thuê của người ký chưa được xác thực, không thể duyệt nhận khách thật',
       );
     }
 
-    if (listing.unitId && activeAgreement.agreementUnits.length > 0) {
-      const hasUnit = activeAgreement.agreementUnits.some(
-        (u) => u.unitId === listing.unitId && u.status === 'active',
-      );
-      if (!hasUnit) {
-        throw new BadRequestException(
-          'Phòng này chưa được bổ sung vào phụ lục danh mục phòng (PL-01) của Hợp đồng dịch vụ môi giới',
+    // POST-06: Kiểm tra phòng gắn với hợp đồng phải đúng chủ sở hữu
+    if (listing.unitId) {
+      const unit = await this.prisma.rentalUnit.findUnique({ where: { id: listing.unitId } });
+      if (!unit || unit.ownerId !== listing.ownerId) {
+        throw new BadRequestException('Phòng đăng tin không thuộc quyền quản lý của chủ hợp đồng');
+      }
+
+      if (activeAgreement.agreementUnits.length > 0) {
+        const hasUnit = activeAgreement.agreementUnits.some(
+          (u) => u.unitId === listing.unitId && u.status === 'active',
         );
+        if (!hasUnit) {
+          throw new BadRequestException(
+            'Phòng này chưa được bổ sung vào phụ lục danh mục phòng (PL-01) của Hợp đồng dịch vụ môi giới',
+          );
+        }
+      }
+    }
+
+    // 6. Hạn mức chống spam tách biệt khỏi gói trả tiền (GAP-13, POST-07)
+    let maxAllowedListings = 5;
+    if (activeMembership) {
+      if (activeMembership.planSnapshot && typeof activeMembership.planSnapshot === 'object') {
+        const snap = activeMembership.planSnapshot as any;
+        if (typeof snap.maxActiveListings === 'number') {
+          maxAllowedListings = snap.maxActiveListings;
+        }
+      } else if (activeMembership.plan?.maxActiveListings) {
+        maxAllowedListings = activeMembership.plan.maxActiveListings;
       }
     }
 
@@ -524,7 +544,7 @@ export class AdminService {
 
       if (currentActiveCount >= maxAllowedListings) {
         throw new BadRequestException(
-          `Người dùng [${listing.owner.fullName ?? listing.owner.phone}] đã đạt giới hạn tối đa ${maxAllowedListings} tin active của ${planName}. Người dùng cần nâng cấp gói để tiếp tục duyệt tin này lên sàn!`,
+          `Tài khoản đã đạt hạn mức tối đa ${maxAllowedListings} tin đăng đồng thời, vui lòng liên hệ chuyên viên Đức Quân để hỗ trợ kiểm duyệt thêm`,
         );
       }
 
@@ -985,12 +1005,26 @@ export class AdminService {
 
       if (data.unitIds && data.unitIds.length > 0) {
         for (const unitId of data.unitIds) {
-          const unit = await tx.rentalUnit.findUnique({ where: { id: unitId } });
+          const unit = await tx.rentalUnit.findUnique({
+            where: { id: unitId },
+            include: { listings: { where: { status: { in: ['active', 'pending'] } }, orderBy: { createdAt: 'desc' }, take: 1 } },
+          });
+
+          // GAP-11: Tuyệt đối không tự suy diễn giá từ diện tích * 100.000 hay mặc định 3.000.000đ
+          let baseRent: bigint | null = null;
+          if (unit?.listings && unit.listings.length > 0 && unit.listings[0].price) {
+            baseRent = unit.listings[0].price;
+          }
+
+          if (baseRent === null) {
+            throw new BadRequestException(`Phòng ${unit?.unitCode || unitId} chưa có giá thuê được chủ xác nhận, không thể lập phụ lục`);
+          }
+
           await tx.agreementUnit.create({
             data: {
               agreementId: agreement.id,
               unitId,
-              baseMonthlyRent: BigInt(unit?.areaM2 ? Number(unit.areaM2) * 100000 : 3000000),
+              baseMonthlyRent: baseRent,
               status: 'active',
             },
           });

@@ -13,7 +13,7 @@ interface AuthModalProps {
   subtitle?: string;
 }
 
-type AuthStep = 'phone' | 'login-password' | 'register-otp' | 'google-phone';
+type AuthStep = 'phone' | 'login-password' | 'register-otp';
 
 export function AuthModal({
   isOpen,
@@ -63,25 +63,20 @@ export function AuthModal({
     }
   }, [isOpen]);
 
-  async function handleGoogleLogin(credential: string, userPhone?: string) {
+  async function handleGoogleLogin(credential: string) {
     setError(null);
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          credential,
-          phone: userPhone ? userPhone.trim().replace(/\s+/g, '') : undefined,
-        }),
+        body: JSON.stringify({ credential }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? 'Đăng nhập Google thất bại');
 
-      if (data.needPhone) {
-        setGoogleCredential(credential);
-        setGoogleUser(data.googleUser);
-        setStep('google-phone');
+      if (data.needEmailOtp) {
+        setError(data.message || 'Vui lòng xác minh mã OTP gửi tới email tài khoản Google');
         return;
       }
 
@@ -500,64 +495,6 @@ export function AuthModal({
               className="flex w-full items-center justify-center rounded-2xl bg-[#7cd8ce] hover:bg-[#68cdc3] text-white py-3.5 px-4 text-base font-bold shadow-sm transition-all disabled:opacity-60 active:scale-[0.99]"
             >
               {loading ? 'Đang tạo tài khoản...' : 'Xác nhận & Hoàn tất'}
-            </button>
-          </form>
-        )}
-
-        {/* Giao diện Bước liên kết SĐT sau khi đăng nhập Google thành công */}
-        {step === 'google-phone' && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (googleCredential) {
-                handleGoogleLogin(googleCredential, phone);
-              }
-            }}
-            className="mt-6 space-y-4"
-          >
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
-              {googleUser?.picture ? (
-                <img src={googleUser.picture} alt="" className="h-10 w-10 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-600">
-                  G
-                </div>
-              )}
-              <div className="overflow-hidden">
-                <p className="text-sm font-bold text-slate-800 truncate">{googleUser?.name || 'Tài khoản Google'}</p>
-                <p className="text-xs text-slate-500 truncate">{googleUser?.email}</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600">
-              Nhập số điện thoại để chuyên viên Đức Quân liên hệ dẫn xem phòng (Miễn phí 100%, không cần mã OTP):
-            </p>
-
-            <div className="rounded-2xl border-2 border-slate-300 focus-within:border-[#4ecbc4] p-3 transition-all">
-              <label className="block text-[11px] font-semibold text-slate-500">
-                Số điện thoại liên hệ *
-              </label>
-              <input
-                type="tel"
-                autoFocus
-                required
-                placeholder="0912 345 678"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full bg-transparent text-base font-medium text-slate-900 outline-none pt-0.5"
-              />
-            </div>
-
-            {error && (
-              <p className="text-xs text-red-500 font-medium">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center rounded-2xl bg-[#7cd8ce] hover:bg-[#68cdc3] text-white py-3.5 px-4 text-base font-bold shadow-sm transition-all disabled:opacity-60 active:scale-[0.99]"
-            >
-              {loading ? 'Đang hoàn tất...' : 'Hoàn tất đăng nhập'}
             </button>
           </form>
         )}

@@ -8,6 +8,7 @@ import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { canonicalizeEmail, canonicalizePhone } from './utils/identity-canonical';
 
 function serializeUser(user: {
   id: bigint;
@@ -55,7 +56,7 @@ export class AuthService {
     const existing = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
     if (existing) throw new ConflictException('Số điện thoại đã được đăng ký, vui lòng đăng nhập');
 
-    const otpValid = this.otpService.verifyOtp(dto.phone, dto.otpCode);
+    const otpValid = await this.otpService.verifyOtp(dto.phone, dto.otpCode);
     if (!otpValid) throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn');
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -86,81 +87,103 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập 1-Click bằng Google (Hoàn toàn MIỄN PHÍ 100% vĩnh viễn)
-   * Xác thực Google ID Token trực tiếp từ Google Identity Services
+   * Xác thực Google ID Token phía server theo chuẩn KT-01
+   * Ràng buộc audience (aud) khớp client ID, issuer (iss), expiry (exp), email_verified=true
    */
-  async googleLogin(dto: GoogleLoginDto) {
-    if (!dto.credential) {
+  async verifyGoogleIdToken(idToken: string) {
+    if (!idToken) {
       throw new BadRequestException('Thiếu Google credential token');
     }
 
-    // 1. Xác thực Google Token với Google OAuth TokenInfo API
-    let googlePayload: {
-      sub: string;
-      email: string;
-      name?: string;
-      picture?: string;
-      email_verified?: string | boolean;
-    };
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      throw new BadRequestException('Chưa cấu hình Google Client ID trên máy chủ');
+    }
 
+    const { google } = require('googleapis');
+    const oauth2Client = new google.auth.OAuth2(clientId);
+
+    let payload: any;
     try {
-      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(dto.credential)}`);
-      if (!res.ok) {
-        throw new Error('Google token không hợp lệ hoặc đã hết hạn');
-      }
-      googlePayload = await res.json();
-    } catch (err: any) {
-      throw new UnauthorizedException(`Xác thực tài khoản Google thất bại: ${err.message}`);
-    }
-
-    const { email, name, picture } = googlePayload;
-    if (!email) {
-      throw new BadRequestException('Không tìm thấy địa chỉ email trong tài khoản Google');
-    }
-
-    // 2. Nếu có số điện thoại truyền lên:
-    if (dto.phone) {
-      let user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
-      if (user) {
-        if (user.isBlocked) {
-          throw new UnauthorizedException('Tài khoản của bạn đã bị khóa, vui lòng liên hệ quản trị viên');
-        }
-        // Cập nhật thông tin nếu chưa có
-        if (!user.fullName || !user.avatarUrl) {
-          user = await this.prisma.user.update({
-            where: { id: user.id },
-            data: {
-              fullName: user.fullName || name,
-              avatarUrl: user.avatarUrl || picture,
-              isPhoneVerified: true,
-            },
-          });
-        }
-        return this.issueTokens(user);
-      }
-
-      // Tạo tài khoản mới trực tiếp với số điện thoại đã xác thực qua Google (không cần OTP SMS)
-      const newUser = await this.prisma.user.create({
-        data: {
-          phone: dto.phone,
-          fullName: name || 'Khách hàng Google',
-          avatarUrl: picture,
-          isPhoneVerified: true,
-        },
+      const ticket = await oauth2Client.verifyIdToken({
+        idToken,
+        audience: clientId,
       });
-
-      return this.issueTokens(newUser);
+      payload = ticket.getPayload();
+    } catch (err: any) {
+      throw new UnauthorizedException(`Xác thực Google ID Token thất bại: ${err.message}`);
     }
 
-    // 3. Nếu chưa có số điện thoại:
-    // Trả về needPhone: true để giao diện mở form nhập SĐT nhanh (không cần OTP)
+    if (!payload || !payload.sub) {
+      throw new UnauthorizedException('Google ID token không hợp lệ (thiếu sub identifier)');
+    }
+
+    // Kiểm tra issuer
+    if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') {
+      throw new UnauthorizedException('Google token issuer không hợp lệ');
+    }
+
+    // Bắt buộc email_verified = true (KT-01)
+    if (!payload.email || payload.email_verified !== true) {
+      throw new UnauthorizedException('Email tài khoản Google chưa được xác thực (email_verified=false)');
+    }
+
+    const canonicalEmail = canonicalizeEmail(payload.email);
+
     return {
-      needPhone: true,
-      googleUser: {
-        email,
-        name: name || '',
-        picture: picture || '',
-      },
+      sub: payload.sub as string,
+      email: payload.email as string,
+      canonicalEmail,
+      name: payload.name || '',
+      picture: payload.picture || '',
+    };
+  }
+
+  /**
+   * Đăng nhập bằng Google Identity Services (KT-01 / GAP-02 / GAP-03)
+   * Sử dụng Google `sub` làm khóa tài khoản duy nhất, không dùng số điện thoại tự khai.
+   */
+  async googleLogin(dto: GoogleLoginDto) {
+    // 1. Xác thực Google ID Token phía máy chủ (KT-01)
+    const googleUser = await this.verifyGoogleIdToken(dto.credential);
+
+    // 2. Tra cứu tài khoản theo Google sub làm khóa duy nhất (GAP-02, GAP-03)
+    let user: any = null;
+
+    if ((this.prisma as any).authIdentity) {
+      const identity = await (this.prisma as any).authIdentity.findUnique({
+        where: {
+          provider_subject: {
+            provider: 'google',
+            subject: googleUser.sub,
+          },
+        },
+        include: { user: true },
+      });
+      if (identity) {
+        user = identity.user;
+      }
+    }
+
+    // 3. Nếu tìm thấy user đã liên kết Google sub:
+    if (user) {
+      if (user.isBlocked) {
+        throw new UnauthorizedException('Tài khoản của bạn đã bị khóa, vui lòng liên hệ quản trị viên');
+      }
+      return this.issueTokens(user);
+    }
+
+    // 4. Nếu chưa có tài khoản gắn với sub:
+    // Theo BR-05 & Mục 5.1: Đăng ký Google yêu cầu hoàn tất xác minh OTP email
+    // Tuyệt đối không tự cấp token đăng nhập hoặc tin số điện thoại client tự gửi
+    return {
+      needEmailOtp: true,
+      googleSub: googleUser.sub,
+      email: googleUser.email,
+      canonicalEmail: googleUser.canonicalEmail,
+      name: googleUser.name,
+      picture: googleUser.picture,
+      message: 'Vui lòng xác minh mã OTP gửi tới email tài khoản Google để hoàn tất đăng ký',
     };
   }
 
@@ -281,7 +304,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
     if (!user) throw new BadRequestException('Tài khoản không tồn tại');
 
-    const otpValid = this.otpService.verifyOtp(dto.phone, dto.otpCode);
+    const otpValid = await this.otpService.verifyOtp(dto.phone, dto.otpCode);
     if (!otpValid) throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn');
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10);
@@ -294,7 +317,10 @@ export class AuthService {
       },
     });
 
-    return { message: 'Đặt lại mật khẩu thành công, vui lòng đăng nhập lại' };
+    return {
+      success: true,
+      message: 'Đặt lại mật khẩu thành công, vui lòng đăng nhập lại',
+    };
   }
 
   async me(userId: bigint) {

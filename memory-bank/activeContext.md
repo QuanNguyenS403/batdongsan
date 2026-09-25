@@ -1,24 +1,27 @@
 # Trạng thái phiên làm việc hiện tại
 
-**Việc vừa hoàn thành (25/09/2026 — TRIỂN KHAI PHƯƠNG ÁN A THANH TOÁN TỰ ĐỘNG VIETCOMBANK 0Đ TRỌN ĐỜI & ĐỒNG BỘ THƯƠNG HIỆU QNS BROKER):**
-1. **Triển khai toàn diện Phương án A (Vietcombank Email Webhook 0đ vĩnh viễn)**:
-   - Endpoint Backend: `@Post('webhook/bank')` trong `PaymentsController` kết nối tới `handleBankEmailWebhook` trong `PaymentsService`.
-   - Cơ chế bảo mật: Xác thực chặt chẽ qua `BANK_WEBHOOK_SECRET=qns_bank_sec_9f8b42ec31057e7c81d3` (hỗ trợ qua header `x-webhook-secret` hoặc body).
-   - Bộ giải mã thông minh (Smart Parser): Hỗ trợ cả JSON cấu trúc lẫn trích xuất tự động bằng Regex từ nội dung rawEmail của Vietcombank.
-   - Đối soát tự động & Gạch nợ: Khớp mã hoa hồng `paymentReferenceCode`, tự động ghi nhận thanh toán `Payment`, phân bổ `allocatePayment` và ghi log `AuditEvent`.
-   - Thông báo tức thì qua Telegram: Tự động gửi tin nhắn báo tiền về tài khoản kèm mã giao dịch qua bot `@QNSbroker_bot`.
-   - Google Apps Script: Tạo file kịch bản `packages/database/scripts/vietcombank-email-webhook.gs` kèm hàm `testConnect` và tài liệu hướng dẫn chi tiết `HUONG-DAN-THANH-TOAN-VIETCOMBANK-0D.md`.
-2. **Loại bỏ triệt để PayOS & SMS keys dư thừa**:
-   - Xóa bỏ toàn bộ route `@Post('webhook/payos')` và hàm `handlePayosWebhook` trong `PaymentsController` & `PaymentsService`.
-   - Loại bỏ các biến `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`, `PAYOS_WEBHOOK_URL` khỏi toàn bộ các file `.env`, `apps/api/.env`, `packages/database/.env`, `.env.example`.
-   - Loại bỏ `SMS_API_KEY`, `SMS_SECRET_KEY` khỏi cấu hình, chuyển trọn vẹn xác thực OTP sang Telegram Bot (`SMS_PROVIDER=telegram`) 100% miễn phí.
-3. **Triển khai Đăng nhập 1-Click bằng Google (Phương án 2 - 0đ trọn đời)**:
-   - Endpoint Backend: `@Post('google')` trong `AuthController` kết nối `googleLogin` trong `AuthService`, xác thực Google Token qua Google TokenInfo API.
-   - Luồng thông minh: Khách hàng xác thực qua Google không cần mã OTP SMS, tài khoản tự động tạo và đánh dấu đã xác thực. Nếu chưa có SĐT, hệ thống mở form nhập SĐT nhanh 1 lần duy nhất.
-   - Giao diện: Tích hợp nút "Đăng nhập nhanh bằng Google (0đ)" chuẩn Google Identity Services trên cả `AuthModal.tsx` và `dang-nhap/page.tsx`.
-   - Cấu hình: Thêm biến `NEXT_PUBLIC_GOOGLE_CLIENT_ID` vào toàn bộ hệ thống file `.env`.
+**Việc vừa hoàn thành (25/09/2026 — THỰC THI KẾ HOẠCH ĐIỀU CHỈNH V2, CHẶN LỖI P0, ENGINE HOA HỒNG V2 & ĐẠT GATE G-01):**
+1. **Khắc phục lỗi bảo mật P0 tối khẩn (GAP-01 / OTP-01 / OTP-02)**:
+   - Phát hiện chính xác và sửa lỗi thiếu `await` trước lời gọi `verifyOtp` trong `AuthService.register()` (dòng ~58) và `resetPassword()` (dòng ~284). Bổ sung kiểm tra kết quả boolean nghiêm ngặt.
+   - Thêm bộ kiểm thử `test-w00-p0.js` chứng minh: OTP sai/rỗng/hết hạn bị từ chối 400 Bad Request, tuyệt đối không tạo user và không đổi mật khẩu.
+2. **Loại bỏ lỗ hổng Google OAuth (GAP-02 / GAP-03 / AUTH-07..10)**:
+   - Xóa bỏ hoàn toàn trường `phone` tự khai khỏi `GoogleLoginDto` và giao diện (`AuthModal.tsx`, `dang-nhap/page.tsx`).
+   - Tích hợp xác thực token Google server-side qua thư viện chính thức, kiểm tra `aud` khớp Client ID, `iss`, `exp`, `email_verified=true`, sử dụng `sub` làm khóa tài khoản duy nhất.
+   - Tạo tiện ích `identity-canonical.ts`: Chuẩn hóa email theo quy chuẩn KT-02 (bỏ dot với Gmail cá nhân, giữ nguyên dot cho domain Workspace) và chuẩn hóa SĐT về E.164 (+84).
+3. **Gỡ bỏ hoàn toàn thanh toán trực tuyến (GAP-06 / PAY-01)**:
+   - Vô hiệu hóa route `GET /payments/commissions/:id/vietqr` và `POST /payments/webhook/bank`, trả 404 NotFoundException nhất quán.
+   - Đổi tên miền nghiệp vụ sang `Receivables & Offline Collections`.
+   - Đánh dấu `vietcombank-email-webhook.gs` và `HUONG-DAN-THANH-TOAN-VIETCOMBANK-0D.md` thành tài liệu lịch sử đã ngừng áp dụng.
+4. **Chốt đặc tả và xóa sạch công thức cũ "40% tháng đầu" (W-01 / GAP-08)**:
+   - Đồng bộ trang `dieu-khoan/page.tsx`, `MembershipPricingClient.tsx`, `EXECUTION-STATUS.md` sang công thức V2: 40% tiền thuê trung bình một tháng theo toàn bộ thời hạn hợp đồng.
+5. **Triển khai Engine tính hoa hồng V2 và kiểm thử 14 ca (W-06 / GAP-11 / FEE-01..14)**:
+   - Tạo `commission-calculator.ts` thực hiện chuẩn xác công thức $\frac{\Sigma(p_i \times m_i)}{\Sigma(m_i)} \times 40\%$, làm tròn half-up ở bước cuối cùng với số nguyên BigInt.
+   - Xóa bỏ nhánh suy diễn giá từ `areaM2 * 100.000` hoặc mặc định 3.000.000đ trong `admin.service.ts` (GAP-11).
+   - Xóa bỏ thông báo yêu cầu nâng cấp gói trong luồng duyệt tin `approveListing` (GAP-13).
+   - Chạy bộ test `test-fee-v2.js` đạt 14/14 PASS (100%), chứng minh ví dụ 24 tháng ra đúng 2.700.000đ, FEE-07 half-up ra đúng 400.001đ, xử lý race condition concurrency (FEE-09) an toàn.
+6. **Nghiệm thu hoàn tất Gate G-01**: Toàn bộ GAP-01..13 và GAP-15 đã có bằng chứng khắc phục kiểm thử tự động thật.
 
-**Việc hoàn thành trước đó (24/09/2026 — HOÀN THÀNH 100% PHASE KỸ THUẬT P0 VÀ NGHIỆM THU 30 CA AT CHO PIVOT MÔI GIỚI CHO THUÊ):**
+**Việc hoàn thành trước đó (25/09/2026 — TRIỂN KHAI PHƯƠNG ÁN A THANH TOÁN TỰ ĐỘNG VIETCOMBANK 0Đ TRỌN ĐỜI & ĐỒNG BỘ THƯƠNG HIỆU QNS BROKER — NAY BỊ V2 THAY THẾ Ở PHẦN THANH TOÁN ONLINE):**
 1. **Chuyển đổi triệt để Mô hình Kinh doanh (Pivot 24/09/2026)**:
    - Thay thế toàn bộ mô hình marketplace bán gói membership sang môi giới trực tiếp có người thật (Đức Quân) điều phối độc quyền.
    - Thu phí thành công 40% (một lần) từ chủ nhà khi giao dịch thành công (đủ 4 điều kiện §6.2), khách thuê 100% miễn phí (0 đồng phí môi giới). Nền tảng không thu hộ tiền thuê, không giữ cọc.

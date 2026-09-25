@@ -6,14 +6,14 @@ import { setTokens } from '@/lib/auth-client';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
-type Step = 'phone' | 'login-password' | 'register-otp' | 'register-info' | 'forgot-password' | 'google-phone';
+type Step = 'phone' | 'login-password' | 'register-otp' | 'register-info' | 'forgot-password';
 
 function formatFriendlyError(err: unknown): string {
-  const msg = (err as Error)?.message || 'Đã có lỗi xảy ra, vui lòng thử lại sau.';
+  const msg = (err as Error)?.message || 'Đã có lỗi xảy ra, vui lòng thử lại sau';
   if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('network') || msg.includes('ENOTFOUND')) {
-    return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.';
+    return 'Không thể kết nối đến máy chủ, vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau';
   }
-  return msg;
+  return msg.replace(/\.+$/, '');
 }
 
 function getSafeReturnUrl(rawUrl: string | null): string {
@@ -38,8 +38,6 @@ function DangNhapContent() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [googleCredential, setGoogleCredential] = useState<string | null>(null);
-  const [googleUser, setGoogleUser] = useState<{ email: string; name: string; picture: string } | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -72,27 +70,17 @@ function DangNhapContent() {
     }
   }, []);
 
-  async function handleGoogleLogin(credential: string, userPhone?: string) {
+  async function handleGoogleLogin(credential: string) {
     setError(null);
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          credential,
-          phone: userPhone ? userPhone.trim().replace(/\s+/g, '') : undefined,
-        }),
+        body: JSON.stringify({ credential }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? 'Đăng nhập Google thất bại');
-
-      if (data.needPhone) {
-        setGoogleCredential(credential);
-        setGoogleUser(data.googleUser);
-        setStep('google-phone');
-        return;
-      }
 
       setTokens(data.accessToken, data.refreshToken);
       const safeUrl = getSafeReturnUrl(returnToParam);
@@ -125,7 +113,7 @@ function DangNhapContent() {
     try {
       const res = await fetch(`${API_URL}/auth/check-phone?phone=${encodeURIComponent(phone)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Không kiểm tra được số điện thoại.');
+      if (!res.ok) throw new Error(data.message ?? 'Không kiểm tra được số điện thoại');
 
       if (data.exists) {
         setStep('login-password');
@@ -150,7 +138,7 @@ function DangNhapContent() {
         body: JSON.stringify({ phone, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Đăng nhập thất bại.');
+      if (!res.ok) throw new Error(data.message ?? 'Đăng nhập thất bại');
 
       setTokens(data.accessToken, data.refreshToken);
       router.push(getSafeReturnUrl(returnToParam));
@@ -171,7 +159,7 @@ function DangNhapContent() {
         body: JSON.stringify({ phone }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Gửi OTP thất bại.');
+      if (!res.ok) throw new Error(data.message ?? 'Gửi OTP thất bại');
       setStep('register-otp');
     } catch (err) {
       setError(formatFriendlyError(err));
@@ -191,7 +179,7 @@ function DangNhapContent() {
         body: JSON.stringify({ phone }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Không thể gửi mã OTP.');
+      if (!res.ok) throw new Error(data.message ?? 'Không thể gửi mã OTP');
       setStep('forgot-password');
       setOtpCode('');
       setNewPassword('');
@@ -213,9 +201,9 @@ function DangNhapContent() {
         body: JSON.stringify({ phone, otpCode, newPassword }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Đặt lại mật khẩu thất bại.');
+      if (!res.ok) throw new Error(data.message ?? 'Đặt lại mật khẩu thất bại');
 
-      setSuccessMsg('Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.');
+      setSuccessMsg('Đặt lại mật khẩu thành công, vui lòng đăng nhập với mật khẩu mới');
       setStep('login-password');
       setPassword('');
     } catch (err) {
@@ -236,7 +224,7 @@ function DangNhapContent() {
         body: JSON.stringify({ phone, otpCode, fullName, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Đăng ký thất bại.');
+      if (!res.ok) throw new Error(data.message ?? 'Đăng ký thất bại');
 
       setTokens(data.accessToken, data.refreshToken);
       router.push(getSafeReturnUrl(returnToParam));
@@ -256,7 +244,7 @@ function DangNhapContent() {
           </div>
           <h1 className="text-2xl font-bold text-text-primary">Đăng nhập / Đăng ký</h1>
           <p className="mt-1 text-xs text-text-secondary">
-            Xác thực bằng số điện thoại (OTP). Ở môi trường dev, mã OTP hiển thị trong console log server.
+            Xác thực bằng số điện thoại (OTP)
           </p>
         </div>
 
@@ -478,57 +466,6 @@ function DangNhapContent() {
               className="btn-primary w-full"
             >
               {loading ? 'Đang đăng ký...' : 'Hoàn tất đăng ký'}
-            </button>
-          </form>
-        )}
-
-        {step === 'google-phone' && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (googleCredential) {
-                handleGoogleLogin(googleCredential, phone);
-              }
-            }}
-            className="mt-6 space-y-4"
-          >
-            <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
-              {googleUser?.picture ? (
-                <img src={googleUser.picture} alt="" className="h-10 w-10 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-600">
-                  G
-                </div>
-              )}
-              <div className="overflow-hidden">
-                <p className="text-sm font-bold text-text-primary truncate">{googleUser?.name || 'Tài khoản Google'}</p>
-                <p className="text-xs text-text-secondary truncate">{googleUser?.email}</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-text-secondary">
-              Nhập số điện thoại để chuyên viên Đức Quân liên hệ dẫn xem phòng (Miễn phí 100%, không cần mã OTP):
-            </p>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-text-secondary">Số điện thoại liên hệ *</label>
-              <input
-                required
-                type="tel"
-                autoFocus
-                placeholder="Ví dụ: 0901234567"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="input-field"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full"
-            >
-              {loading ? 'Đang hoàn tất...' : 'Hoàn tất đăng nhập'}
             </button>
           </form>
         )}

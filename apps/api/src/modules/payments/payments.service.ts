@@ -257,123 +257,18 @@ export class PaymentsService {
   }
 
   /**
-   * Sinh thông tin mã VietQR động chuẩn Napas247 cho khoản phí hoa hồng
-   * Hoàn toàn MIỄN PHÍ qua VietQR API
+  /**
+   * Đã ngừng cung cấp VietQR trực tuyến theo Kế hoạch V2 (BR-01, GAP-06)
    */
-  async getVietQrForCommission(commissionId: bigint | number | string) {
-    const cId = BigInt(commissionId);
-    const commission = await this.prisma.commission.findUnique({
-      where: { id: cId },
-      include: {
-        deal: {
-          include: {
-            unit: true,
-            owner: true,
-          },
-        },
-      },
-    });
-
-    if (!commission) {
-      throw new NotFoundException('Không tìm thấy khoản phí hoa hồng');
-    }
-
-    const remainingAmount = commission.totalDueVnd - commission.paidAmountVnd;
-    const isPaid = remainingAmount <= 0n;
-
-    const bankBin = process.env.BANK_BIN || '970436';
-    const bankName = process.env.BANK_NAME || 'Vietcombank';
-    const accountNumber = process.env.BANK_ACCOUNT_NUMBER || '0981753082';
-    const accountName = process.env.BANK_ACCOUNT_NAME || 'NGUYEN DUC QUAN';
-
-    const transferMemo = commission.paymentReferenceCode;
-    const qrAmount = remainingAmount > 0n ? remainingAmount.toString() : '0';
-
-    const qrUrl = `https://img.vietqr.io/image/${bankBin}-${accountNumber}-compact2.png?amount=${qrAmount}&addInfo=${encodeURIComponent(transferMemo)}&accountName=${encodeURIComponent(accountName)}`;
-
-    return {
-      commissionId: commission.id.toString(),
-      dealCode: commission.deal.dealCode,
-      totalDueVnd: commission.totalDueVnd.toString(),
-      paidAmountVnd: commission.paidAmountVnd.toString(),
-      remainingAmountVnd: remainingAmount.toString(),
-      isPaid,
-      status: commission.status,
-      bankInfo: {
-        bankName,
-        bankBin,
-        accountNumber,
-        accountName,
-      },
-      transferMemo,
-      qrUrl,
-    };
+  async getVietQrForCommission(_commissionId: bigint | number | string) {
+    throw new NotFoundException('Chức năng VietQR thanh toán trực tuyến đã bị vô hiệu hóa hoàn toàn theo Kế hoạch V2 (BR-01, GAP-06)');
   }
 
-
   /**
-   * Tự động nhận Webhook biến động số dư từ Email Vietcombank (Google Apps Script)
-   * Hoàn toàn MIỄN PHÍ 100% vĩnh viễn, bảo mật bằng BANK_WEBHOOK_SECRET
+   * Đã ngừng cung cấp Webhook ngân hàng tự động theo Kế hoạch V2 (BR-01, GAP-06)
    */
-  async handleBankEmailWebhook(payload: any, secretHeader?: string) {
-    const configuredSecret = process.env.BANK_WEBHOOK_SECRET;
-    const providedSecret = payload?.secret || secretHeader;
-
-    if (configuredSecret && providedSecret !== configuredSecret) {
-      throw new UnauthorizedException('Mã bảo mật Webhook ngân hàng không chính xác');
-    }
-
-    let rawDescription = String(payload?.description || '');
-    let amount = BigInt(payload?.amount || 0);
-    let reference = String(payload?.reference || payload?.orderCode || '');
-    const accountNumber = String(payload?.accountNumber || process.env.BANK_ACCOUNT_NUMBER || '1050773506');
-    const bankName = String(payload?.bankName || process.env.BANK_NAME || 'Vietcombank');
-
-    // Nếu gửi chuỗi rawEmail từ Gmail về, trích xuất tự động qua Regex
-    if (payload?.rawEmail) {
-      const emailText = String(payload.rawEmail);
-
-      if (!amount) {
-        const amountMatch =
-          emailText.match(/\+\s*([0-9.,]+)\s*(?:VND|VNĐ|đ)/i) ||
-          emailText.match(/(?:Số tiền|Giao dịch|Số tiền giao dịch)[\s:]*([+\-]?\s*[0-9.,]+)/i);
-        if (amountMatch) {
-          const cleanNum = amountMatch[1].replace(/[,.\s]/g, '');
-          amount = BigInt(cleanNum || 0);
-        }
-      }
-
-      if (!rawDescription) {
-        const descMatch = emailText.match(
-          /(?:Nội dung|Nội dung giao dịch|Chi tiết|Details)[\s:]*([^\r\n]+)/i,
-        );
-        if (descMatch) {
-          rawDescription = descMatch[1].trim();
-        }
-      }
-
-      if (!reference) {
-        const refMatch = emailText.match(
-          /(?:Số tham chiếu|Mã giao dịch|Ref|Transaction ID|MBVCB)[\s.:]*([A-Za-z0-9.]+)/i,
-        );
-        if (refMatch) {
-          reference = refMatch[1].trim();
-        }
-      }
-    }
-
-    if (!reference) {
-      reference = `VCB-${Date.now()}`;
-    }
-
-    return this.processBankTransaction({
-      amount,
-      reference,
-      rawDescription,
-      accountNumber,
-      bankName,
-      transactionDateTime: payload?.transactionDateTime ? new Date(payload.transactionDateTime) : new Date(),
-    });
+  async handleBankEmailWebhook(_payload: any, _secretHeader?: string) {
+    throw new NotFoundException('Webhook ngân hàng tự động đã bị vô hiệu hóa hoàn toàn theo Kế hoạch V2 (BR-01, GAP-06)');
   }
 
   /**

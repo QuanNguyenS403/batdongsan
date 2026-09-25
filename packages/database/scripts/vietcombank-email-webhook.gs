@@ -1,20 +1,18 @@
 /**
- * GOOGLE APPS SCRIPT: TỰ ĐỘNG ĐỐI SOÁT & GẠCH NỢ QNS BROKER QUA EMAIL VIETCOMBANK (0Đ TRỌN ĐỜI)
+ * ⚠️ [TÀI LIỆU LỊCH SỬ — ĐÃ NGỪNG ÁP DỤNG TRÊN TOÀN HỆ THỐNG]
  *
- * Hướng dẫn thiết lập trong 3 phút:
- * 1. Mở trình duyệt, truy cập: https://script.google.com và đăng nhập bằng Gmail ducquan16102006@gmail.com
- * 2. Bấm nút "Dự án mới" (New project)
- * 3. Xóa code mặc định và dán toàn bộ nội dung file này vào
- * 4. Điền URL website thật (hoặc URL tunnel ngrok khi test local) vào WEBHOOK_URL
- * 5. Bấm icon Đĩa mềm (Save / Lưu)
- * 6. Chọn hàm "testConnect" ở thanh công cụ và bấm "Chạy" (Run) để cấp quyền đọc Gmail lần đầu
- * 7. Bấm biểu tượng Đồng hồ (Triggers / Trình kích hoạt) ở cột bên trái:
- *    - Bấm nút "Thêm trình kích hoạt" (Add Trigger) ở góc dưới cùng bên phải
- *    - Chọn hàm: checkVietcombankEmails
- *    - Chọn nguồn sự kiện: Theo thời gian (Time-driven)
- *    - Chọn loại trình kích hoạt theo thời gian: Hàng phút (Minutes timer)
- *    - Chọn khoảng thời gian: Mỗi 1 phút (Every minute)
- *    - Bấm Lưu. Hoàn tất!
+ * QUY TẮC BR-01 & GAP-06 (Kế hoạch V2 — 25/09/2026):
+ * - Toàn bộ chức năng thanh toán trực tuyến và webhook ngân hàng tự động ĐÃ BỊ GỠ BỎ HOÀN TOÀN.
+ * - Route POST /payments/webhook/bank và GET /payments/commissions/:id/vietqr trả về HTTP 404 nhất quán.
+ * - Nghiệp vụ thu phí chuyển sang đối soát ngoài hệ thống (offline-collections / receivables) do Admin thực hiện.
+ *
+ * ⚠️ LƯU Ý BẮT BUỘC DÀNH CHO QUÂN (QUẢN TRỊ VIÊN):
+ * - Việc xóa file hoặc sửa code Git KHÔNG TỰ TẮT trigger đang chạy trên Google Apps Script Console!
+ * - Quân cần trực tiếp mở Google Apps Script Console (https://script.google.com),
+ *   chọn dự án liên kết với Gmail ducquan16102006@gmail.com, vào mục Triggers (Trình kích hoạt),
+ *   và TỰ TAY BẤM XÓA / TẮT TRIGGER `checkVietcombankEmails` để dừng gửi request vào hệ thống.
+ *
+ * File này được lưu lại phục vụ mục đích kiểm toán và đối chiếu lịch sử (Mục 3.1).
  */
 
 const CONFIG = {

@@ -1,6 +1,11 @@
-# Hướng Dẫn Tự Động Hóa Thanh Toán Vietcombank 0đ (Phương Án A)
+# [TÀI LIỆU LỊCH SỬ — ĐÃ NGỪNG ÁP DỤNG] Hướng Dẫn Tự Động Hóa Thanh Toán Vietcombank 0đ
 
-Phương án này giúp bạn nhận tiền và tự động gạch nợ hoa hồng 100% tự động trọn đời, tiền về thẳng tài khoản Vietcombank cá nhân mà không tốn bất kỳ chi phí duy trì hay cổng thanh toán trung gian nào
+> ⚠️ **THÔNG BÁO QUAN TRỌNG (Kế hoạch V2 — 25/09/2026):**  
+> Chức năng thanh toán trực tuyến và webhook ngân hàng tự động **ĐÃ BỊ GỠ BỎ HOÀN TOÀN** khỏi ứng dụng theo Quy tắc BR-01 và GAP-06.  
+> Tài liệu này được giữ lại **chỉ phục vụ mục đích lưu trữ lịch sử**. Tuyệt đối **KHÔNG** làm theo tài liệu này để bật lại webhook ngân hàng hoặc cổng thanh toán tự động.  
+>  
+> ⚠️ **LƯU Ý DÀNH RIÊNG CHO QUÂN:**  
+> Nếu bạn đã cài đặt trigger trên Google Apps Script Console, hãy mở [https://script.google.com](https://script.google.com), vào mục Trình kích hoạt (Triggers) và **TẮT / XÓA trigger `checkVietcombankEmails`** ngay lập tức.
 
 ---
 

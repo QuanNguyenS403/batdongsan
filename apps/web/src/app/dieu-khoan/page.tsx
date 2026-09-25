@@ -45,7 +45,7 @@ export default function DieuKhoanPage() {
               <ul className="list-disc pl-5 space-y-1.5">
                 <li>Ký Thỏa thuận dịch vụ môi giới (HĐ-01) với đơn vị dịch vụ trước khi phòng được công khai tiếp nhận khách thuê</li>
                 <li>Cung cấp đầy đủ giấy tờ chứng minh quyền cho thuê hợp pháp và cam kết thông tin thực tế về vị trí, giá thuê, biểu phí dịch vụ</li>
-                <li>Thanh toán phí dịch vụ môi giới thành công một lần duy nhất bằng 40% tiền thuê tháng đầu tiên (sau ưu đãi) khi giao dịch hoàn tất ký kết và bàn giao thực tế</li>
+                <li>Thanh toán phí dịch vụ môi giới thành công một lần duy nhất bằng 40% tiền thuê cơ bản trung bình của một tháng theo toàn bộ thời hạn hợp đồng đã xác định khi giao dịch hoàn tất ký kết và bàn giao thực tế</li>
                 <li>Không tự ý nâng giá, không thay đổi điều kiện đã thỏa thuận và thông báo kịp thời khi phòng không còn khả dụng</li>
               </ul>
             </section>
@@ -63,7 +63,7 @@ export default function DieuKhoanPage() {
             <section>
               <h2 className="text-base font-bold text-text-primary mb-2">4. Điều kiện xác nhận Giao dịch thành công</h2>
               <p>
-                Giao dịch được ghi nhận thành công để phát sinh phí môi giới khi đáp ứng đồng thời: hợp đồng thuê được ký kết giữa bên thuê và bên cho thuê, bên thuê đã nhận bàn giao phòng theo biên bản bàn giao, và bên cho thuê đã nhận kỳ thanh toán đầu tiên theo thỏa thuận
+                Giao dịch được ghi nhận thành công để phát sinh phí môi giới khi đáp ứng đồng thời: hợp đồng thuê có hiệu lực giữa bên thuê và bên cho thuê, bên thuê đã nhận bàn giao phòng theo biên bản bàn giao, và khoản tiền thuê đầu tiên đến hạn (nếu có) đã được bên cho thuê xác nhận nhận từ khách thuê
               </p>
             </section>
 

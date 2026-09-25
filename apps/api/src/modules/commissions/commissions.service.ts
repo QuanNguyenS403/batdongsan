@@ -8,6 +8,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GenerateCommissionDto } from './dto/generate-commission.dto';
 import { RaiseDisputeDto } from './dto/raise-dispute.dto';
 import { AdjustCommissionDto } from './dto/adjust-commission.dto';
+import {
+  calculateWeightedAverageCommission,
+  CommissionCalculationInput,
+  CommissionCalculationResult,
+  RentScheduleSegment,
+} from './utils/commission-calculator';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -15,13 +21,21 @@ export class CommissionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Tính chính xác số tiền hoa hồng theo công thức mục 6.1
-   * commission_base_vnd * rate_bps / 10000
-   * Sử dụng số nguyên BigInt tránh sai số dấu phẩy động
+   * Tính chính xác số tiền hoa hồng cho 1 kỳ/tháng theo Mục 7.5 Kế hoạch V2:
+   * Áp dụng làm tròn half-up CHỈ ở bước cuối cùng, sử dụng BigInt
    */
   calculateCommissionAmount(baseVnd: bigint, rateBps = 4000): bigint {
     if (baseVnd <= 0n) return 0n;
-    return (baseVnd * BigInt(rateBps)) / 10000n;
+    const numerator = baseVnd * BigInt(rateBps);
+    const denominator = 10000n;
+    return (2n * numerator + denominator) / (2n * denominator);
+  }
+
+  /**
+   * Tính hoa hồng bình quân có trọng số toàn kỳ hợp đồng (Mục 7.1 Kế hoạch V2)
+   */
+  calculateFromSchedule(input: CommissionCalculationInput): CommissionCalculationResult {
+    return calculateWeightedAverageCommission(input);
   }
 
   /**
@@ -99,24 +113,42 @@ export class CommissionsService {
       // Nếu cơ sở phí = 0đ (miễn phí thật theo §6.1), lưu kết quả không thu phí (status = 'void')
       const status = commissionBaseVnd === 0n ? 'void' : 'due';
 
-      const commission = await tx.commission.create({
-        data: {
-          dealId: dId,
-          agencyId: deal.agreement?.agencyId,
-          commissionBaseVnd,
-          rateBps,
-          commissionAmountVnd,
-          taxAmountVnd: 0n,
-          totalDueVnd,
-          paidAmountVnd: 0n,
-          refundedAmountVnd: 0n,
-          dueAt,
-          status,
-          policyVersion: deal.agreement?.termsVersion || '1.0',
-          paymentReferenceCode,
-          version: 1,
-        },
-      });
+      let commission;
+      try {
+        commission = await tx.commission.create({
+          data: {
+            dealId: dId,
+            agencyId: deal.agreement?.agencyId,
+            commissionBaseVnd,
+            rateBps,
+            commissionAmountVnd,
+            taxAmountVnd: 0n,
+            totalDueVnd,
+            paidAmountVnd: 0n,
+            refundedAmountVnd: 0n,
+            dueAt,
+            status,
+            policyVersion: deal.agreement?.termsVersion || '2.0',
+            paymentReferenceCode,
+            version: 1,
+          },
+        });
+      } catch (err: any) {
+        // FEE-09 & BR-12: Bắt lỗi P2002 nếu có race condition tạo commission đồng thời cho cùng dealId
+        if (err.code === 'P2002' || err.message?.includes('Unique constraint failed')) {
+          const concurrentCommission = await tx.commission.findUnique({
+            where: { dealId: dId },
+          });
+          if (concurrentCommission) {
+            return {
+              commission: concurrentCommission,
+              isDuplicateCall: true,
+              message: 'Giao dịch đã có khoản hoa hồng gốc được tạo đồng thời trước đó',
+            };
+          }
+        }
+        throw err;
+      }
 
       return {
         commission,

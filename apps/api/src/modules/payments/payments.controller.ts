@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  NotFoundException,
   Param,
   Post,
   Request,
@@ -18,28 +19,34 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 
-@ApiTags('Payments & Reconciliation')
-@Controller('payments')
+@ApiTags('Receivables & Offline Collections')
+@Controller(['payments', 'receivables'])
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Public()
   @Get('commissions/:id/vietqr')
-  @ApiOperation({ summary: 'Lấy mã VietQR động chuẩn Napas247 cho khoản phí hoa hồng' })
-  async getVietQr(@Param('id') id: string) {
-    return this.paymentsService.getVietQrForCommission(id);
+  @ApiOperation({ summary: 'Chức năng VietQR thanh toán trực tuyến đã bị gỡ bỏ (PAY-01)' })
+  async getVietQr(@Param('id') _id: string) {
+    throw new NotFoundException('Chức năng VietQR thanh toán trực tuyến đã bị vô hiệu hóa hoàn toàn theo Kế hoạch V2 (PAY-01)');
   }
 
+  // Alias method phục vụ kiểm thử và tương thích ngược
+  async getVietQrForCommission(_id: string | bigint) {
+    return this.getVietQr(String(_id));
+  }
 
   @Public()
   @Post('webhook/bank')
-  @ApiOperation({ summary: 'Webhook tự động nhận thông báo biến động số dư từ Email/App ngân hàng miễn phí' })
-  async handleBankWebhook(
-    @Body() payload: any,
-    @Headers('x-webhook-secret') secretHeader?: string,
-  ) {
-    return this.paymentsService.handleBankEmailWebhook(payload, secretHeader);
+  @ApiOperation({ summary: 'Webhook ngân hàng tự động đã bị gỡ bỏ (PAY-01)' })
+  async handleBankWebhook() {
+    throw new NotFoundException('Webhook ngân hàng tự động đã bị vô hiệu hóa hoàn toàn theo Kế hoạch V2 (PAY-01)');
+  }
+
+  // Alias method phục vụ kiểm thử và tương thích ngược
+  async handleBankEmailWebhook(_dto?: any) {
+    return this.handleBankWebhook();
   }
 
   @Post('bank-transactions')

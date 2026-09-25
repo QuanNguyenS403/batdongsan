@@ -133,7 +133,10 @@ export class OtpService implements OnModuleInit, OnModuleDestroy {
    * Xác thực mã OTP thông thường
    */
   async verifyOtp(phone: string, code: string): Promise<boolean> {
+    if (!phone || !code || typeof phone !== 'string' || typeof code !== 'string') return false;
     const cleanPhone = phone.replace(/\s+/g, '');
+    const cleanCode = code.trim();
+    if (!cleanPhone || !cleanCode) return false;
 
     if (this.redis) {
       const otpKey = `otp:${cleanPhone}`;
