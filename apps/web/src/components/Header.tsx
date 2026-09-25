@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { authFetch, clearTokens, getAccessToken } from '@/lib/auth-client';
-import { SITE_CONFIG } from '@/lib/constants';
 
 interface CurrentUser {
   id: string;
@@ -93,28 +92,8 @@ export function Header() {
           </span>
         </Link>
 
-        {/* Hotline ở giữa / desktop */}
-        <div className="hidden lg:flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-white/95 ring-1 ring-white/15 backdrop-blur-sm">
-          <span>📞</span>
-          <span>Hotline chuyên viên điều phối:</span>
-          <a
-            href={`tel:${SITE_CONFIG.hotline.replace(/\s+/g, '')}`}
-            className="font-bold text-white hover:underline transition-all"
-          >
-            {SITE_CONFIG.hotline}
-          </a>
-        </div>
-
         {/* Actions bên phải */}
-        <div className="flex items-center gap-3">
-          <a
-            href={`tel:${SITE_CONFIG.hotline.replace(/\s+/g, '')}`}
-            className="inline-flex lg:hidden items-center gap-1 text-xs text-white/90 hover:text-white"
-          >
-            <span>📞</span>
-            <span className="font-semibold">{SITE_CONFIG.hotline}</span>
-          </a>
-
+        <div className="flex items-center gap-2.5 sm:gap-3">
           {!checked ? (
             <div className="h-9 w-20 skeleton bg-white/20 rounded-xl" />
           ) : user ? (
@@ -129,15 +108,12 @@ export function Header() {
                 </Link>
               )}
 
-              {/* Nút Đăng tin */}
+              {/* Nút + Đăng tin */}
               <Link
                 href="/dang-tin"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-white text-brand px-3.5 py-2 text-xs font-bold shadow-sm transition-all hover:bg-teal-50 active:scale-[0.98]"
+                className="inline-flex items-center gap-1 rounded-xl bg-white text-brand px-3.5 py-2 text-xs sm:text-sm font-bold shadow-sm transition-all hover:bg-teal-50 active:scale-[0.98]"
               >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                <span>Đăng tin</span>
+                <span>+ Đăng tin</span>
               </Link>
 
               {/* Avatar dropdown */}
@@ -210,19 +186,16 @@ export function Header() {
           ) : (
             <>
               <Link
-                href="/dang-nhap"
-                className="text-xs sm:text-sm font-semibold text-white/90 hover:text-white transition-colors px-2 py-1"
+                href="/dang-tin"
+                className="inline-flex items-center gap-1 rounded-xl bg-white text-brand px-3.5 py-2 text-xs sm:text-sm font-bold shadow-sm transition-all hover:bg-teal-50 active:scale-[0.98]"
               >
-                Đăng nhập
+                <span>+ Đăng tin</span>
               </Link>
               <Link
-                href="/dang-tin"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-white text-brand px-3.5 py-2 text-xs font-bold shadow-sm transition-all hover:bg-teal-50 active:scale-[0.98]"
+                href="/dang-nhap"
+                className="text-xs sm:text-sm font-semibold text-white/95 hover:text-white transition-colors px-2 py-1 whitespace-nowrap"
               >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                <span>Đăng tin</span>
+                Đăng ký/Đăng nhập
               </Link>
             </>
           )}
@@ -298,7 +271,7 @@ export function Header() {
                 href="/dang-nhap"
                 className="flex rounded-xl px-4 py-2.5 text-sm font-semibold bg-white/10 hover:bg-white/20 transition-colors mt-2"
               >
-                Đăng nhập tài khoản
+                Đăng ký/Đăng nhập
               </Link>
             )}
             <Link
