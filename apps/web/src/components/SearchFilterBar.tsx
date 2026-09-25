@@ -176,6 +176,12 @@ export function SearchFilterBar({
             placeholder={placeholder}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleFilter(e);
+              }
+            }}
             className="input-field"
           />
         </div>

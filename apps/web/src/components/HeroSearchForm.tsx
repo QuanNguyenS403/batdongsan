@@ -32,21 +32,44 @@ export function HeroSearchForm() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const executeSearch = useCallback((queryText?: string) => {
+    const text = (queryText !== undefined ? queryText : keyword).trim();
+    setShowDropdown(false);
+    if (text) {
+      router.push(`/thue?keyword=${encodeURIComponent(text)}`);
+    } else {
+      router.push('/thue');
+    }
+  }, [keyword, router]);
+
   const handleSelect = useCallback((text: string) => {
     setKeyword(text);
-    setShowDropdown(false);
-    router.push(`/thue?keyword=${encodeURIComponent(text)}`);
-  }, [router]);
+    executeSearch(text);
+  }, [executeSearch]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (keyword.trim()) {
-      setShowDropdown(false);
-      router.push(`/thue?keyword=${encodeURIComponent(keyword.trim())}`);
-    }
+    executeSearch();
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Nếu đang chọn một gợi ý bằng phím mũi tên thì chọn gợi ý đó
+      if (showDropdown && activeIndex >= 0 && suggestions[activeIndex]) {
+        handleSelect(suggestions[activeIndex].text);
+      } else {
+        // Ngược lại tìm kiếm ngay lập tức với từ khóa hiện tại trong ô nhập
+        executeSearch();
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      setShowDropdown(false);
+      return;
+    }
+
     if (!showDropdown || suggestions.length === 0) return;
 
     if (e.key === 'ArrowDown') {
@@ -55,11 +78,6 @@ export function HeroSearchForm() {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault();
-      handleSelect(suggestions[activeIndex].text);
-    } else if (e.key === 'Escape') {
-      setShowDropdown(false);
     }
   }
 
