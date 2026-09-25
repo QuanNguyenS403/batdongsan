@@ -29,12 +29,12 @@ import { AppController } from './app.controller';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // QUAN TRỌNG: hỗ trợ đọc .env.production hoặc .env ở gốc monorepo và apps/api
+      // QUAN TRỌNG: ưu tiên đọc .env ở gốc monorepo (Single Source of Truth) rồi mới tới local
       envFilePath: [
-        join(__dirname, '..', `.env.${process.env.NODE_ENV ?? 'development'}`),
-        join(__dirname, '..', '.env'),
         join(__dirname, '..', '..', '..', `.env.${process.env.NODE_ENV ?? 'development'}`),
         join(__dirname, '..', '..', '..', '.env'),
+        join(__dirname, '..', `.env.${process.env.NODE_ENV ?? 'development'}`),
+        join(__dirname, '..', '.env'),
       ],
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),

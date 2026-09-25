@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const listing = await getListingOrNotFound(params.slug);
     const desc = listing.description?.slice(0, 160) ?? `${listing.title} tại ${listing.location.name}`;
     return {
-      title: `${listing.title} | QNS Thuê`,
+      title: `${listing.title} | QNS BROKER`,
       description: desc,
       openGraph: {
         title: listing.title,
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   } catch {
     return {
-      title: 'Chi tiết phòng cho thuê | QNS Thuê',
+      title: 'Chi tiết phòng cho thuê | QNS BROKER',
       description: 'Thông tin chi tiết phòng trọ, căn hộ, studio cho thuê minh bạch chi phí, chuyên viên Đức Quân trực tiếp tư vấn và dẫn xem miễn phí',
     };
   }
@@ -218,7 +218,7 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             )}
 
-            {/* Khối Thông tin chính & Chi phí minh bạch (Chuẩn mẫu Mogi & USP QNS Thuê) */}
+            {/* Khối Thông tin chính & Chi phí minh bạch (Chuẩn mẫu Mogi & USP QNS BROKER) */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-card">
               <h2 className="mb-4 font-bold text-text-primary text-base">Thông tin chính & Biểu phí</h2>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-4">

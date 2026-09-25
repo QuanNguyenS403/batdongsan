@@ -5,23 +5,24 @@ const prisma = new PrismaClient();
 
 async function bootstrapAdmin() {
   const secret = process.env.ADMIN_BOOTSTRAP_SECRET;
-  const phone = process.env.ADMIN_BOOTSTRAP_PHONE;
-  const password = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+  const phone = process.argv[2] || process.env.ADMIN_BOOTSTRAP_PHONE;
+  const password = process.argv[3] || process.env.ADMIN_BOOTSTRAP_PASSWORD;
   const fullName = process.env.ADMIN_BOOTSTRAP_FULLNAME || 'Quản trị viên';
 
   if (!secret || secret.trim().length < 16) {
-    console.error('❌ Lỗi: ADMIN_BOOTSTRAP_SECRET chưa được cấu hình hoặc ngắn hơn 16 ký tự.');
-    console.error('Vui lòng thiết lập ADMIN_BOOTSTRAP_SECRET trong file .env trước khi chạy.');
+    console.error('❌ Lỗi: ADMIN_BOOTSTRAP_SECRET chưa được cấu hình hoặc ngắn hơn 16 ký tự');
+    console.error('Vui lòng thiết lập ADMIN_BOOTSTRAP_SECRET trong file .env trước khi chạy');
     process.exit(1);
   }
 
-  if (!phone || !/^0[3|5|7|8|9][0-9]{8}$/.test(phone)) {
-    console.error('❌ Lỗi: ADMIN_BOOTSTRAP_PHONE không hợp lệ hoặc thiếu (cần 10 chữ số định dạng VN).');
+  if (!phone || !/^0[35789][0-9]{8}$/.test(phone)) {
+    console.error('❌ Lỗi: SĐT admin không hợp lệ (cần 10 chữ số định dạng VN: ^0[35789]...)');
+    console.error(`Giá trị hiện tại: "${phone}"`);
     process.exit(1);
   }
 
   if (!password || password.length < 8) {
-    console.error('❌ Lỗi: ADMIN_BOOTSTRAP_PASSWORD chưa được cung cấp hoặc ngắn hơn 8 ký tự.');
+    console.error('❌ Lỗi: Mật khẩu admin chưa được cung cấp hoặc ngắn hơn 8 ký tự');
     process.exit(1);
   }
 
@@ -52,12 +53,22 @@ async function bootstrapAdmin() {
     console.log(`✅ Đã nâng quyền và cập nhật mật khẩu cho quản trị viên: ${adminUser.phone} (${adminUser.fullName})`);
   }
 
-  console.log('🔒 Tài khoản admin đã sẵn sàng. Hãy xóa hoặc vô hiệu hóa ADMIN_BOOTSTRAP_SECRET khi không còn cần thiết.');
+  console.log('----------------------------------------------------');
+  console.log('🎉 KHỞI TẠO TÀI KHOẢN ADMIN THÀNH CÔNG');
+  console.log(`📱 Số điện thoại: ${phone}`);
+  console.log(`🔑 Mật khẩu: ${password}`);
+  console.log('🌐 Đường dẫn đăng nhập: http://localhost:3000/dang-nhap');
+  console.log('⚡ Trang quản trị Admin: http://localhost:3000/admin');
+  console.log('----------------------------------------------------');
 }
 
 bootstrapAdmin()
   .catch((err) => {
-    console.error('❌ Lỗi bootstrap admin:', err);
+    console.error('❌ Lỗi bootstrap admin:', err.message || err);
+    if (err.message && err.message.includes('Can\'t reach database server')) {
+      console.error('👉 Gợi ý: Hãy mở Docker Desktop và chạy lệnh: docker compose up -d');
+    }
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
+

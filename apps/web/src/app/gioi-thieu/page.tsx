@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Giới thiệu Dịch vụ BĐS Cho Thuê — Minh bạch & Tiện lợi',
+  title: 'Giới thiệu Dịch vụ Môi giới Cho thuê — QNS BROKER',
   description:
     'Dịch vụ môi giới cho thuê chuyên nghiệp — minh bạch chi phí điện nước, chuyên viên trực tiếp tư vấn và dẫn xem phòng thực tế miễn phí cho người thuê',
 };
@@ -28,7 +28,7 @@ export default function GioiThieuPage() {
             Dịch vụ Bất động sản Chuyên biệt Cho thuê
           </h1>
           <p className="text-sm text-text-secondary leading-relaxed mb-8 border-b border-surface-border pb-6">
-            QNS Thuê ra đời với định hướng chuyên biệt 100% vào phân khúc <strong>cho thuê nhà ở, phòng trọ, studio và mặt bằng kinh doanh</strong>. Chúng tôi giải quyết triệt để nỗi lo &quot;chi phí ẩn&quot; và hỗ trợ người thuê tìm được căn phòng ưng ý với chuyên viên dẫn xem trực tiếp
+            QNS BROKER ra đời với định hướng chuyên biệt 100% vào phân khúc <strong>cho thuê nhà ở, phòng trọ, studio và mặt bằng kinh doanh</strong>. Chúng tôi giải quyết triệt để nỗi lo &quot;chi phí ẩn&quot; và hỗ trợ người thuê tìm được căn phòng ưng ý với chuyên viên dẫn xem trực tiếp
           </p>
 
           <div className="space-y-8">

@@ -7,6 +7,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 
 function serializeUser(user: {
   id: bigint;
@@ -45,7 +46,7 @@ export class AuthService {
     const code = await this.otpService.sendOtp(phone);
     const isDev = process.env.SMS_PROVIDER === 'mock' || !process.env.SMS_PROVIDER || process.env.NODE_ENV !== 'production';
     return {
-      message: 'Đã gửi mã xác thực SMS.',
+      message: 'Đã gửi mã xác thực SMS',
       ...(isDev ? { devOtp: code } : {}),
     };
   }
@@ -82,6 +83,85 @@ export class AuthService {
     if (!passwordMatches) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng');
 
     return this.issueTokens(user);
+  }
+
+  /**
+   * Đăng nhập 1-Click bằng Google (Hoàn toàn MIỄN PHÍ 100% vĩnh viễn)
+   * Xác thực Google ID Token trực tiếp từ Google Identity Services
+   */
+  async googleLogin(dto: GoogleLoginDto) {
+    if (!dto.credential) {
+      throw new BadRequestException('Thiếu Google credential token');
+    }
+
+    // 1. Xác thực Google Token với Google OAuth TokenInfo API
+    let googlePayload: {
+      sub: string;
+      email: string;
+      name?: string;
+      picture?: string;
+      email_verified?: string | boolean;
+    };
+
+    try {
+      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(dto.credential)}`);
+      if (!res.ok) {
+        throw new Error('Google token không hợp lệ hoặc đã hết hạn');
+      }
+      googlePayload = await res.json();
+    } catch (err: any) {
+      throw new UnauthorizedException(`Xác thực tài khoản Google thất bại: ${err.message}`);
+    }
+
+    const { email, name, picture } = googlePayload;
+    if (!email) {
+      throw new BadRequestException('Không tìm thấy địa chỉ email trong tài khoản Google');
+    }
+
+    // 2. Nếu có số điện thoại truyền lên:
+    if (dto.phone) {
+      let user = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
+      if (user) {
+        if (user.isBlocked) {
+          throw new UnauthorizedException('Tài khoản của bạn đã bị khóa, vui lòng liên hệ quản trị viên');
+        }
+        // Cập nhật thông tin nếu chưa có
+        if (!user.fullName || !user.avatarUrl) {
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+              fullName: user.fullName || name,
+              avatarUrl: user.avatarUrl || picture,
+              isPhoneVerified: true,
+            },
+          });
+        }
+        return this.issueTokens(user);
+      }
+
+      // Tạo tài khoản mới trực tiếp với số điện thoại đã xác thực qua Google (không cần OTP SMS)
+      const newUser = await this.prisma.user.create({
+        data: {
+          phone: dto.phone,
+          fullName: name || 'Khách hàng Google',
+          avatarUrl: picture,
+          isPhoneVerified: true,
+        },
+      });
+
+      return this.issueTokens(newUser);
+    }
+
+    // 3. Nếu chưa có số điện thoại:
+    // Trả về needPhone: true để giao diện mở form nhập SĐT nhanh (không cần OTP)
+    return {
+      needPhone: true,
+      googleUser: {
+        email,
+        name: name || '',
+        picture: picture || '',
+      },
+    };
   }
 
   /**

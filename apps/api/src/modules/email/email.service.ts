@@ -75,7 +75,7 @@ export class EmailService {
   }
 
   private async sendEmail(to: string, subject: string, html: string, textSummary: string): Promise<boolean> {
-    const from = this.config?.get<string>('SMTP_FROM') ?? process.env.SMTP_FROM ?? 'BĐS Cho Thuê <no-reply@batdongsan.vn>';
+    const from = this.config?.get<string>('SMTP_FROM') ?? process.env.SMTP_FROM ?? 'QNS BROKER <no-reply@qnsbroker.com>';
 
     if (this.isMock || !this.transporter) {
       this.logger.log(`\n📧 ========== [MOCK EMAIL NOTIFICATION] ==========

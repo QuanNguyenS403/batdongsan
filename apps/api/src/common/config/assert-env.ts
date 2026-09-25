@@ -97,7 +97,7 @@ export function assertRequiredSecrets(): void {
   }
 
   // BẢO MẬT & VẬN HÀNH (P0-06): Trong môi trường production, BẮT BUỘC có nhà cung cấp SMS thật và API key hợp lệ
-  const SUPPORTED_SMS_PROVIDERS = ['esms', 'twilio', 'speedsms'];
+  const SUPPORTED_SMS_PROVIDERS = ['esms', 'twilio', 'speedsms', 'telegram'];
   if (isProduction) {
     const provider = process.env.SMS_PROVIDER;
     if (!provider || provider === 'mock') {
@@ -117,7 +117,7 @@ export function assertRequiredSecrets(): void {
     if (provider === 'esms') {
       if (!process.env.SMS_API_KEY || !process.env.SMS_SECRET_KEY) {
         throw new Error(
-          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="esms" yêu cầu cả SMS_API_KEY và SMS_SECRET_KEY trong .env.`,
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="esms" yêu cầu cả SMS_API_KEY và SMS_SECRET_KEY trong .env`,
         );
       }
     } else if (provider === 'twilio') {
@@ -127,13 +127,19 @@ export function assertRequiredSecrets(): void {
         !process.env.TWILIO_PHONE_NUMBER
       ) {
         throw new Error(
-          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="twilio" yêu cầu đầy đủ TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN và TWILIO_PHONE_NUMBER trong .env.`,
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="twilio" yêu cầu đầy đủ TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN và TWILIO_PHONE_NUMBER trong .env`,
         );
       }
     } else if (provider === 'speedsms') {
       if (!process.env.SMS_API_KEY) {
         throw new Error(
-          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="speedsms" yêu cầu SMS_API_KEY trong .env.`,
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="speedsms" yêu cầu SMS_API_KEY trong .env`,
+        );
+      }
+    } else if (provider === 'telegram') {
+      if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
+        throw new Error(
+          `[CẤU HÌNH SMS THIẾU] SMS_PROVIDER="telegram" yêu cầu cả TELEGRAM_BOT_TOKEN và TELEGRAM_CHAT_ID trong .env`,
         );
       }
     }

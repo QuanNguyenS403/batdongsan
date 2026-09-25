@@ -19,7 +19,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  const defaultOrigins = 'http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001';
+  const defaultOrigins = 'http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001,https://qnsbroker.com,https://www.qnsbroker.com';
   const allowedOrigins = (process.env.CORS_ORIGINS || `${process.env.NEXT_PUBLIC_SITE_URL || ''},${defaultOrigins}`)
     .split(',')
     .map((o) => o.trim())
@@ -56,8 +56,8 @@ async function bootstrap() {
   // Trong môi trường production (NODE_ENV=production), tắt hoàn toàn /docs để bảo vệ API surface.
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('Batdongsan API')
-      .setDescription('API cho nền tảng rao vặt bất động sản')
+      .setTitle('QNS BROKER API')
+      .setDescription('API cho nền tảng dịch vụ môi giới cho thuê bất động sản QNS BROKER')
       .setVersion('0.1')
       .addBearerAuth()
       .build();

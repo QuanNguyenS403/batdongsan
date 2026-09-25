@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { SITE_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'Liên hệ & Hỗ trợ | QNS Thuê',
+  title: 'Liên hệ & Hỗ trợ | QNS BROKER',
   description:
-    'Thông tin liên hệ, hotline hỗ trợ, báo cáo tin đăng vi phạm và giải đáp thắc mắc người dùng tại QNS Thuê',
+    'Thông tin liên hệ, hotline hỗ trợ, báo cáo tin đăng vi phạm và giải đáp thắc mắc người dùng tại QNS BROKER',
 };
 
 export default function ContactPage() {
@@ -26,7 +26,7 @@ export default function ContactPage() {
             Thông tin Liên hệ & Hỗ trợ
           </h1>
           <p className="text-sm text-text-secondary leading-relaxed mb-8 border-b border-surface-border pb-4">
-            Ban Quản trị nền tảng QNS Thuê luôn sẵn sàng lắng nghe ý kiến đóng góp, giải đáp thắc mắc và hỗ trợ bạn trong quá trình tìm phòng hoặc đăng tin
+            Ban Quản trị nền tảng QNS BROKER luôn sẵn sàng lắng nghe ý kiến đóng góp, giải đáp thắc mắc và hỗ trợ bạn trong quá trình tìm phòng hoặc đăng tin
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -57,7 +57,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="text-xs text-text-muted">Phụ trách kỹ thuật & Vận hành:</p>
-                  <p className="font-semibold text-text-primary">Đội ngũ Vận hành QNS Thuê</p>
+                  <p className="font-semibold text-text-primary">Đội ngũ Vận hành QNS BROKER</p>
                 </div>
               </div>
             </div>

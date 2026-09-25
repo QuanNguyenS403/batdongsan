@@ -17,7 +17,7 @@ import {
 } from '@/lib/demo-data';
 
 export const metadata: Metadata = {
-  title: 'Cho thuê Căn hộ & Studio giá tốt — QNS Thuê',
+  title: 'Cho thuê Căn hộ & Studio giá tốt — QNS BROKER',
   description:
     'Danh sách tin cho thuê căn hộ và studio minh bạch chi phí mới nhất, phân tách rõ ràng chuyên mục Căn hộ và Studio riêng biệt, tư vấn và trực tiếp dẫn xem tận nơi miễn phí',
 };

@@ -9,6 +9,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CheckPhoneDto } from './dto/check-phone.dto';
 import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -48,6 +49,12 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Post('google')
+  googleLogin(@Body() dto: GoogleLoginDto) {
+    return this.authService.googleLogin(dto);
   }
 
   @Public()
